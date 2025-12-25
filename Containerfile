@@ -1,18 +1,14 @@
-# 1. BASE LAYER: CentOS Stream 10 (RHEL 10 Upstream)
-# This is the "Pure" base image, not the Bluefin Alpha version.
+# 1. BASE LAYER: CentOS Stream 10
 FROM quay.io/centos-bootc/centos-bootc:stream10
 
 # 2. SYSTEM SETUP: Repos & Workstation
-# We install the EPEL 10 release to get benchmark tools.
+# We enable CRB (Code Ready Builder) as it is often needed for EPEL packages.
+# We REMOVED the Intel Video drivers causing the failure.
 RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm \
+    && dnf config-manager --set-enabled crb \
     && dnf -y group install workstation-product-environment \
     && dnf -y install \
-    # --- HARDWARE ACCELERATION (Intel) ---
-    intel-compute-runtime \
-    intel-media-driver \
-    libigdgmm \
-    monitor-edid \
-    # --- UTILITIES ---
+    # --- BENCHMARK UTILITIES ---
     git \
     wget \
     tar \
