@@ -3,16 +3,36 @@ on:
   push:
     branches: ['main']
     paths: ['Containerfile', 'pixi.toml']
+  workflow_dispatch:
+
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build-push:
     runs-on: ubuntu-latest
     permissions: {packages: write, contents: read}
     steps:
       - uses: actions/checkout@v4
+
+      # --- FIX 1: HANDLE CAPITAL LETTERS ---
+      # This converts "User/Repo" to "user/repo" so Docker doesn't crash
+      - name: Lowercase Repo Name
+        run: |
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+
+      # --- FIX 2: CORRECT INDENTATION ---
+      # I changed this to multi-line format to prevent the syntax error on line 15
       - uses: docker/login-action@v3
-        with: {registry: ${{ env.REGISTRY }}, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }}}
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v5
-        with: {context: ., file: Containerfile, push: true, tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest}
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          # Uses the lowercase name we created in step 1
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
