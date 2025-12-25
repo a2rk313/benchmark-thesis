@@ -27,14 +27,9 @@ RUN curl -fsSL https://pixi.sh/install.sh | bash
 WORKDIR /opt/gis-benchmarks
 COPY pixi.toml .
 
-# --- FIX: PATCH PIXI.TOML ---
-# 1. Force platform to ONLY linux-64 (drops win-64 which caused the build failure)
-# 2. Fix "[project]" deprecation warning -> "[workspace]"
-# 3. Fix "depends_on" deprecation warning -> "depends-on"
-RUN sed -i 's/platforms = .*$/platforms = ["linux-64"]/' pixi.toml \
-    && sed -i 's/\[project\]/[workspace]/' pixi.toml \
-    && sed -i 's/depends_on/depends-on/' pixi.toml \
-    && pixi install
+# FIX: No messy sed commands needed anymore!
+# We just install. Pixi will generate a fresh lockfile automatically.
+RUN pixi install
 
 # 5. JULIA LAYER: Strict Pinning
 ENV JULIA_DEPOT_PATH=/opt/gis-benchmarks/.julia_depot
