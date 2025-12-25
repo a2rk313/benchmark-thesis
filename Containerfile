@@ -1,17 +1,15 @@
-# 1. BASE LAYER: Fedora 41 (The RHEL 10 Upstream)
-# This image exists publicly and works immediately.
+# 1. BASE LAYER: Fedora 41 (RHEL 10 Upstream)
 FROM quay.io/fedora/fedora-bootc:41
 
-# 2. SYSTEM SETUP: Enterprise Workstation
-# We install the exact GNOME stack that will likely ship in RHEL 10.
+# 2. SYSTEM SETUP: Workstation Group
 RUN dnf -y groupinstall "Workstation" \
     && dnf -y install \
-    # --- HARDWARE ACCELERATION (Intel) ---
+    # --- HARDWARE ACCELERATION ---
     intel-compute-runtime \
     intel-media-driver \
     libigdgmm \
     monitor-edid \
-    # --- BENCHMARK UTILITIES ---
+    # --- UTILITIES ---
     git \
     wget \
     tar \
@@ -20,7 +18,6 @@ RUN dnf -y groupinstall "Workstation" \
     iotop \
     tuned \
     tuned-profiles-cpu-partitioning \
-    # --- COMPATIBILITY ---
     xorg-x11-server-Xwayland \
     && dnf clean all
 
@@ -59,13 +56,11 @@ RUN echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/p
     && echo 'export JULIA_PROJECT=/opt/gis-benchmarks' >> /etc/profile.d/bench-lab.sh \
     && chmod +x /etc/profile.d/bench-lab.sh
 
-# 7. SERVICE LAYER: Auto-Run on Boot
-# (Ensure benchmark.service is in your repo!)
-COPY benchmark.service /etc/systemd/system/benchmark.service
-RUN systemctl enable benchmark.service
-
-# 8. RUNTIME LAYER: Tuning & Boot Config
-RUN chown -R 1000:1000 /opt/gis-benchmarks \
+# 7. RUNTIME LAYER: Manual Mode Setup
+# We removed the benchmark.service copy.
+# instead, we set a password so you can login manually.
+RUN echo "root:benchmark" | chpasswd \
+    && chown -R 1000:1000 /opt/gis-benchmarks \
     && chmod -R 775 /opt/gis-benchmarks \
     && systemctl enable gdm \
     && systemctl set-default graphical.target \
