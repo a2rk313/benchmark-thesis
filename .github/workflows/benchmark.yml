@@ -5,11 +5,16 @@ on:
   workflow_run:
     workflows: ["Build OS Image"]
     types: [completed]
+  workflow_dispatch:
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}:latest
+      # ⚠️ CRITICAL: Replace 'your_username' and 'gis-benchmarks'
+      # with your actual lowercase GitHub username and repo name.
+      # GitHub Actions CANNOT read variables here. You MUST hardcode it.
+      image: ghcr.io/a2rk313/benchmark-thesis:latest
       options: --user root
     steps:
       - uses: actions/checkout@v4
