@@ -1,23 +1,16 @@
-# 1. BASE LAYER: CentOS Stream 10 (Pinned Version)
-# We lock the OS to the snapshot from Dec 23, 2025.
-# This guarantees Kernel 6.12 behaviors are preserved forever.
-FROM quay.io/centos-bootc/centos-bootc:stream10-20251223
+# 1. BASE LAYER: Fedora 41 (The RHEL 10 Upstream)
+# This image exists publicly and works immediately.
+FROM quay.io/fedora/fedora-bootc:41
 
-# 2. REPOS: Enable EPEL 10 (Required for Benchmarking Tools)
-RUN dnf -y install \
-    https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm \
-    && dnf -y install 'dnf-command(config-manager)' \
-    && dnf config-manager --set-enabled crb \
-    && dnf clean all
-
-# 3. REAL-WORLD DESKTOP: GNOME Workstation
-# Installs full GUI stack (GNOME, Wayland, Fonts, NetworkManager)
+# 2. SYSTEM SETUP: Enterprise Workstation
+# We install the exact GNOME stack that will likely ship in RHEL 10.
 RUN dnf -y groupinstall "Workstation" \
     && dnf -y install \
-    # --- DRIVERS (Intel Compute for GIS) ---
+    # --- HARDWARE ACCELERATION (Intel) ---
     intel-compute-runtime \
     intel-media-driver \
     libigdgmm \
+    monitor-edid \
     # --- BENCHMARK UTILITIES ---
     git \
     wget \
@@ -31,17 +24,17 @@ RUN dnf -y groupinstall "Workstation" \
     xorg-x11-server-Xwayland \
     && dnf clean all
 
-# 4. TOOL LAYER: Pin Pixi (v0.18.0)
+# 3. TOOL LAYER: Pin Pixi (v0.18.0)
 ARG PIXI_VERSION=v0.18.0
 RUN curl -fsSL https://github.com/prefix-dev/pixi/releases/download/${PIXI_VERSION}/pixi-x86_64-unknown-linux-musl.tar.gz \
     | tar -xz -C /usr/bin/ pixi
 
-# 5. APP LAYER: Bake the Lab
+# 4. APP LAYER: Bake the Lab
 WORKDIR /opt/gis-benchmarks
 COPY pixi.toml .
 RUN pixi install --locked
 
-# 6. JULIA LAYER: Strict Pinning
+# 5. JULIA LAYER: Strict Pinning
 ENV JULIA_DEPOT_PATH=/opt/gis-benchmarks/.julia_depot
 ENV JULIA_PROJECT=/opt/gis-benchmarks
 RUN mkdir -p $JULIA_DEPOT_PATH && \
@@ -61,10 +54,15 @@ RUN mkdir -p $JULIA_DEPOT_PATH && \
         {name="StaticArrays", version="1.9.3"} \
     ]); Pkg.instantiate(); Pkg.precompile();'
 
-# 7. CONFIG LAYER: Profile Scripts
+# 6. CONFIG LAYER: Profile Scripts
 RUN echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/profile.d/bench-lab.sh \
     && echo 'export JULIA_PROJECT=/opt/gis-benchmarks' >> /etc/profile.d/bench-lab.sh \
     && chmod +x /etc/profile.d/bench-lab.sh
+
+# 7. SERVICE LAYER: Auto-Run on Boot
+# (Ensure benchmark.service is in your repo!)
+COPY benchmark.service /etc/systemd/system/benchmark.service
+RUN systemctl enable benchmark.service
 
 # 8. RUNTIME LAYER: Tuning & Boot Config
 RUN chown -R 1000:1000 /opt/gis-benchmarks \
