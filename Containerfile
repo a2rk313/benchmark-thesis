@@ -1,13 +1,13 @@
-# 1. BASE LAYER: Fedora 41 (RHEL 10 Upstream)
-# Verified: This image exists and is public.
-FROM quay.io/fedora/fedora-bootc:41
+# 1. BASE LAYER: CentOS Stream 10 (RHEL 10 Upstream)
+# This is the "Pure" base image, not the Bluefin Alpha version.
+FROM quay.io/centos-bootc/centos-bootc:stream10
 
-# 2. SYSTEM SETUP: Workstation Group
-# FIX: 'dnf5' requires "group install" (2 words), not "groupinstall".
-# We also use the ID to be safer.
-RUN dnf -y group install "Workstation" \
+# 2. SYSTEM SETUP: Repos & Workstation
+# We install the EPEL 10 release to get benchmark tools.
+RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm \
+    && dnf -y group install workstation-product-environment \
     && dnf -y install \
-    # --- HARDWARE ACCELERATION ---
+    # --- HARDWARE ACCELERATION (Intel) ---
     intel-compute-runtime \
     intel-media-driver \
     libigdgmm \
@@ -21,6 +21,7 @@ RUN dnf -y group install "Workstation" \
     iotop \
     tuned \
     tuned-profiles-cpu-partitioning \
+    # --- COMPATIBILITY ---
     xorg-x11-server-Xwayland \
     && dnf clean all
 
@@ -60,7 +61,6 @@ RUN echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/p
     && chmod +x /etc/profile.d/bench-lab.sh
 
 # 7. RUNTIME LAYER: Manual Mode Setup
-# No "COPY benchmark.service" to avoid file not found error.
 RUN echo "root:benchmark" | chpasswd \
     && chown -R 1000:1000 /opt/gis-benchmarks \
     && chmod -R 775 /opt/gis-benchmarks \
