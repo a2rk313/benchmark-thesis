@@ -2,8 +2,7 @@
 FROM quay.io/centos-bootc/centos-bootc:stream10
 
 # 2. SYSTEM SETUP: Repos & Workstation
-# We enable CRB (Code Ready Builder) as it is often needed for EPEL packages.
-# We REMOVED the Intel Video drivers causing the failure.
+# We enable CRB for dependencies and install EPEL for benchmark tools.
 RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm \
     && dnf config-manager --set-enabled crb \
     && dnf -y group install workstation-product-environment \
@@ -21,10 +20,11 @@ RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
     xorg-x11-server-Xwayland \
     && dnf clean all
 
-# 3. TOOL LAYER: Pin Pixi (v0.18.0)
-ARG PIXI_VERSION=v0.18.0
-RUN curl -fsSL https://github.com/prefix-dev/pixi/releases/download/${PIXI_VERSION}/pixi-x86_64-unknown-linux-musl.tar.gz \
-    | tar -xz -C /usr/bin/ pixi
+# 3. TOOL LAYER: Install Pixi (Official Script)
+# FIX: The manual tar command failed. We now use the official installer script.
+# We set PIXI_HOME=/usr to force the binary into /usr/bin/pixi
+ENV PIXI_HOME=/usr
+RUN curl -fsSL https://pixi.sh/install.sh | bash
 
 # 4. APP LAYER: Bake the Lab
 WORKDIR /opt/gis-benchmarks
