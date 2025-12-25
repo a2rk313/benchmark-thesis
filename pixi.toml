@@ -41,5 +41,6 @@ r-terra = ">=1.7_65"
 r-stars = ">=0.6_4"
 # FIX: Relaxed version because strict 14.0.0 does not exist on Linux
 r-arrow = ">=14.0.0"
-r-data.table = ">=1.14.8"
+# FIX: Added quotes around "r-data.table" because it contains a dot
+"r-data.table" = ">=1.14.8"
 r-dplyr = ">=1.1.3"
