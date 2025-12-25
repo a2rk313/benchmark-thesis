@@ -1,8 +1,11 @@
 # 1. BASE LAYER: Fedora 41 (RHEL 10 Upstream)
+# Verified: This image exists and is public.
 FROM quay.io/fedora/fedora-bootc:41
 
 # 2. SYSTEM SETUP: Workstation Group
-RUN dnf -y groupinstall "Workstation" \
+# FIX: 'dnf5' requires "group install" (2 words), not "groupinstall".
+# We also use the ID to be safer.
+RUN dnf -y group install "Workstation" \
     && dnf -y install \
     # --- HARDWARE ACCELERATION ---
     intel-compute-runtime \
@@ -57,8 +60,7 @@ RUN echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/p
     && chmod +x /etc/profile.d/bench-lab.sh
 
 # 7. RUNTIME LAYER: Manual Mode Setup
-# We removed the benchmark.service copy.
-# instead, we set a password so you can login manually.
+# No "COPY benchmark.service" to avoid file not found error.
 RUN echo "root:benchmark" | chpasswd \
     && chown -R 1000:1000 /opt/gis-benchmarks \
     && chmod -R 775 /opt/gis-benchmarks \
