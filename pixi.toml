@@ -7,74 +7,85 @@ channels = ["conda-forge"]
 platforms = ["linux-64"]
 
 [dependencies]
-# --- CORE ENGINE ---
-python = "3.13.*"        # Python 3.13 is the stable scientific standard in late 2025
-numpy = "2.4.*"          # Numpy 2.4 released Dec 2025
-hyperfine = "1.19.*"
+# --- CORE ENGINES (Latest Stable) ---
+python = "3.13.*"        # Latest Python
+numpy = "*"              # Will fetch Numpy 2.x if available/compatible
+hyperfine = "*"
 
 # --- DATA PREP ---
-scipy = "1.16.*"         # SciPy 1.16 released Oct 2025
-zarr = "3.1.*"           # Zarr 3.1 released Nov 2025
-rioxarray = "0.20.*"     # Latest stable
+scipy = "*"
+zarr = "*"
+rioxarray = "*"
 
 # --- PYTHON STACK ---
-pandas = "3.0.*"         # Pandas 3.0 released Dec 2025
-geopandas = "1.1.*"      # GeoPandas 1.1 released Dec 2025
-rasterio = "1.4.*"       # Rasterio 1.4 released Dec 2025
-shapely = "2.1.*"        # Shapely 2.x Series
-xarray = "2025.12.*"     # CalVer release Dec 2025
-dask = "2025.12.*"       # CalVer release Dec 2025
-scikit-learn = "1.8.*"   # Scikit-learn 1.8 released Dec 2025
+# Using '*' allows Pixi to solve for the absolute latest version
+# available on conda-forge right now.
+pandas = "*"
+geopandas = "*"
+rasterio = "*"
+shapely = "*"
+xarray = "*"
+dask = "*"
+scikit-learn = "*"
 
 # --- R STACK ---
-r-base = "4.5.*"         # R 4.5.2 released late 2025
-r-sf = "1.0-23"          # Latest stable on CRAN
-r-terra = "1.8.*"        # Terra 1.8 released Nov 2025
-r-stars = "0.7.*"        # Stars 0.7
+r-base = "4.5.*"         # Latest R
+r-sf = "*"
+r-terra = "*"
+r-stars = "*"
 r-class = "*"
 r-rmatio = "*"
 r-dplyr = "*"
 
 # --- JULIA ---
-julia = "1.12.*"         # Julia 1.12 released Oct/Dec 2025
+julia = "1.12.*"         # Latest Stable Julia
 
+# --- LINUX SPECIFIC ---
 [target.linux-64.dependencies]
-libgdal = "3.12.*"       # GDAL 3.12 released Dec 2025
+libgdal = "*"
 compilers = "*"
+
+# --- WINDOWS SPECIFIC ---
+[target.win-64.dependencies]
+libgdal = "*"
+m2w64-toolchain = "*"    # Required to compile R packages on Windows
 
 [tasks]
 # 1. SETUP
 prepare = "python tools/download_data.py"
-# 2. WARMUP
-warmup = "python -c 'import shapely' && julia -e 'println(\"Ready\")'"
 
-# 3. WORKFLOWS
+# 2. WARMUP
+# Windows-safe quoting used here to prevent CLI errors
+warmup = "python -c \"import shapely; print('Py Ready')\""
+
+# 3. BENCHMARKS
 bench-vector = """
 hyperfine --warmup 1 --min-runs 3 --export-json results_vector.json \
-  -n 'Py_Vector' 'python benchmarks/bench_vector.py' \
-  -n 'R_Vector'  'Rscript benchmarks/bench_vector.R' \
-  -n 'Jl_Vector' 'julia --project=/opt/gis-benchmarks benchmarks/bench_vector.jl'
+  -n "Py_Vector" "python benchmarks/bench_vector.py" \
+  -n "R_Vector"  "Rscript benchmarks/bench_vector.R" \
+  -n "Jl_Vector" "julia --project=. benchmarks/bench_vector.jl"
 """
 
 bench-raster = """
 hyperfine --warmup 1 --min-runs 3 --export-json results_raster.json \
-  -n 'Py_Raster' 'python benchmarks/bench_raster.py' \
-  -n 'R_Raster'  'Rscript benchmarks/bench_raster.R' \
-  -n 'Jl_Raster' 'julia --project=/opt/gis-benchmarks benchmarks/bench_raster.jl'
+  -n "Py_Raster" "python benchmarks/bench_raster.py" \
+  -n "R_Raster"  "Rscript benchmarks/bench_raster.R" \
+  -n "Jl_Raster" "julia --project=. benchmarks/bench_raster.jl"
 """
 
 bench-hsi = """
 hyperfine --warmup 1 --min-runs 3 --export-json results_hsi.json \
-  -n 'Py_HSI' 'python benchmarks/bench_hsi.py' \
-  -n 'R_HSI'  'Rscript benchmarks/bench_hsi.R' \
-  -n 'Jl_HSI' 'julia --project=/opt/gis-benchmarks benchmarks/bench_hsi.jl'
+  -n "Py_HSI" "python benchmarks/bench_hsi.py" \
+  -n "R_HSI"  "Rscript benchmarks/bench_hsi.R" \
+  -n "Jl_HSI" "julia --project=. benchmarks/bench_hsi.jl"
 """
 
 bench-knn = """
 hyperfine --warmup 1 --min-runs 3 --export-json results_knn.json \
-  -n 'Py_KNN' 'python benchmarks/bench_knn.py' \
-  -n 'R_KNN'  'Rscript benchmarks/bench_knn.R' \
-  -n 'Jl_KNN' 'julia --project=/opt/gis-benchmarks benchmarks/bench_knn.jl'
+  -n "Py_KNN" "python benchmarks/bench_knn.py" \
+  -n "R_KNN"  "Rscript benchmarks/bench_knn.R" \
+  -n "Jl_KNN" "julia --project=. benchmarks/bench_knn.jl"
 """
 
-run-all = { depends_on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
+# MASTER COMMAND
+run-all = { depends-on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
