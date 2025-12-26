@@ -1,71 +1,80 @@
-[workspace]
-name = "gis-benchmarks"
-version = "1.0.0"
-description = "Scientific GIS Benchmark Suite (RHEL 10 Enterprise Standard)"
-authors = ["Admin"]
+[project]
+name = "thesis-benchmarks"
+version = "2.1.0"
+description = "Full Workflow GIS Benchmark Suite (Bleeding Edge 2025)"
+authors = ["A2RK"]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 
+[dependencies]
+# --- CORE ENGINE ---
+python = "3.13.*"        # Python 3.13 is the stable scientific standard in late 2025
+numpy = "2.4.*"          # Numpy 2.4 released Dec 2025
+hyperfine = "1.19.*"
+
+# --- DATA PREP ---
+scipy = "1.16.*"         # SciPy 1.16 released Oct 2025
+zarr = "3.1.*"           # Zarr 3.1 released Nov 2025
+rioxarray = "0.20.*"     # Latest stable
+
+# --- PYTHON STACK ---
+pandas = "3.0.*"         # Pandas 3.0 released Dec 2025
+geopandas = "1.1.*"      # GeoPandas 1.1 released Dec 2025
+rasterio = "1.4.*"       # Rasterio 1.4 released Dec 2025
+shapely = "2.1.*"        # Shapely 2.x Series
+xarray = "2025.12.*"     # CalVer release Dec 2025
+dask = "2025.12.*"       # CalVer release Dec 2025
+scikit-learn = "1.8.*"   # Scikit-learn 1.8 released Dec 2025
+
+# --- R STACK ---
+r-base = "4.5.*"         # R 4.5.2 released late 2025
+r-sf = "1.0-23"          # Latest stable on CRAN
+r-terra = "1.8.*"        # Terra 1.8 released Nov 2025
+r-stars = "0.7.*"        # Stars 0.7
+r-class = "*"
+r-rmatio = "*"
+r-dplyr = "*"
+
+# --- JULIA ---
+julia = "1.12.*"         # Julia 1.12 released Oct/Dec 2025
+
+[target.linux-64.dependencies]
+libgdal = "3.12.*"       # GDAL 3.12 released Dec 2025
+compilers = "*"
+
 [tasks]
-# FIX: Downloads specific datasets for Vector, Raster, and HSI benchmarks
-prepare = """
-mkdir -p data results
+# 1. SETUP
+prepare = "python tools/download_data.py"
+# 2. WARMUP
+warmup = "python -c 'import shapely' && julia -e 'println(\"Ready\")'"
 
-# --- 1. VECTOR DATA (Natural Earth) ---
-# Points (Cities) and Polygons (Countries) for spatial join benchmarks
-wget -nc -P data/ https://naciscdn.org/naturalearth/10m/cultural/ne_10m_populated_places.zip
-wget -nc -P data/ https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip
-
-# --- 2. RASTER DATA (GeoTIFF) ---
-# Satellite imagery with shaded relief for raster I/O benchmarks
-wget -nc -P data/ https://naciscdn.org/naturalearth/50m/raster/NE1_50M_SR_W.zip
-
-# --- 3. HYPERSPECTRAL DATA (Indian Pines) ---
-# Standard .mat files for HSI classification (used by bench_hsi.py)
-wget -nc -P data/ http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat
-wget -nc -P data/ http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat
-
-# --- 4. EXTRACT ---
-unzip -n -d data/ data/ne_10m_populated_places.zip
-unzip -n -d data/ data/ne_10m_admin_0_countries.zip
-unzip -n -d data/ data/NE1_50M_SR_W.zip
+# 3. WORKFLOWS
+bench-vector = """
+hyperfine --warmup 1 --min-runs 3 --export-json results_vector.json \
+  -n 'Py_Vector' 'python benchmarks/bench_vector.py' \
+  -n 'R_Vector'  'Rscript benchmarks/bench_vector.R' \
+  -n 'Jl_Vector' 'julia --project=/opt/gis-benchmarks benchmarks/bench_vector.jl'
 """
 
-warmup = { cmd = "julia --project=. -e 'using Pkg; Pkg.precompile()'", depends-on = ["prepare"] }
+bench-raster = """
+hyperfine --warmup 1 --min-runs 3 --export-json results_raster.json \
+  -n 'Py_Raster' 'python benchmarks/bench_raster.py' \
+  -n 'R_Raster'  'Rscript benchmarks/bench_raster.R' \
+  -n 'Jl_Raster' 'julia --project=/opt/gis-benchmarks benchmarks/bench_raster.jl'
+"""
 
-# Corrected filenames to match your folder structure
-bench-vector = { cmd = "julia --project=. src/bench_vector.jl", depends-on = ["warmup"] }
-bench-raster = { cmd = "julia --project=. src/bench_raster.jl", depends-on = ["warmup"] }
-bench-hsi = { cmd = "python src/bench_hsi.py", depends-on = ["warmup"] }
-bench-knn = { cmd = "python src/bench_knn.py", depends-on = ["warmup"] }
+bench-hsi = """
+hyperfine --warmup 1 --min-runs 3 --export-json results_hsi.json \
+  -n 'Py_HSI' 'python benchmarks/bench_hsi.py' \
+  -n 'R_HSI'  'Rscript benchmarks/bench_hsi.R' \
+  -n 'Jl_HSI' 'julia --project=/opt/gis-benchmarks benchmarks/bench_hsi.jl'
+"""
 
-run-all = { depends-on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
+bench-knn = """
+hyperfine --warmup 1 --min-runs 3 --export-json results_knn.json \
+  -n 'Py_KNN' 'python benchmarks/bench_knn.py' \
+  -n 'R_KNN'  'Rscript benchmarks/bench_knn.R' \
+  -n 'Jl_KNN' 'julia --project=/opt/gis-benchmarks benchmarks/bench_knn.jl'
+"""
 
-[dependencies]
-# --- CORE LANGUAGES ---
-python = "*"
-julia = "*"
-
-# --- PYTHON GIS STACK ---
-gdal = "*"
-rasterio = "*"
-shapely = "*"
-geopandas = "*"
-numpy = "*"
-pandas = "*"
-scipy = "*"
-scikit-learn = "*"
-xarray = "*"
-dask = "*"
-zarr = "*"
-duckdb = "*"
-pyarrow = "*"
-
-# --- R GIS STACK ---
-r-base = "*"
-r-sf = "*"
-r-terra = "*"
-r-stars = "*"
-r-arrow = "*"
-"r-data.table" = "*"
-r-dplyr = "*"
+run-all = { depends_on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
