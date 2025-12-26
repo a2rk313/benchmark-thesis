@@ -4,22 +4,26 @@ version = "1.0.0"
 description = "Scientific GIS Benchmark Suite (RHEL 10 Enterprise Standard)"
 authors = ["Admin"]
 channels = ["conda-forge"]
-# STRICT PLATFORM: Linux Only (Prevents Windows resolution errors)
+# STRICT PLATFORM: Linux Only
 platforms = ["linux-64"]
 
 [tasks]
-# FIX: Using correct "depends-on" syntax
+# FIX: Syntax updated to "depends-on"
 prepare = "mkdir -p data results"
 warmup = { cmd = "julia --project=. -e 'using Pkg; Pkg.precompile()'", depends-on = ["prepare"] }
-bench-vector = { cmd = "julia --project=. src/benchmark_vector.jl", depends-on = ["warmup"] }
-bench-raster = { cmd = "julia --project=. src/benchmark_raster.jl", depends-on = ["warmup"] }
-bench-hsi = { cmd = "python src/benchmark_hsi.py", depends-on = ["warmup"] }
-bench-knn = { cmd = "python src/benchmark_knn.py", depends-on = ["warmup"] }
+
+# --- CRITICAL FIX: MATCH FILENAMES FROM SCREENSHOT ---
+# Changed "benchmark_vector.jl" -> "bench_vector.jl", etc.
+bench-vector = { cmd = "julia --project=. src/bench_vector.jl", depends-on = ["warmup"] }
+bench-raster = { cmd = "julia --project=. src/bench_raster.jl", depends-on = ["warmup"] }
+bench-hsi = { cmd = "python src/bench_hsi.py", depends-on = ["warmup"] }
+bench-knn = { cmd = "python src/bench_knn.py", depends-on = ["warmup"] }
+# -----------------------------------------------------
+
 run-all = { depends-on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
 
 [dependencies]
 # --- CORE LANGUAGES ---
-# "*" means "Give me the latest version available today (Dec 2025)"
 python = "*"
 julia = "*"
 
@@ -44,6 +48,5 @@ r-sf = "*"
 r-terra = "*"
 r-stars = "*"
 r-arrow = "*"
-# FIX: Quotes required for key with dot
 "r-data.table" = "*"
 r-dplyr = "*"
