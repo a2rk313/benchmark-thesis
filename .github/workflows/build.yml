@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  # Use the GitHub Container Registry
   REGISTRY: ghcr.io
-  # Use the repository name (e.g., your-user/gis-benchmarks) automatically
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -22,19 +20,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- CRITICAL FIX: FREE UP DISK SPACE ---
-      # This deletes pre-installed tools (Android, .NET, etc.)
-      # to give your build ~40GB of space instead of 14GB.
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space-action@v1.3.1
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
+      # --- FIXED: MANUAL CLEANUP ---
+      # We manually delete large SDKs (Android, .NET, Haskell)
+      # This reclaims ~25GB of space so your build won't crash.
+      - name: Free Disk Space (Manual)
+        run: |
+          echo "Free space before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          echo "Free space after cleanup:"
+          df -h
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -52,7 +51,6 @@ jobs:
           context: .
           file: Containerfile
           push: true
-          # This automatically tags the image as "latest"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           # Optimization: Cache layers to make future builds faster
           cache-from: type=gha
