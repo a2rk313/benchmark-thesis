@@ -1,15 +1,16 @@
 name: Cloud Benchmark
+
 on:
   push:
-    branches: ['main']
-  workflow_run:
-    workflows: ["Build OS Image"]
-    types: [completed]
+    branches: [ "main" ]
+  workflow_dispatch:
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     container:
-      # Automatically uses the image built by build.yml
+      # This pulls the OS image built by your build.yml workflow
+      # Note: On a fresh push, this might pull the previous image if the build job hasn't finished yet.
       image: ghcr.io/${{ github.repository }}:latest
       options: --user root
     steps:
