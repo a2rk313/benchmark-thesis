@@ -1,38 +1,59 @@
-name: Build OS Image
+name: Build and Push OS Image
+
 on:
   push:
-    branches: ['main']
-    paths: ['Containerfile', 'pixi.toml']
+    branches: [ "main" ]
   workflow_dispatch:
 
 env:
+  # Use the GitHub Container Registry
   REGISTRY: ghcr.io
+  # Use the repository name (e.g., your-user/gis-benchmarks) automatically
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-push:
     runs-on: ubuntu-latest
-    permissions: {packages: write, contents: read}
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # --- FIX 1: HANDLE CAPITAL LETTERS ---
-      # This converts "User/Repo" to "user/repo" so Docker doesn't crash
-      - name: Lowercase Repo Name
-        run: |
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
+      # --- CRITICAL FIX: FREE UP DISK SPACE ---
+      # This deletes pre-installed tools (Android, .NET, etc.)
+      # to give your build ~40GB of space instead of 14GB.
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space-action@v1.3.1
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
 
-      # --- FIX 2: CORRECT INDENTATION ---
-      # I changed this to multi-line format to prevent the syntax error on line 15
-      - uses: docker/login-action@v3
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: Containerfile
           push: true
-          # Uses the lowercase name we created in step 1
+          # This automatically tags the image as "latest"
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # Optimization: Cache layers to make future builds faster
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
