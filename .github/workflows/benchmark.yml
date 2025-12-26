@@ -1,28 +1,55 @@
 name: Cloud Benchmark
+
 on:
+  workflow_dispatch: # Allows you to manually trigger the benchmark button
   push:
-    branches: ['main']
-  workflow_run:
-    workflows: ["Build OS Image"]
-    types: [completed]
-  workflow_dispatch:
+    branches: [ "main" ] # Optional: Runs on every push (disable if too expensive)
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  benchmark:
+  run-benchmark:
     runs-on: ubuntu-latest
-    container:
-      # ⚠️ CRITICAL: Replace 'your_username' and 'gis-benchmarks'
-      # with your actual lowercase GitHub username and repo name.
-      # GitHub Actions CANNOT read variables here. You MUST hardcode it.
-      image: ghcr.io/a2rk313/benchmark-thesis:latest
-      options: --user root
+    permissions:
+      contents: read
+      packages: read
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Sync Code
-        run: cp -r benchmarks tools /opt/gis-benchmarks/
-      - name: Run Suite
-        working-directory: /opt/gis-benchmarks
-        run: pixi run run-all
-      - name: Upload Data
-        uses: actions/upload-artifact@v4
-        with: {name: results, path: /opt/gis-benchmarks/final_results.csv}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # --- CRITICAL FIX: FREE DISK SPACE ---
+      # The runner needs extra space to download (pull) your large OS image.
+      # We manually delete unused tools to reclaim ~25GB.
+      - name: Free Disk Space (Manual)
+        run: |
+          echo "Free space before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          echo "Free space after cleanup:"
+          df -h
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull Docker Image
+        run: |
+          echo "Pulling image..."
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Run GIS Benchmarks
+        run: |
+          echo "Starting Benchmark Suite..."
+          # We run the container using the default CMD (pixi run run-all)
+          # --rm removes the container after it finishes to save space
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
