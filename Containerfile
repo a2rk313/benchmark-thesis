@@ -26,29 +26,29 @@ RUN curl -fsSL https://pixi.sh/install.sh | bash
 # 4. APP LAYER: Bake the Lab
 WORKDIR /opt/gis-benchmarks
 COPY pixi.toml .
-
-# FIX: No messy sed commands needed anymore!
-# We just install. Pixi will generate a fresh lockfile automatically.
 RUN pixi install
 
-# 5. JULIA LAYER: Strict Pinning
+# 5. JULIA LAYER: Install Latest GIS Packages
 ENV JULIA_DEPOT_PATH=/opt/gis-benchmarks/.julia_depot
 ENV JULIA_PROJECT=/opt/gis-benchmarks
+
+# We manually inject the system GDAL (provided by Pixi) into Julia
+# Then we install the packages using valid Julia syntax
 RUN mkdir -p $JULIA_DEPOT_PATH && \
     echo '[GDAL]' > LocalPreferences.toml && \
     echo 'libgdal = "/opt/gis-benchmarks/.pixi/envs/default/lib/libgdal.so"' >> LocalPreferences.toml && \
     echo 'libgdal_vendor = "system"' >> LocalPreferences.toml && \
     pixi run julia -e 'using Pkg; Pkg.add([ \
-        {name="ArchGDAL", version="0.10.2"}, \
-        {name="Shapefile", version="0.10.1"}, \
-        {name="YAXArrays", version="0.5.2"}, \
-        {name="Zarr", version="0.12.0"}, \
-        {name="DuckDB", version="0.9.2"}, \
-        {name="DataFrames", version="1.6.1"}, \
-        {name="CSV", version="0.10.13"}, \
-        {name="BenchmarkTools", version="1.5.0"}, \
-        {name="NearestNeighbors", version="0.4.19"}, \
-        {name="StaticArrays", version="1.9.3"} \
+        "ArchGDAL", \
+        "Shapefile", \
+        "YAXArrays", \
+        "Zarr", \
+        "DuckDB", \
+        "DataFrames", \
+        "CSV", \
+        "BenchmarkTools", \
+        "NearestNeighbors", \
+        "StaticArrays" \
     ]); Pkg.instantiate(); Pkg.precompile();'
 
 # 6. CONFIG LAYER: Profile Scripts
