@@ -8,28 +8,41 @@ on:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    container:
-      # This pulls the OS image built by your build.yml workflow
-      # Note: On a fresh push, this might pull the previous image if the build job hasn't finished yet.
-      image: ghcr.io/${{ github.repository }}:latest
-      options: --user root
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prep Directories
+      # 1. FREE DISK SPACE (Manual Cleanup)
+      # Necessary because your GIS container is larger than the default runner space.
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+
+      # 2. PULL IMAGE
+      - name: Pull Docker Image
+        run: docker pull ghcr.io/${{ github.repository }}:latest
+
+      # 3. RUN BENCHMARK (Direct Mounts)
+      # We mount your actual 'benchmarks' and 'tools' folders directly into the container.
+      # We also mount a 'results' folder to save the output.
+      - name: Run Suite
         run: |
           mkdir -p results
-          # Copy scripts from repo to /opt location
-          cp -r benchmarks tools /opt/gis-benchmarks/
+          docker run --rm \
+            --user root \
+            -v ${{ github.workspace }}/benchmarks:/opt/gis-benchmarks/benchmarks \
+            -v ${{ github.workspace }}/tools:/opt/gis-benchmarks/tools \
+            -v ${{ github.workspace }}/results:/opt/gis-benchmarks/results \
+            ghcr.io/${{ github.repository }}:latest \
+            /bin/bash -c "pixi run run-all"
 
-      - name: Run Suite
-        working-directory: /opt/gis-benchmarks
-        run: pixi run run-all
-
+      # 4. UPLOAD
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: |
-            /opt/gis-benchmarks/*.json
-            /opt/gis-benchmarks/results/*
+          path: results/*.json
