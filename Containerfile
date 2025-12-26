@@ -10,6 +10,7 @@ RUN dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.
     git \
     wget \
     tar \
+    unzip \
     stress-ng \
     htop \
     iotop \
@@ -26,19 +27,12 @@ RUN curl -fsSL https://pixi.sh/install.sh | bash
 # 4. APP LAYER: Bake the Lab
 WORKDIR /opt/gis-benchmarks
 COPY pixi.toml .
-
-# --- CRITICAL FIX: COPY SOURCE CODE ---
-# We were missing this! It puts your Julia/Python scripts into the image.
 COPY src ./src
-
-# Install dependencies (Pixi solves for Linux automatically)
 RUN pixi install
 
 # 5. JULIA LAYER: Install Latest GIS Packages
 ENV JULIA_DEPOT_PATH=/opt/gis-benchmarks/.julia_depot
 ENV JULIA_PROJECT=/opt/gis-benchmarks
-
-# Inject system GDAL and install packages
 RUN mkdir -p $JULIA_DEPOT_PATH && \
     echo '[GDAL]' > LocalPreferences.toml && \
     echo 'libgdal = "/opt/gis-benchmarks/.pixi/envs/default/lib/libgdal.so"' >> LocalPreferences.toml && \
@@ -57,7 +51,6 @@ RUN mkdir -p $JULIA_DEPOT_PATH && \
     ]); Pkg.instantiate(); Pkg.precompile();'
 
 # 6. CONFIG LAYER: Optimize GNOME & Profile
-# Disable GNOME Search Indexing (tracker) to save I/O
 RUN systemctl mask packagekit.service \
     && systemctl mask plocate-updatedb.service \
     && systemctl mask systemd-oomd \

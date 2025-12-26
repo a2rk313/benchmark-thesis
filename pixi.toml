@@ -4,21 +4,40 @@ version = "1.0.0"
 description = "Scientific GIS Benchmark Suite (RHEL 10 Enterprise Standard)"
 authors = ["Admin"]
 channels = ["conda-forge"]
-# STRICT PLATFORM: Linux Only
 platforms = ["linux-64"]
 
 [tasks]
-# FIX: Syntax updated to "depends-on"
-prepare = "mkdir -p data results"
+# FIX: Downloads specific datasets for Vector, Raster, and HSI benchmarks
+prepare = """
+mkdir -p data results
+
+# --- 1. VECTOR DATA (Natural Earth) ---
+# Points (Cities) and Polygons (Countries) for spatial join benchmarks
+wget -nc -P data/ https://naciscdn.org/naturalearth/10m/cultural/ne_10m_populated_places.zip
+wget -nc -P data/ https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip
+
+# --- 2. RASTER DATA (GeoTIFF) ---
+# Satellite imagery with shaded relief for raster I/O benchmarks
+wget -nc -P data/ https://naciscdn.org/naturalearth/50m/raster/NE1_50M_SR_W.zip
+
+# --- 3. HYPERSPECTRAL DATA (Indian Pines) ---
+# Standard .mat files for HSI classification (used by bench_hsi.py)
+wget -nc -P data/ http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat
+wget -nc -P data/ http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat
+
+# --- 4. EXTRACT ---
+unzip -n -d data/ data/ne_10m_populated_places.zip
+unzip -n -d data/ data/ne_10m_admin_0_countries.zip
+unzip -n -d data/ data/NE1_50M_SR_W.zip
+"""
+
 warmup = { cmd = "julia --project=. -e 'using Pkg; Pkg.precompile()'", depends-on = ["prepare"] }
 
-# --- CRITICAL FIX: MATCH FILENAMES FROM SCREENSHOT ---
-# Changed "benchmark_vector.jl" -> "bench_vector.jl", etc.
+# Corrected filenames to match your folder structure
 bench-vector = { cmd = "julia --project=. src/bench_vector.jl", depends-on = ["warmup"] }
 bench-raster = { cmd = "julia --project=. src/bench_raster.jl", depends-on = ["warmup"] }
 bench-hsi = { cmd = "python src/bench_hsi.py", depends-on = ["warmup"] }
 bench-knn = { cmd = "python src/bench_knn.py", depends-on = ["warmup"] }
-# -----------------------------------------------------
 
 run-all = { depends-on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
 
