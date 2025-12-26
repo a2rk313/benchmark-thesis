@@ -26,14 +26,19 @@ RUN curl -fsSL https://pixi.sh/install.sh | bash
 # 4. APP LAYER: Bake the Lab
 WORKDIR /opt/gis-benchmarks
 COPY pixi.toml .
+
+# --- CRITICAL FIX: COPY SOURCE CODE ---
+# We were missing this! It puts your Julia/Python scripts into the image.
+COPY src ./src
+
+# Install dependencies (Pixi solves for Linux automatically)
 RUN pixi install
 
 # 5. JULIA LAYER: Install Latest GIS Packages
 ENV JULIA_DEPOT_PATH=/opt/gis-benchmarks/.julia_depot
 ENV JULIA_PROJECT=/opt/gis-benchmarks
 
-# We manually inject the system GDAL (provided by Pixi) into Julia
-# Then we install the packages using valid Julia syntax
+# Inject system GDAL and install packages
 RUN mkdir -p $JULIA_DEPOT_PATH && \
     echo '[GDAL]' > LocalPreferences.toml && \
     echo 'libgdal = "/opt/gis-benchmarks/.pixi/envs/default/lib/libgdal.so"' >> LocalPreferences.toml && \
@@ -51,8 +56,12 @@ RUN mkdir -p $JULIA_DEPOT_PATH && \
         "StaticArrays" \
     ]); Pkg.instantiate(); Pkg.precompile();'
 
-# 6. CONFIG LAYER: Profile Scripts
-RUN echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/profile.d/bench-lab.sh \
+# 6. CONFIG LAYER: Optimize GNOME & Profile
+# Disable GNOME Search Indexing (tracker) to save I/O
+RUN systemctl mask packagekit.service \
+    && systemctl mask plocate-updatedb.service \
+    && systemctl mask systemd-oomd \
+    && echo 'export PATH=/opt/gis-benchmarks/.pixi/envs/default/bin:$PATH' > /etc/profile.d/bench-lab.sh \
     && echo 'export JULIA_PROJECT=/opt/gis-benchmarks' >> /etc/profile.d/bench-lab.sh \
     && chmod +x /etc/profile.d/bench-lab.sh
 
