@@ -1,28 +1,28 @@
-name: Cloud Benchmark
+name: Build and Push OS Image
 
 on:
-  workflow_dispatch: # Allows you to manually trigger the benchmark button
   push:
-    branches: [ "main" ] # Optional: Runs on every push (disable if too expensive)
+    branches: [ "main" ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  run-benchmark:
+  build-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
+      packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- CRITICAL FIX: FREE DISK SPACE ---
-      # The runner needs extra space to download (pull) your large OS image.
-      # We manually delete unused tools to reclaim ~25GB.
+      # --- FIXED: MANUAL CLEANUP ---
+      # We manually delete large SDKs (Android, .NET, Haskell)
+      # This reclaims ~25GB of space so your build won't crash.
       - name: Free Disk Space (Manual)
         run: |
           echo "Free space before cleanup:"
@@ -42,14 +42,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull Docker Image
-        run: |
-          echo "Pulling image..."
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Run GIS Benchmarks
-        run: |
-          echo "Starting Benchmark Suite..."
-          # We run the container using the default CMD (pixi run run-all)
-          # --rm removes the container after it finishes to save space
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # Optimization: Cache layers to make future builds faster
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
