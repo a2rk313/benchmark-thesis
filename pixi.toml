@@ -4,11 +4,11 @@ version = "1.0.0"
 description = "Scientific GIS Benchmark Suite (RHEL 10 Enterprise Standard)"
 authors = ["Admin"]
 channels = ["conda-forge"]
-# FIX: Removed "win-64" to prevent cross-platform resolution errors
+# STRICT PLATFORM: Linux Only (Prevents Windows resolution errors)
 platforms = ["linux-64"]
 
 [tasks]
-# FIX: Updated "depends_on" to "depends-on" to fix deprecation warning
+# FIX: Using correct "depends-on" syntax
 prepare = "mkdir -p data results"
 warmup = { cmd = "julia --project=. -e 'using Pkg; Pkg.precompile()'", depends-on = ["prepare"] }
 bench-vector = { cmd = "julia --project=. src/benchmark_vector.jl", depends-on = ["warmup"] }
@@ -18,29 +18,32 @@ bench-knn = { cmd = "python src/benchmark_knn.py", depends-on = ["warmup"] }
 run-all = { depends-on = ["prepare", "warmup", "bench-vector", "bench-raster", "bench-hsi", "bench-knn"] }
 
 [dependencies]
-python = "3.11.*"
-# Python GIS Stack
-gdal = ">=3.8.3"
-rasterio = ">=1.3.9"
-shapely = ">=2.0.2"
-geopandas = ">=0.14.2"
-numpy = ">=1.26.3"
-pandas = ">=2.1.4"
-scipy = ">=1.11.4"
-scikit-learn = ">=1.3.2"
-xarray = ">=2023.12.0"
-dask = ">=2023.12.0"
-zarr = ">=2.16.1"
-duckdb = ">=0.9.2"
-pyarrow = ">=14.0.2"
+# --- CORE LANGUAGES ---
+# "*" means "Give me the latest version available today (Dec 2025)"
+python = "*"
+julia = "*"
 
-# R GIS Stack
-r-base = ">=4.3.2"
-r-sf = ">=1.0_15"
-r-terra = ">=1.7_65"
-r-stars = ">=0.6_4"
-# FIX: Relaxed version because strict 14.0.0 does not exist on Linux
-r-arrow = ">=14.0.0"
-# FIX: Added quotes around "r-data.table" because it contains a dot
-"r-data.table" = ">=1.14.8"
-r-dplyr = ">=1.1.3"
+# --- PYTHON GIS STACK ---
+gdal = "*"
+rasterio = "*"
+shapely = "*"
+geopandas = "*"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+scikit-learn = "*"
+xarray = "*"
+dask = "*"
+zarr = "*"
+duckdb = "*"
+pyarrow = "*"
+
+# --- R GIS STACK ---
+r-base = "*"
+r-sf = "*"
+r-terra = "*"
+r-stars = "*"
+r-arrow = "*"
+# FIX: Quotes required for key with dot
+"r-data.table" = "*"
+r-dplyr = "*"
