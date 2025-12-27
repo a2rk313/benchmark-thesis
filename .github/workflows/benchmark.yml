@@ -8,12 +8,15 @@ on:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
+    # Grant permission to read the package
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - uses: actions/checkout@v4
 
-      # 1. FREE DISK SPACE (Manual Cleanup)
-      # Necessary because your GIS container is larger than the default runner space.
+      # 1. FREE DISK SPACE
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -22,13 +25,19 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
 
-      # 2. PULL IMAGE
+      # 2. LOGIN TO REGISTRY (Fixes "unauthorized" error)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3. PULL IMAGE
       - name: Pull Docker Image
         run: docker pull ghcr.io/${{ github.repository }}:latest
 
-      # 3. RUN BENCHMARK (Direct Mounts)
-      # We mount your actual 'benchmarks' and 'tools' folders directly into the container.
-      # We also mount a 'results' folder to save the output.
+      # 4. RUN BENCHMARK
       - name: Run Suite
         run: |
           mkdir -p results
@@ -40,7 +49,7 @@ jobs:
             ghcr.io/${{ github.repository }}:latest \
             /bin/bash -c "pixi run run-all"
 
-      # 4. UPLOAD
+      # 5. UPLOAD
       - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
