@@ -14,8 +14,8 @@ DATASETS = {
         "file": "ne_10m_admin_0_countries.shp"
     },
     "raster": {
-        # FIXED: Updated 'master' to 'main' and used raw.githubusercontent.com
-        "url": "https://raw.githubusercontent.com/cogeo/cog-spec/main/examples/20200101_cog.tif",
+        # FIXED: Points to correct 'master' branch
+        "url": "https://raw.githubusercontent.com/cogeo/cog-spec/master/examples/20200101_cog.tif",
         "file": "landsat_sample_cog.tif"
     },
     "hsi": {
@@ -28,7 +28,6 @@ def download_with_retry(url, dest, retries=3):
     for i in range(retries):
         try:
             print(f"⬇️ Downloading {dest} (Attempt {i+1})...")
-            # Fake User-Agent to avoid 403 Forbidden on some servers
             req = urllib.request.Request(
                 url,
                 data=None,
@@ -46,7 +45,6 @@ def download_with_retry(url, dest, retries=3):
 def prepare():
     for key, info in DATASETS.items():
         dest = os.path.join(DATA_DIR, info["file"])
-        # Handle Zip extraction logic
         if info["url"].endswith(".zip"):
             if not os.path.exists(dest):
                 zip_name = "temp.zip"
@@ -59,7 +57,6 @@ def prepare():
             if not os.path.exists(dest):
                 download_with_retry(info["url"], dest)
 
-    # Convert HSI to Zarr
     if not os.path.exists(ZARR_PATH):
         print("📦 Converting PaviaU .mat to Zarr Cube...")
         try:
@@ -69,7 +66,6 @@ def prepare():
             print("✅ Zarr Cube Created.")
         except Exception as e:
             print(f"⚠️ Failed to convert HSI: {e}")
-            # Don't crash build if HSI fails, just skip it (optional safety)
             pass
 
 if __name__ == "__main__":
