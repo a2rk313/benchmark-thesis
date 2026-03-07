@@ -1,0 +1,95 @@
+# =============================================================================
+# THESIS R ENVIRONMENT - Reproducible Micro-Container
+# Version: 2.9.0 (minimal + essential packages only)
+# Base: Fedora 43
+# R: 4.4.x / 4.5.x (from system)
+# =============================================================================
+#
+# STRATEGY: Install only ESSENTIAL packages that compile successfully
+#   - terra: Works (pure C++, no s2 dependency)
+#   - data.table: Works (mature, stable)
+#   - dplyr: Skip (not critical for benchmarks)
+#   - sf: Skip (s2 dependency has GCC 15 issues)
+#   - gstat: Skip (depends on sf)
+#
+#   Benchmarks will use terra only (sufficient for raster operations)
+#
+# BUILD:  podman build -t thesis-r:4.5 -f containers/r.Containerfile .
+# TIME:   ~5 minutes (minimal compilation)
+# =============================================================================
+
+FROM docker.io/library/fedora:43
+
+LABEL org.opencontainers.image.title="Thesis R Geospatial Lab" \
+      org.opencontainers.image.version="4.5-minimal"
+
+# =============================================================================
+# System Dependencies (only R-core from repos)
+# =============================================================================
+RUN dnf -y upgrade --refresh && \
+    dnf -y install \
+        gcc gcc-c++ make cmake git wget tar bzip2 \
+        time sysstat \
+        gdal gdal-devel \
+        proj proj-devel \
+        geos geos-devel \
+        sqlite sqlite-devel \
+        R-core R-core-devel \
+        openssl-devel libcurl-devel libxml2-devel \
+        udunits2-devel \
+    && dnf clean all
+
+# Document versions
+RUN rpm -q gdal proj geos sqlite R-core | tee /build-versions.txt && \
+    Rscript -e 'cat(R.version.string, "\n")' >> /build-versions.txt
+
+# =============================================================================
+# R Configuration
+# =============================================================================
+ENV R_LIBS_SITE=/usr/local/lib/R/site-library
+RUN mkdir -p "${R_LIBS_SITE}"
+
+RUN printf '%s\n' \
+    'options(repos = c(CRAN = "https://cloud.r-project.org/"))' \
+    'options(Ncpus = 4L)' \
+    '.libPaths(c("/usr/local/lib/R/site-library", .libPaths()))' \
+    > /root/.Rprofile
+
+# =============================================================================
+# R Package Installation - MINIMAL SET (packages that work)
+# Skip sf/gstat due to s2/GCC15 issues - not critical for raster benchmarks
+# =============================================================================
+
+# Install remotes for version pinning
+RUN Rscript -e 'install.packages("remotes", lib=Sys.getenv("R_LIBS_SITE"))'
+
+# terra - Core raster package (works great, no sf dependency)
+RUN Rscript -e 'remotes::install_version("terra", version="1.8-29", repos="https://cloud.r-project.org/", upgrade="never")'
+
+# data.table - Fast data manipulation (works, stable)
+RUN Rscript -e 'remotes::install_version("data.table", version="1.16.4", repos="https://cloud.r-project.org/", upgrade="never")'
+
+# Utility packages (small, no geo dependencies)
+RUN Rscript -e 'install.packages(c("jsonlite", "digest", "tictoc", "bench"), lib=Sys.getenv("R_LIBS_SITE"))'
+
+# =============================================================================
+# Verification
+# =============================================================================
+RUN Rscript -e '
+    pkgs <- c("terra", "data.table", "jsonlite", "digest")
+    for (p in pkgs) {
+        library(p, character.only = TRUE)
+        cat(sprintf("%-12s %s\n", p, as.character(packageVersion(p))))
+    }
+    cat("✓ All R packages OK\n")
+    cat("Note: sf/gstat skipped (s2 has GCC 15 issues, not needed for raster benchmarks)\n")
+'
+
+# =============================================================================
+# Runtime environment
+# =============================================================================
+ENV OMP_NUM_THREADS=1 \
+    R_MAX_VSIZE=16G
+
+WORKDIR /benchmarks
+CMD ["/bin/bash"]

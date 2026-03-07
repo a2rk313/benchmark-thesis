@@ -1,0 +1,110 @@
+# =============================================================================
+# THESIS PYTHON ENVIRONMENT - Reproducible Micro-Container
+# Version: 2.6.0 (system scipy - no compilation needed!)
+# Base: Fedora 43
+# Python: 3.14 (Fedora 43 default)
+# =============================================================================
+#
+# STRATEGY: Use system scipy/numpy from Fedora repos (pre-compiled)
+#   Python 3.14 is too new → no scipy wheels on PyPI
+#   Building scipy from source requires complex BLAS/LAPACK setup
+#   Solution: Use Fedora's pre-built python3-scipy package
+#   
+#   Benefits:
+#     - No compilation (instant install!)
+#     - Pre-tested by Fedora
+#     - Already linked to correct BLAS/LAPACK
+#     - scipy + numpy in 30 seconds instead of 15 minutes!
+#
+# BUILD:  podman build -t thesis-python:3.13 -f containers/python.Containerfile .
+# TIME:   ~5 minutes (no scipy compilation!)
+# =============================================================================
+
+FROM docker.io/library/fedora:43
+
+LABEL org.opencontainers.image.title="Thesis Python Geospatial Lab" \
+      org.opencontainers.image.version="3.14-system-scipy"
+
+# =============================================================================
+# System packages - including pre-built scipy/numpy
+# =============================================================================
+RUN dnf -y upgrade --refresh && \
+    dnf -y install \
+        gcc gcc-c++ make cmake git wget tar bzip2 \
+        time sysstat \
+        gdal gdal-devel \
+        proj proj-devel \
+        geos geos-devel \
+        sqlite sqlite-devel \
+        python3 python3-devel python3-pip \
+        python3-numpy python3-scipy python3-pandas \
+    && dnf clean all
+
+# Document versions
+RUN rpm -q gdal proj geos sqlite python3 python3-scipy python3-numpy | tee /build-versions.txt && \
+    python3 --version >> /build-versions.txt
+
+# =============================================================================
+# Python environment
+# =============================================================================
+RUN python3 -m pip install --no-cache-dir --upgrade pip
+
+# =============================================================================
+# Python packages - SKIP numpy/scipy/pandas (already from system)
+# Use pip only for packages not in Fedora repos
+# =============================================================================
+
+# Layer 1: Geospatial core
+RUN python3 -m pip install --no-cache-dir \
+    "shapely>=2.0,<2.1" \
+    "pyproj>=3.7,<3.8"
+
+# Layer 2: Raster/Vector I/O
+RUN python3 -m pip install --no-cache-dir \
+    "fiona>=1.10,<1.11" \
+    "rasterio>=1.4,<1.5"
+
+# Layer 3: GeoPandas
+RUN python3 -m pip install --no-cache-dir \
+    "geopandas>=1.0,<1.1"
+
+# Layer 4: ML and utilities
+RUN python3 -m pip install --no-cache-dir \
+    "scikit-learn>=1.6,<1.7" \
+    "psutil>=7.0,<8.0" \
+    "tqdm>=4.67,<5.0"
+
+# Layer 5: Visualization
+RUN python3 -m pip install --no-cache-dir \
+    "matplotlib>=3.10,<3.11" \
+    "seaborn>=0.13,<0.14"
+
+# =============================================================================
+# Verification
+# =============================================================================
+RUN python3 - << 'PYEOF'
+import sys
+print(f"Python: {sys.version}")
+import numpy;       print(f"numpy      {numpy.__version__} (system)")
+import scipy;       print(f"scipy      {scipy.__version__} (system)")
+import pandas;      print(f"pandas     {pandas.__version__} (system)")
+import shapely;     print(f"shapely    {shapely.__version__}")
+import pyproj;      print(f"pyproj     {pyproj.__version__}")
+import fiona;       print(f"fiona      {fiona.__version__}")
+import rasterio;    print(f"rasterio   {rasterio.__version__}")
+import geopandas;   print(f"geopandas  {geopandas.__version__}")
+import sklearn;     print(f"sklearn    {sklearn.__version__}")
+import matplotlib;  print(f"matplotlib {matplotlib.__version__}")
+print("✓ All packages OK")
+PYEOF
+
+# =============================================================================
+# Runtime environment
+# =============================================================================
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR \
+    GDAL_CACHEMAX=512
+
+WORKDIR /benchmarks
+CMD ["/bin/bash"]
