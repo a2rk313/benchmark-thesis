@@ -69,6 +69,9 @@ RUN Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org/"
 
 RUN Rscript -e 'remotes::install_version("terra", version="1.8-29", repos="https://cloud.r-project.org/", upgrade="never")'
 
+# Install FNN for KD-tree based IDW interpolation
+RUN Rscript -e 'install.packages("FNN", repos="https://cloud.r-project.org/")'
+
 # ---------- Verification ----------
 RUN Rscript - <<'EOF'
 pkgs <- c("terra", "data.table", "jsonlite", "digest")
