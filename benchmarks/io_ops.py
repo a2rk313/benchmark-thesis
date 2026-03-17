@@ -4,7 +4,7 @@
 I/O Operations Benchmark - Python Implementation
 ===============================================================================
 Tests file I/O performance for CSV and binary formats
-Tasks: CSV Write/Read, Binary Write/Read, Random Access
+Tasks: CSV Write/Read, Binary Write/Read
 ===============================================================================
 """
 
@@ -17,102 +17,158 @@ import os
 from pathlib import Path
 
 def benchmark_csv_write(n_rows=1_000_000):
+    """
+    Task 1: Write CSV File
+    Create 1M-row CSV with lat, lon, device_id columns
+    """
+    # Pre-generate data (not timed)
     df = pd.DataFrame({
         'lat': np.random.uniform(-90, 90, n_rows),
         'lon': np.random.uniform(-180, 180, n_rows),
         'device_id': np.random.randint(1, 10000, n_rows)
     })
+    
     output_path = 'data/io_test_python.csv'
+    
+    # Timed operation
     start = time.perf_counter()
     df.to_csv(output_path, index=False)
     elapsed = time.perf_counter() - start
+    
     return elapsed, os.path.getsize(output_path)
 
 def benchmark_csv_read():
+    """
+    Task 2: Read CSV File
+    """
     input_path = 'data/io_test_python.csv'
+    
+    # Timed operation
     start = time.perf_counter()
     df = pd.read_csv(input_path)
     elapsed = time.perf_counter() - start
+    
     return elapsed, len(df)
 
 def benchmark_binary_write(n_values=1_000_000):
+    """
+    Task 3: Write Binary File
+    """
+    # Pre-generate data (not timed)
     arr = np.random.randn(n_values).astype(np.float64)
+    
     output_path = 'data/io_test_python.bin'
+    
+    # Timed operation
     start = time.perf_counter()
     arr.tofile(output_path)
     elapsed = time.perf_counter() - start
+    
     return elapsed, os.path.getsize(output_path)
 
 def benchmark_binary_read():
+    """
+    Task 4: Read Binary File
+    """
     input_path = 'data/io_test_python.bin'
+    
+    # Timed operation
     start = time.perf_counter()
     arr = np.fromfile(input_path, dtype=np.float64)
     elapsed = time.perf_counter() - start
+    
     return elapsed, len(arr)
-
-def benchmark_random_access(n_accesses=1000):
-    input_path = 'data/io_test_python.csv'
-    with open(input_path, 'r') as f:
-        n_lines = sum(1 for _ in f)
-    line_indices = np.random.randint(0, n_lines, n_accesses)
-    start = time.perf_counter()
-    with open(input_path, 'r') as f:
-        lines = f.readlines()
-        for idx in line_indices:
-            _ = lines[idx]
-    elapsed = time.perf_counter() - start
-    return elapsed, n_accesses
 
 def main():
     print("=" * 70)
     print("PYTHON - I/O Operations Benchmark")
     print("=" * 70)
     
+    # Configuration
     n_csv_rows = 1_000_000
     n_binary_values = 1_000_000
-    n_random_accesses = 1000
     n_runs = 10
     
+    # Create data directory
     Path('data').mkdir(exist_ok=True)
+    
     results = {}
     
-    print(f"\n[1/5] CSV Write ({n_csv_rows:,} rows)...")
-    times, sizes = zip(*[benchmark_csv_write(n_csv_rows) for _ in range(n_runs)])
+    # Task 1: CSV Write
+    print(f"\n[1/4] CSV Write ({n_csv_rows:,} rows)...")
+    times = []
+    file_size = 0
+    for _ in range(n_runs):
+        t, size = benchmark_csv_write(n_csv_rows)
+        times.append(t)
+        file_size = size
     results['csv_write'] = {
-        'mean': np.mean(times), 'std': np.std(times),
-        'file_size_mb': sizes[0] / (1024**2)
+        'mean': float(np.mean(times)),
+        'std': float(np.std(times)),
+        'min': float(np.min(times)),
+        'max': float(np.max(times)),
+        'file_size_mb': float(file_size / (1024**2))
     }
+    print(f"  ✓ Min: {results['csv_write']['min']:.4f}s (primary)")
     print(f"  ✓ Mean: {results['csv_write']['mean']:.4f}s ± {results['csv_write']['std']:.4f}s")
+    print(f"  ✓ File size: {results['csv_write']['file_size_mb']:.2f} MB")
     
-    print(f"\n[2/5] CSV Read ({n_csv_rows:,} rows)...")
-    times, rows = zip(*[benchmark_csv_read() for _ in range(n_runs)])
+    # Task 2: CSV Read
+    print(f"\n[2/4] CSV Read ({n_csv_rows:,} rows)...")
+    times = []
+    n_rows = 0
+    for _ in range(n_runs):
+        t, rows = benchmark_csv_read()
+        times.append(t)
+        n_rows = rows
     results['csv_read'] = {
-        'mean': np.mean(times), 'std': np.std(times), 'rows_read': rows[0]
+        'mean': float(np.mean(times)),
+        'std': float(np.std(times)),
+        'min': float(np.min(times)),
+        'max': float(np.max(times)),
+        'rows_read': int(n_rows)
     }
+    print(f"  ✓ Min: {results['csv_read']['min']:.4f}s (primary)")
     print(f"  ✓ Mean: {results['csv_read']['mean']:.4f}s ± {results['csv_read']['std']:.4f}s")
     
-    print(f"\n[3/5] Binary Write ({n_binary_values:,} values)...")
-    times, sizes = zip(*[benchmark_binary_write(n_binary_values) for _ in range(n_runs)])
+    # Task 3: Binary Write
+    print(f"\n[3/4] Binary Write ({n_binary_values:,} float64 values)...")
+    times = []
+    file_size = 0
+    for _ in range(n_runs):
+        t, size = benchmark_binary_write(n_binary_values)
+        times.append(t)
+        file_size = size
     results['binary_write'] = {
-        'mean': np.mean(times), 'std': np.std(times),
-        'file_size_mb': sizes[0] / (1024**2)
+        'mean': float(np.mean(times)),
+        'std': float(np.std(times)),
+        'min': float(np.min(times)),
+        'max': float(np.max(times)),
+        'file_size_mb': float(file_size / (1024**2))
     }
+    print(f"  ✓ Min: {results['binary_write']['min']:.4f}s (primary)")
     print(f"  ✓ Mean: {results['binary_write']['mean']:.4f}s ± {results['binary_write']['std']:.4f}s")
+    print(f"  ✓ File size: {results['binary_write']['file_size_mb']:.2f} MB")
     
-    print(f"\n[4/5] Binary Read ({n_binary_values:,} values)...")
-    times, vals = zip(*[benchmark_binary_read() for _ in range(n_runs)])
+    # Task 4: Binary Read
+    print(f"\n[4/4] Binary Read ({n_binary_values:,} float64 values)...")
+    times = []
+    n_values = 0
+    for _ in range(n_runs):
+        t, values = benchmark_binary_read()
+        times.append(t)
+        n_values = values
     results['binary_read'] = {
-        'mean': np.mean(times), 'std': np.std(times), 'values_read': vals[0]
+        'mean': float(np.mean(times)),
+        'std': float(np.std(times)),
+        'min': float(np.min(times)),
+        'max': float(np.max(times)),
+        'values_read': int(n_values)
     }
+    print(f"  ✓ Min: {results['binary_read']['min']:.4f}s (primary)")
     print(f"  ✓ Mean: {results['binary_read']['mean']:.4f}s ± {results['binary_read']['std']:.4f}s")
     
-    print(f"\n[5/5] Random Access ({n_random_accesses} reads)...")
-    times, reads = zip(*[benchmark_random_access(n_random_accesses) for _ in range(n_runs)])
-    results['random_access'] = {
-        'mean': np.mean(times), 'std': np.std(times), 'lines_read': reads[0]
-    }
-    print(f"  ✓ Mean: {results['random_access']['mean']:.4f}s ± {results['random_access']['std']:.4f}s")
-    
+    # Save results
     print("\n" + "=" * 70)
     print("SAVING RESULTS...")
     print("=" * 70)
@@ -123,21 +179,26 @@ def main():
         'numpy_version': np.__version__,
         'n_csv_rows': n_csv_rows,
         'n_binary_values': n_binary_values,
-        'n_random_accesses': n_random_accesses,
         'n_runs': n_runs,
+        'methodology': 'Minimum time as primary estimator (Chen & Revels 2016)',
         'results': results
     }
     
+    Path('results').mkdir(exist_ok=True)
     with open('results/io_ops_python.json', 'w') as f:
         json.dump(output, f, indent=2)
     
     print("✓ Results saved to: results/io_ops_python.json")
     
+    # Cleanup
     print("\nCleaning up test files...")
     for path in ['data/io_test_python.csv', 'data/io_test_python.bin']:
         if os.path.exists(path):
             os.remove(path)
     print("✓ Cleanup complete")
+    
+    print("\nNote: Minimum times are primary metrics (Chen & Revels 2016)")
+    print("      Mean/median provided for context only")
 
 if __name__ == "__main__":
     main()

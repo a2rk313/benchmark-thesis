@@ -1,8 +1,12 @@
 #!/usr/bin/env julia
 """
 ===============================================================================
-SCENARIO A.2: Hyperspectral SAM – Julia Implementation (Cuprite dataset)
-===============================================================================
+SCENARIO A.2: Hyperspectral Spectral Angle Mapper - Julia Implementation
+==============================================================================
+Task: SAM classification on 224-band hyperspectral imagery
+Dataset: NASA AVIRIS Cuprite (224 bands, freely available)
+Metrics: Memory striding efficiency, zero-copy views, SIMD vectorization
+==============================================================================
 """
 
 using MAT
@@ -12,113 +16,158 @@ using SHA
 using JSON3
 using Random
 
+"""
+Calculate Spectral Angle Mapper (SAM) between pixels and reference
+
+Args:
+    pixel_spectra: Matrix of shape (n_pixels, n_bands)
+    reference_spectrum: Vector of shape (n_bands,)
+
+Returns:
+    SAM angles in radians (vector of length n_pixels)
+"""
 function spectral_angle_mapper(pixel_spectra::Matrix{Float32}, reference_spectrum::Vector{Float32})
     epsilon = Float32(1e-8)
+    
+    # Dot product: pixel · reference
     dot_products = pixel_spectra * reference_spectrum
+    
+    # Norms
     pixel_norms = [norm(pixel_spectra[i, :]) for i in 1:size(pixel_spectra, 1)]
     ref_norm = norm(reference_spectrum)
+    
+    # Cosine of angle
     cos_angles = dot_products ./ (pixel_norms .* ref_norm .+ epsilon)
+    
+    # Clip to valid range [-1, 1]
     cos_angles = clamp.(cos_angles, -1.0f0, 1.0f0)
+    
+    # SAM angle (radians)
     angles = acos.(cos_angles)
+    
     return angles
 end
 
 function main()
     println("=" ^ 70)
-    println("JULIA - Scenario A.2: Hyperspectral SAM (Cuprite)")
+    println("JULIA - Scenario A.2: Hyperspectral SAM")
     println("=" ^ 70)
-
-    # -------------------------------------------------------------------------
-    # 1. Load Cuprite dataset
-    # -------------------------------------------------------------------------
-    println("\n[1/5] Loading Cuprite dataset...")
-    vars = matread("data/Cuprite.mat")
-    # Find the first non-metadata key
-    keys_list = collect(keys(vars))
-    data_key = filter(k -> !startswith(string(k), "__"), keys_list)[1]
-    data_raw = vars[data_key]  # raw array
-    println("  Raw size: ", size(data_raw))
-
-    # Determine which dimension corresponds to bands (should be 224)
-    dims = size(data_raw)
-    band_dim = findfirst(==(224), dims)
-    if band_dim === nothing
-        error("Could not find dimension with size 224 (bands). Found sizes: $dims")
-    end
-
-    # Permute so that bands become the first dimension
-    if band_dim == 1
-        data = data_raw
-    elseif band_dim == 2
-        data = permutedims(data_raw, (2,1,3))
-    elseif band_dim == 3
-        data = permutedims(data_raw, (3,1,2))
-    else
-        error("Unexpected number of dimensions")
-    end
-
-    n_bands, n_rows, n_cols = size(data)
-    println("  ✓ Dataset shape (after reordering): $n_bands bands, $n_rows×$n_cols pixels")
-
+    
+    # =========================================================================
+    # 1. Initialize
+    # =========================================================================
+    println("\n[1/5] Initializing...")
+    
+    # Random but reproducible reference spectrum
     Random.seed!(42)
+    n_bands = 224
     reference_spectrum = rand(Float32, n_bands)
-    reference_spectrum ./= norm(reference_spectrum)
-    ref_hash = bytes2hex(sha256(reinterpret(UInt8, reference_spectrum)))[1:16]
+    reference_spectrum ./= norm(reference_spectrum)  # Normalize
+    
+    println("  ✓ Reference spectrum: $n_bands bands")
+    ref_hash = bytes2hex(sha256(reference_spectrum))[1:16]
     println("  ✓ Reference spectrum hash: $ref_hash")
-
-    # -------------------------------------------------------------------------
-    # 2. Process in chunks
-    # -------------------------------------------------------------------------
-    println("\n[2/5] Processing hyperspectral data (chunked)...")
-    chunk_size = 256
+    
+    # =========================================================================
+    # 2. Open Dataset (MAT file format)
+    # =========================================================================
+    println("\n[2/5] Opening hyperspectral dataset...")
+    
+    hsi_path = "data/Cuprite.mat"
+    
+    println("  ✓ Loading MAT file: $hsi_path")
+    mat_file = matopen(hsi_path)
+    data_keys = names(mat_file)
+    data_key = data_keys[1]
+    data = read(mat_file, data_key)
+    close(mat_file)
+    
+    n_bands = size(data, 1)
+    n_rows = size(data, 2)
+    n_cols = size(data, 3)
+    println("  ✓ Dataset shape: $n_bands bands × $n_rows × $n_cols pixels")
+    
+    # File size
+    file_size_gb = filesize(hsi_path) / (1024^3)
+    println("  ✓ File size: $(round(file_size_gb, digits=2)) GB")
+    
+    # Memory info
+    mem_info = Sys.free_memory() / (1024^3)
+    println("  ✓ Available RAM: $(round(mem_info, digits=2)) GB")
+    
+    if file_size_gb > mem_info * 0.8
+        println("  ⚠ Dataset size exceeds 80% of available RAM - using chunked processing")
+    end
+    
+    # =========================================================================
+    # 3. Process with Chunked I/O
+    # =========================================================================
+    println("\n[3/5] Processing hyperspectral data (chunked I/O)...")
+    
     sam_results = Float32[]
     pixels_processed = 0
+    
+    # Process in chunks
+    chunk_size = 256
     chunks_processed = 0
-
-    for r_start in 1:chunk_size:n_rows
-        r_end = min(r_start + chunk_size - 1, n_rows)
-        for c_start in 1:chunk_size:n_cols
-            c_end = min(c_start + chunk_size - 1, n_cols)
-            # Extract chunk (bands, rows, cols)
-            chunk = data[:, r_start:r_end, c_start:c_end]
-            # Reshape to (pixels, bands)
-            n_pixels = (r_end - r_start + 1) * (c_end - c_start + 1)
-            pixel_spectra = permutedims(reshape(chunk, n_bands, n_pixels), (2, 1))
-            pixel_spectra = Float32.(pixel_spectra)
-
+    
+    for row_start in 1:chunk_size:n_rows
+        for col_start in 1:chunk_size:n_cols
+            row_end = min(row_start + chunk_size - 1, n_rows)
+            col_end = min(col_start + chunk_size - 1, n_cols)
+            
+            # Extract chunk
+            chunk = data[:, row_start:row_end, col_start:col_end]
+            
+            # Reshape to (n_pixels, n_bands)
+            n_pixels_chunk = (row_end - row_start + 1) * (col_end - col_start + 1)
+            pixel_spectra = reshape(chunk, n_pixels_chunk, n_bands)
+            
+            # Calculate SAM
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)
+            
+            # Accumulate
             append!(sam_results, sam_angles)
-            pixels_processed += n_pixels
+            pixels_processed += n_pixels_chunk
             chunks_processed += 1
-
+            
+            # Progress
             if chunks_processed % 10 == 0
                 print("\r    Processed $chunks_processed chunks ($pixels_processed pixels)...")
             end
         end
     end
+    
     println("\r    Processed $chunks_processed chunks ($pixels_processed pixels)... Done!")
-
-    # -------------------------------------------------------------------------
-    # 3. Statistics
-    # -------------------------------------------------------------------------
-    println("\n[3/5] Computing statistics...")
+    
+    # =========================================================================
+    # 4. Compute Statistics
+    # =========================================================================
+    println("\n[4/5] Computing statistics...")
+    
     mean_sam = mean(sam_results)
     median_sam = median(sam_results)
     std_sam = std(sam_results)
     min_sam = minimum(sam_results)
     max_sam = maximum(sam_results)
-    println("  ✓ Mean SAM: $(round(mean_sam, digits=6)) rad ($(round(rad2deg(mean_sam), digits=2))°)")
-    println("  ✓ Median SAM: $(round(median_sam, digits=6)) rad")
-    println("  ✓ Std Dev: $(round(std_sam, digits=6)) rad")
-
-    # -------------------------------------------------------------------------
-    # 4. Validation
-    # -------------------------------------------------------------------------
-    println("\n[4/5] Generating validation data...")
+    
+    println("  ✓ Mean SAM: $(round(mean_sam, digits=6)) radians ($(round(rad2deg(mean_sam), digits=2))°)")
+    println("  ✓ Median SAM: $(round(median_sam, digits=6)) radians")
+    println("  ✓ Std Dev: $(round(std_sam, digits=6)) radians")
+    println("  ✓ Range: [$(round(min_sam, digits=6)), $(round(max_sam, digits=6))] radians")
+    
+    # =========================================================================
+    # 5. Validation & Export
+    # =========================================================================
+    println("\n[5/5] Generating validation data...")
+    
+    # Generate validation hash
     result_str = "$(round(mean_sam, digits=8))_$(pixels_processed)_$(round(median_sam, digits=8))"
     result_hash = bytes2hex(sha256(result_str))[1:16]
+    
     println("  ✓ Validation hash: $result_hash")
-
+    
+    # Export results
     results = Dict(
         "language" => "julia",
         "scenario" => "hyperspectral_sam",
@@ -134,14 +183,18 @@ function main()
         "validation_hash" => result_hash,
         "reference_hash" => ref_hash
     )
-
+    
+    # Save results
     mkpath("validation")
     open("validation/raster_julia_results.json", "w") do f
         JSON3.write(f, results)
     end
+    
     println("\n  ✓ Results saved to validation/raster_julia_results.json")
     println("=" ^ 70)
+    
     return 0
 end
 
+# Run benchmark
 exit(main())

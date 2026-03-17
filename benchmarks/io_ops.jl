@@ -3,184 +3,189 @@
 ===============================================================================
 I/O Operations Benchmark - Julia Implementation
 ===============================================================================
-Benchmark tasks: CSV write/read, Binary write/read, Random access
-Demonstrates Julia's I/O performance advantages
-Following Chen & Revels (2016) methodology: minimum as primary estimator
+Tests file I/O performance for CSV and binary formats
+Tasks: CSV Write/Read, Binary Write/Read
 ===============================================================================
 """
 
 using CSV
 using DataFrames
-using Random
-using JSON3
 using Statistics
+using JSON
+using Printf
 
 function benchmark_csv_write(n_rows=1_000_000)
-    """Write 1M rows to CSV file"""
+    """
+    Task 1: Write CSV File
+    """
     # Pre-generate data (not timed)
     df = DataFrame(
-        id = 1:n_rows,
-        value = randn(n_rows),
-        category = rand(["A", "B", "C", "D"], n_rows),
-        timestamp = rand(1:1000000, n_rows)
+        lat = rand(Float64, n_rows) .* 180 .- 90,
+        lon = rand(Float64, n_rows) .* 360 .- 180,
+        device_id = rand(1:10000, n_rows)
     )
+    
+    output_path = "data/io_test_julia.csv"
     
     # Timed operation
     start_time = time()
-    CSV.write("data/benchmark_output.csv", df)
+    CSV.write(output_path, df)
     elapsed = time() - start_time
     
-    return elapsed
+    file_size = stat(output_path).size
+    
+    return elapsed, file_size
 end
 
 function benchmark_csv_read()
-    """Read 1M rows from CSV file"""
-    start_time = time()
-    df = CSV.read("data/benchmark_output.csv", DataFrame)
-    elapsed = time() - start_time
-    
-    return elapsed
-end
-
-function benchmark_binary_write(n_elements=10_000_000)
-    """Write 10M numbers to binary file"""
-    # Pre-generate data (not timed)
-    data = randn(n_elements)
+    """
+    Task 2: Read CSV File
+    """
+    input_path = "data/io_test_julia.csv"
     
     # Timed operation
     start_time = time()
-    open("data/benchmark_binary.bin", "w") do io
-        write(io, data)
+    df = CSV.read(input_path, DataFrame)
+    elapsed = time() - start_time
+    
+    return elapsed, nrow(df)
+end
+
+function benchmark_binary_write(n_values=1_000_000)
+    """
+    Task 3: Write Binary File
+    """
+    # Pre-generate data (not timed)
+    arr = randn(Float64, n_values)
+    
+    output_path = "data/io_test_julia.bin"
+    
+    # Timed operation
+    start_time = time()
+    open(output_path, "w") do io
+        write(io, arr)
     end
     elapsed = time() - start_time
     
-    return elapsed
+    file_size = stat(output_path).size
+    
+    return elapsed, file_size
 end
 
 function benchmark_binary_read()
-    """Read 10M numbers from binary file"""
-    start_time = time()
-    data = Vector{Float64}(undef, 10_000_000)
-    open("data/benchmark_binary.bin", "r") do io
-        read!(io, data)
-    end
-    elapsed = time() - start_time
-    
-    return elapsed
-end
-
-function benchmark_random_access(n_reads=10000)
-    """Random access reads from file"""
-    # Create test file if needed
-    if !isfile("data/benchmark_binary.bin")
-        data = randn(10_000_000)
-        open("data/benchmark_binary.bin", "w") do io
-            write(io, data)
-        end
-    end
-    
-    # Generate random positions (not timed)
-    Random.seed!(42)
-    positions = rand(1:9_999_999, n_reads) .* 8  # 8 bytes per Float64
+    """
+    Task 4: Read Binary File
+    """
+    input_path = "data/io_test_julia.bin"
     
     # Timed operation
     start_time = time()
-    results = Vector{Float64}(undef, n_reads)
-    open("data/benchmark_binary.bin", "r") do io
-        for (i, pos) in enumerate(positions)
-            seek(io, pos)
-            results[i] = read(io, Float64)
-        end
+    arr = open(input_path, "r") do io
+        read(io, Float64, filesize(io) ÷ sizeof(Float64))
     end
     elapsed = time() - start_time
     
-    return elapsed
+    return elapsed, length(arr)
+end
+
+function format_number(n::Int)
+    """Helper function for number formatting"""
+    str = string(n)
+    return replace(str, r"(?<=[0-9])(?=(?:[0-9]{3})+(?![0-9]))" => ",")
 end
 
 function main()
     println("=" ^ 70)
     println("JULIA - I/O Operations Benchmark")
-    println("Following Chen & Revels (2016) methodology")
     println("=" ^ 70)
     
     # Configuration
-    n_rows = 1_000_000
-    n_elements = 10_000_000
-    n_random_reads = 10_000
+    n_csv_rows = 1_000_000
+    n_binary_values = 1_000_000
     n_runs = 10
+    
+    # Create data directory
+    mkpath("data")
     
     results = Dict()
     
     # Task 1: CSV Write
-    println("\n[1/5] CSV Write ($(n_rows) rows)...")
-    times = [benchmark_csv_write(n_rows) for _ in 1:n_runs]
+    println("\n[1/4] CSV Write ($(format_number(n_csv_rows)) rows)...")
+    times = Float64[]
+    file_size = 0
+    for _ in 1:n_runs
+        t, size = benchmark_csv_write(n_csv_rows)
+        push!(times, t)
+        file_size = size
+    end
     results["csv_write"] = Dict(
-        "min" => minimum(times),      # PRIMARY (Chen & Revels 2016)
         "mean" => mean(times),
-        "median" => median(times),
         "std" => std(times),
+        "min" => minimum(times),
         "max" => maximum(times),
-        "all_times" => times
+        "file_size_mb" => file_size / (1024^2)
     )
-    println("  ✓ Min:    $(round(results["csv_write"]["min"], digits=4))s (PRIMARY)")
-    println("    Mean:   $(round(results["csv_write"]["mean"], digits=4))s ± $(round(results["csv_write"]["std"], digits=4))s")
-    println("    Median: $(round(results["csv_write"]["median"], digits=4))s")
+    @printf("  ✓ Min: %.4fs (primary)\n", results["csv_write"]["min"])
+    @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["csv_write"]["mean"], results["csv_write"]["std"])
+    @printf("  ✓ File size: %.2f MB\n", results["csv_write"]["file_size_mb"])
     
     # Task 2: CSV Read
-    println("\n[2/5] CSV Read ($(n_rows) rows)...")
-    times = [benchmark_csv_read() for _ in 1:n_runs]
+    println("\n[2/4] CSV Read ($(format_number(n_csv_rows)) rows)...")
+    times = Float64[]
+    n_rows = 0
+    for _ in 1:n_runs
+        t, rows = benchmark_csv_read()
+        push!(times, t)
+        n_rows = rows
+    end
     results["csv_read"] = Dict(
-        "min" => minimum(times),
         "mean" => mean(times),
-        "median" => median(times),
         "std" => std(times),
+        "min" => minimum(times),
         "max" => maximum(times),
-        "all_times" => times
+        "rows_read" => n_rows
     )
-    println("  ✓ Min:    $(round(results["csv_read"]["min"], digits=4))s (PRIMARY)")
-    println("    Mean:   $(round(results["csv_read"]["mean"], digits=4))s ± $(round(results["csv_read"]["std"], digits=4))s")
+    @printf("  ✓ Min: %.4fs (primary)\n", results["csv_read"]["min"])
+    @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["csv_read"]["mean"], results["csv_read"]["std"])
     
     # Task 3: Binary Write
-    println("\n[3/5] Binary Write ($(n_elements) elements)...")
-    times = [benchmark_binary_write(n_elements) for _ in 1:n_runs]
+    println("\n[3/4] Binary Write ($(format_number(n_binary_values)) float64 values)...")
+    times = Float64[]
+    file_size = 0
+    for _ in 1:n_runs
+        t, size = benchmark_binary_write(n_binary_values)
+        push!(times, t)
+        file_size = size
+    end
     results["binary_write"] = Dict(
-        "min" => minimum(times),
         "mean" => mean(times),
-        "median" => median(times),
         "std" => std(times),
+        "min" => minimum(times),
         "max" => maximum(times),
-        "all_times" => times
+        "file_size_mb" => file_size / (1024^2)
     )
-    println("  ✓ Min:    $(round(results["binary_write"]["min"], digits=4))s (PRIMARY)")
-    println("    Mean:   $(round(results["binary_write"]["mean"], digits=4))s ± $(round(results["binary_write"]["std"], digits=4))s")
+    @printf("  ✓ Min: %.4fs (primary)\n", results["binary_write"]["min"])
+    @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["binary_write"]["mean"], results["binary_write"]["std"])
+    @printf("  ✓ File size: %.2f MB\n", results["binary_write"]["file_size_mb"])
     
     # Task 4: Binary Read
-    println("\n[4/5] Binary Read ($(n_elements) elements)...")
-    times = [benchmark_binary_read() for _ in 1:n_runs]
+    println("\n[4/4] Binary Read ($(format_number(n_binary_values)) float64 values)...")
+    times = Float64[]
+    n_values = 0
+    for _ in 1:n_runs
+        t, values = benchmark_binary_read()
+        push!(times, t)
+        n_values = values
+    end
     results["binary_read"] = Dict(
-        "min" => minimum(times),
         "mean" => mean(times),
-        "median" => median(times),
         "std" => std(times),
-        "max" => maximum(times),
-        "all_times" => times
-    )
-    println("  ✓ Min:    $(round(results["binary_read"]["min"], digits=4))s (PRIMARY)")
-    println("    Mean:   $(round(results["binary_read"]["mean"], digits=4))s ± $(round(results["binary_read"]["std"], digits=4))s")
-    
-    # Task 5: Random Access
-    println("\n[5/5] Random Access ($(n_random_reads) reads)...")
-    times = [benchmark_random_access(n_random_reads) for _ in 1:n_runs]
-    results["random_access"] = Dict(
         "min" => minimum(times),
-        "mean" => mean(times),
-        "median" => median(times),
-        "std" => std(times),
         "max" => maximum(times),
-        "all_times" => times
+        "values_read" => n_values
     )
-    println("  ✓ Min:    $(round(results["random_access"]["min"], digits=4))s (PRIMARY)")
-    println("    Mean:   $(round(results["random_access"]["mean"], digits=4))s ± $(round(results["random_access"]["std"], digits=4))s")
+    @printf("  ✓ Min: %.4fs (primary)\n", results["binary_read"]["min"])
+    @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["binary_read"]["mean"], results["binary_read"]["std"])
     
     # Save results
     println("\n" * "=" ^ 70)
@@ -190,29 +195,32 @@ function main()
     output = Dict(
         "language" => "Julia",
         "julia_version" => string(VERSION),
-        "csv_rows" => n_rows,
-        "binary_elements" => n_elements,
-        "random_reads" => n_random_reads,
+        "csv_version" => string(pkgversion(CSV)),
+        "n_csv_rows" => n_csv_rows,
+        "n_binary_values" => n_binary_values,
         "n_runs" => n_runs,
-        "methodology" => "Chen & Revels (2016): minimum as primary estimator",
+        "methodology" => "Minimum time as primary estimator (Chen & Revels 2016)",
         "results" => results
     )
     
-    open("results/io_ops_julia.json", "w") do io
-        JSON3.pretty(io, output)
+    mkpath("results")
+    open("results/io_ops_julia.json", "w") do f
+        JSON.print(f, output, 2)
     end
     
     println("✓ Results saved to: results/io_ops_julia.json")
-    println("\nPrimary metrics (MINIMUM execution time):")
-    println("  CSV write:      $(round(results["csv_write"]["min"], digits=4))s")
-    println("  CSV read:       $(round(results["csv_read"]["min"], digits=4))s")
-    println("  Binary write:   $(round(results["binary_write"]["min"], digits=4))s")
-    println("  Binary read:    $(round(results["binary_read"]["min"], digits=4))s")
-    println("  Random access:  $(round(results["random_access"]["min"], digits=4))s")
     
     # Cleanup
-    rm("data/benchmark_output.csv", force=true)
-    rm("data/benchmark_binary.bin", force=true)
+    println("\nCleaning up test files...")
+    for path in ["data/io_test_julia.csv", "data/io_test_julia.bin"]
+        if isfile(path)
+            rm(path)
+        end
+    end
+    println("✓ Cleanup complete")
+    
+    println("\nNote: Minimum times are primary metrics (Chen & Revels 2016)")
+    println("      Mean/median provided for context only")
 end
 
 main()

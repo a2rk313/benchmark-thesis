@@ -31,9 +31,6 @@ RUN dnf -y upgrade --refresh && \
         sqlite sqlite-devel \
     && dnf clean all
 
-# Install hyperfine (from Fedora repos, or download binary)
-RUN dnf install -y hyperfine
-
 # Document installed versions
 RUN rpm -q gdal proj geos sqlite | tee /build-versions.txt
 
@@ -68,11 +65,11 @@ RUN julia -e 'using Pkg; Pkg.add("Shapefile")'
 RUN julia -e 'using Pkg; Pkg.add("NearestNeighbors")'
 RUN julia -e 'using Pkg; Pkg.add("JSON3")'
 RUN julia -e 'using Pkg; Pkg.add("BenchmarkTools")'
-RUN julia -e 'using Pkg; Pkg.add("LibGEOS")'
-RUN julia -e 'using Pkg; Pkg.add("JSON")'
+RUN julia -e 'using Pkg; Pkg.add("SHA")'
+RUN julia -e 'using Pkg; Pkg.add("Rasters")'
 RUN julia -e 'using Pkg; Pkg.add("GeoDataFrames")'
+RUN julia -e 'using Pkg; Pkg.add("LibGEOS")'
 RUN julia -e 'using Pkg; Pkg.add("MAT")'
-
 
 # Precompile all installed packages
 RUN julia -e 'using Pkg; Pkg.precompile()'
@@ -86,7 +83,7 @@ ENV JULIA_NUM_THREADS=auto \
 # =============================================================================
 # Verification
 # =============================================================================
-RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using ArchGDAL; println("ArchGDAL: OK"); using DataFrames; println("DataFrames: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); println("✓ All packages OK")'
+RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using ArchGDAL; println("ArchGDAL: OK"); using DataFrames; println("DataFrames: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); using SHA; println("SHA: OK"); using Rasters; println("Rasters: OK"); using GeoDataFrames; println("GeoDataFrames: OK"); using LibGEOS; println("LibGEOS: OK"); using MAT; println("MAT: OK"); println("✓ All packages OK")'
 
 WORKDIR /benchmarks
 CMD ["/bin/bash"]

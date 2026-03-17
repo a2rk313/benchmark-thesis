@@ -25,13 +25,16 @@ def download_natural_earth():
     """
     print("\n[1/2] Downloading Natural Earth Countries (1:10m)...")
     
+    # Natural Earth direct download URL
     url = "https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip"
     zip_path = "data/ne_10m_admin_0_countries.zip"
     extract_dir = "data/natural_earth"
     
+    # Create directories
     Path("data").mkdir(exist_ok=True)
     Path(extract_dir).mkdir(exist_ok=True)
     
+    # Download if not exists
     if not os.path.exists(zip_path):
         print(f"  Downloading from {url}...")
         urllib.request.urlretrieve(url, zip_path)
@@ -39,22 +42,28 @@ def download_natural_earth():
     else:
         print(f"  ✓ Using cached download")
     
+    # Extract
     print("  Extracting shapefile...")
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_dir)
     
+    # Load and process
     print("  Processing data...")
     countries = gpd.read_file(f"{extract_dir}/ne_10m_admin_0_countries.shp")
     
     # Keep only columns that exist (some may have changed names)
+    # Essential columns: NAME, POP_EST, CONTINENT, geometry
+    # GDP_MD_EST might be missing – we drop it
     available_cols = countries.columns.tolist()
     cols_to_keep = ['NAME', 'POP_EST', 'CONTINENT', 'geometry']
+    # Only keep columns that actually exist
     cols_present = [col for col in cols_to_keep if col in available_cols]
     countries = countries[cols_present]
     
     # Explode multipolygons to separate features (increases complexity)
     countries = countries.explode(index_parts=True).reset_index(drop=True)
     
+    # Save to GeoPackage
     output_path = "data/natural_earth_countries.gpkg"
     countries.to_file(output_path, driver="GPKG")
     
@@ -84,25 +93,16 @@ def generate_gps_points(n_points=1_000_000, seed=42):
     
     np.random.seed(seed)
     
-    # Desired percentages (must sum to 1.0)
-    frac_nh = 0.40   # Northern Hemisphere cities
-    frac_global = 0.30
-    frac_coastal = 0.20
-    frac_sh = 0.10   # Southern Hemisphere cities
-    
-    # Calculate exact counts (floor)
-    n_nh = int(n_points * frac_nh)
-    n_global = int(n_points * frac_global)
-    n_coastal = int(n_points * frac_coastal)
-    n_sh = int(n_points * frac_sh)
-    
-    # The sum may be less than n_points; we will fill the remainder with global points
-    remainder = n_points - (n_nh + n_global + n_coastal + n_sh)
-    n_global += remainder   # add the remainder here
+    # Create realistic distribution:
+    # 40% clustered in Northern Hemisphere populated regions
+    # 30% distributed globally
+    # 20% concentrated near coastlines
+    # 10% in Southern Hemisphere populated regions
     
     points_data = []
     
     # Northern Hemisphere cities (40%)
+    n_nh = int(n_points * 0.40)
     nh_centers = [
         (40.7128, -74.0060),   # New York
         (51.5074, -0.1278),    # London
@@ -110,65 +110,42 @@ def generate_gps_points(n_points=1_000_000, seed=42):
         (28.6139, 77.2090),    # Delhi
         (31.2304, 121.4737),   # Shanghai
     ]
-    per_cluster = n_nh // len(nh_centers)
     for lat_c, lon_c in nh_centers:
-        lats = np.random.normal(lat_c, 2.0, per_cluster)
-        lons = np.random.normal(lon_c, 2.0, per_cluster)
-        points_data.extend(list(zip(lats, lons)))
-    # Add any leftover to the first cluster
-    leftover_nh = n_nh - per_cluster * len(nh_centers)
-    if leftover_nh > 0:
-        lat_c, lon_c = nh_centers[0]
-        lats = np.random.normal(lat_c, 2.0, leftover_nh)
-        lons = np.random.normal(lon_c, 2.0, leftover_nh)
+        n_cluster = n_nh // len(nh_centers)
+        lats = np.random.normal(lat_c, 2.0, n_cluster)
+        lons = np.random.normal(lon_c, 2.0, n_cluster)
         points_data.extend(list(zip(lats, lons)))
     
-    # Global uniform (30% + remainder)
+    # Global uniform (30%)
+    n_global = int(n_points * 0.30)
     lats_global = np.random.uniform(-90, 90, n_global)
     lons_global = np.random.uniform(-180, 180, n_global)
     points_data.extend(list(zip(lats_global, lons_global)))
     
     # Coastal regions (20%)
-    coastal_groups = 3
-    per_group = n_coastal // coastal_groups
-    # Equatorial
-    lats = np.random.normal(0, 20, per_group)
-    lons = np.random.uniform(-180, 180, per_group)
-    points_data.extend(list(zip(lats, lons)))
-    # Mid-latitude N
-    lats = np.random.normal(45, 10, per_group)
-    lons = np.random.uniform(-180, 180, per_group)
-    points_data.extend(list(zip(lats, lons)))
-    # Mid-latitude S
-    lats = np.random.normal(-35, 10, per_group)
-    lons = np.random.uniform(-180, 180, per_group)
-    points_data.extend(list(zip(lats, lons)))
-    leftover_coastal = n_coastal - per_group * coastal_groups
-    if leftover_coastal > 0:
-        lats = np.random.normal(0, 20, leftover_coastal)
-        lons = np.random.uniform(-180, 180, leftover_coastal)
-        points_data.extend(list(zip(lats, lons)))
+    n_coastal = int(n_points * 0.20)
+    coastal_lats = np.concatenate([
+        np.random.normal(0, 20, n_coastal // 3),     # Equatorial
+        np.random.normal(45, 10, n_coastal // 3),    # Mid-latitude N
+        np.random.normal(-35, 10, n_coastal // 3),   # Mid-latitude S
+    ])
+    coastal_lons = np.random.uniform(-180, 180, n_coastal)
+    points_data.extend(list(zip(coastal_lats, coastal_lons)))
     
     # Southern Hemisphere cities (10%)
+    n_sh = int(n_points * 0.10)
     sh_centers = [
         (-33.8688, 151.2093),  # Sydney
         (-23.5505, -46.6333),  # São Paulo
         (-26.2041, 28.0473),   # Johannesburg
     ]
-    per_cluster = n_sh // len(sh_centers)
     for lat_c, lon_c in sh_centers:
-        lats = np.random.normal(lat_c, 2.0, per_cluster)
-        lons = np.random.normal(lon_c, 2.0, per_cluster)
-        points_data.extend(list(zip(lats, lons)))
-    leftover_sh = n_sh - per_cluster * len(sh_centers)
-    if leftover_sh > 0:
-        lat_c, lon_c = sh_centers[0]
-        lats = np.random.normal(lat_c, 2.0, leftover_sh)
-        lons = np.random.normal(lon_c, 2.0, leftover_sh)
+        n_cluster = n_sh // len(sh_centers)
+        lats = np.random.normal(lat_c, 2.0, n_cluster)
+        lons = np.random.normal(lon_c, 2.0, n_cluster)
         points_data.extend(list(zip(lats, lons)))
     
-    # Convert to DataFrame (first n_points)
-    # Because we added exactly n_points, this slice is safe
+    # Convert to DataFrame
     df = pd.DataFrame(points_data[:n_points], columns=['lat', 'lon'])
     
     # Clip to valid ranges
@@ -180,9 +157,11 @@ def generate_gps_points(n_points=1_000_000, seed=42):
     df['timestamp'] = pd.date_range('2024-01-01', periods=n_points, freq='s')
     df['accuracy_m'] = np.random.exponential(10, n_points).clip(1, 100)
     
+    # Save
     output_path = "data/gps_points_1m.csv"
     df.to_csv(output_path, index=False)
     
+    # Calculate checksum for validation
     file_hash = hashlib.md5(open(output_path, 'rb').read()).hexdigest()
     
     print(f"\n  ✓ Saved to {output_path}")
@@ -199,11 +178,14 @@ def main():
     print("VECTOR DATA GENERATION: Natural Earth + GPS Points")
     print("=" * 70)
     
+    # Create data directory
     Path("data").mkdir(exist_ok=True)
     
+    # Generate datasets
     countries = download_natural_earth()
     points = generate_gps_points()
     
+    # Summary
     print("\n" + "=" * 70)
     print("DATA GENERATION COMPLETE")
     print("=" * 70)

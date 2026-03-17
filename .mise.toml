@@ -1,0 +1,242 @@
+# .mise.toml - Cross-Platform Benchmark Environment Configuration
+# Works on Linux (Fedora Atomic), Windows, and macOS
+# https://mise.jdx.dev
+
+min_version = "2024.1.0"
+
+[tools]
+# Exact versions for reproducibility
+python = "3.12.1"
+julia = "1.11.2"
+node = "20.11.0"  # For any visualization tools
+
+[env]
+# Auto-create Python virtual environment
+_.python.venv = { path = ".venv", create = true }
+
+# Use fast Python installer (optional but recommended)
+UV_PYTHON_INSTALL_MIRROR = "https://github.com/indygreg/python-build-standalone/releases/download"
+
+# Benchmark configuration
+BENCHMARK_RUNS = "10"
+BENCHMARK_THREADS = "8"
+
+# Platform-specific settings (examples)
+# Uncomment and modify as needed:
+# BLAS_THREADS = { linux = "8", windows = "4" }
+# DATA_DIR = { linux = "~/thesis-benchmarks/data", windows = "C:\\thesis-benchmarks\\data" }
+
+[tasks.install]
+description = "Install all dependencies"
+run = """
+echo "Installing Python packages..."
+python -m pip install --upgrade pip setuptools wheel
+
+# Option A: Using pip
+pip install numpy scipy pandas matplotlib \
+            rasterio geopandas scikit-learn \
+            pytest pytest-cov
+
+# Option B: Using uv (faster, uncomment to use)
+# pip install uv
+# uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn
+
+# Lock dependencies
+pip freeze > requirements.txt
+
+echo ""
+echo "Installing Julia packages..."
+julia -e 'using Pkg; Pkg.activate("."); Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "ArchGDAL", "Statistics"]); Pkg.precompile()'
+
+echo ""
+echo "✓ Installation complete!"
+echo "  Python: $(python --version)"
+echo "  Julia: $(julia --version)"
+echo ""
+echo "Note: Install R manually from https://cran.r-project.org"
+"""
+
+[tasks.download-data]
+description = "Download Cuprite hyperspectral dataset"
+run = """
+echo "Downloading AVIRIS Cuprite dataset..."
+python tools/download_cuprite.py
+echo "✓ Cuprite dataset ready"
+"""
+
+[tasks.download-vector]
+description = "Download Natural Earth vector data"
+run = """
+echo "Downloading Natural Earth countries dataset..."
+python tools/gen_vector_data.py
+echo "✓ Vector data ready"
+"""
+
+[tasks.setup]
+description = "Complete setup (install + download data)"
+depends = ["install", "download-data", "download-vector"]
+
+[tasks.bench]
+description = "Run all benchmarks"
+run = """
+echo "========================================================================"
+echo "Running Benchmark Suite"
+echo "========================================================================"
+
+mkdir -p results
+
+echo ""
+echo "[1/6] Matrix operations (Python)..."
+python benchmarks/matrix_ops.py
+
+echo ""
+echo "[2/6] Matrix operations (Julia)..."
+julia benchmarks/matrix_ops.jl
+
+echo ""
+echo "[3/6] Matrix operations (R)..."
+Rscript benchmarks/matrix_ops.R
+
+echo ""
+echo "[4/6] I/O operations..."
+python benchmarks/io_ops.py
+julia benchmarks/io_ops.jl
+Rscript benchmarks/io_ops.R
+
+echo ""
+echo "[5/6] Hyperspectral (Cuprite)..."
+python benchmarks/hsi_stream.py
+julia benchmarks/hsi_stream.jl
+Rscript benchmarks/hsi_stream.R
+
+echo ""
+echo "[6/6] Vector/Raster benchmarks..."
+python benchmarks/vector_pip.py
+julia benchmarks/vector_pip.jl
+Rscript benchmarks/vector_pip.R
+
+echo ""
+echo "========================================================================"
+echo "✓ Benchmarks complete!"
+echo "Results in: results/"
+echo "========================================================================"
+"""
+
+[tasks.validate]
+description = "Run validation analysis"
+run = """
+echo "Running Chen & Revels validation..."
+python validation/chen_revels_validation.py
+
+echo ""
+echo "Comparing with Tedesco et al. (2025)..."
+python tools/compare_with_tedesco.py
+
+echo ""
+echo "✓ Validation complete"
+"""
+
+[tasks.scaling]
+description = "Run scaling analysis"
+run = """
+echo "Running multi-scale benchmarks..."
+python benchmark_scaling.py
+
+echo ""
+echo "Generating scaling visualizations..."
+python visualize_scaling.py
+
+echo ""
+echo "✓ Scaling analysis complete"
+echo "Figures: results/scaling/*.png"
+"""
+
+[tasks.clean]
+description = "Clean generated files"
+run = """
+rm -rf results/*.json
+rm -rf results/scaling/*.json results/scaling/*.png
+rm -rf __pycache__ .pytest_cache
+find . -name "*.pyc" -delete
+echo "✓ Cleaned"
+"""
+
+[tasks.test]
+description = "Run tests"
+run = """
+pytest validation/ -v
+echo "✓ Tests passed"
+"""
+
+[tasks.check]
+description = "Verify environment setup"
+run = """
+echo "Checking environment..."
+echo ""
+
+echo "Python:"
+python --version
+python -c "import numpy, scipy, pandas; print(f'  NumPy {numpy.__version__}, SciPy {scipy.__version__}, Pandas {pandas.__version__}')"
+
+echo ""
+echo "Julia:"
+julia --version
+julia -e 'using Pkg; println("  Packages: ", length(Pkg.dependencies()))'
+
+echo ""
+echo "R:"
+if command -v Rscript &> /dev/null; then
+    Rscript --version 2>&1 | head -1
+else
+    echo "  ⚠ R not installed (install from https://cran.r-project.org)"
+fi
+
+echo ""
+echo "Datasets:"
+[ -d "data/cuprite" ] && echo "  ✓ Cuprite" || echo "  ❌ Cuprite (run: mise run download-data)"
+[ -f "data/natural_earth_countries.gpkg" ] && echo "  ✓ Natural Earth" || echo "  ❌ Natural Earth (run: mise run download-vector)"
+
+echo ""
+echo "✓ Environment check complete"
+"""
+
+# Convenience aliases
+[tasks]
+b = { alias = "bench" }
+s = { alias = "setup" }
+v = { alias = "validate" }
+c = { alias = "clean" }
+
+# Development tasks
+[tasks.dev]
+description = "Enter development shell with all tools"
+run = "echo 'Development environment ready. Python, Julia available.'; $SHELL"
+
+[tasks.jupyter]
+description = "Start Jupyter lab for analysis"
+run = """
+pip install jupyterlab -q
+jupyter lab --no-browser
+"""
+
+# Documentation tasks
+[tasks.docs]
+description = "Generate documentation"
+run = """
+echo "Generating documentation..."
+echo "✓ See README.md and docs/"
+"""
+
+# Platform-specific tasks (examples)
+[tasks.bench-linux]
+description = "Run benchmarks with Linux-specific optimizations"
+run = """
+# Set CPU governor
+sudo cpupower frequency-set --governor performance 2>/dev/null || true
+
+# Run benchmarks
+mise run bench
+
+# Restore governor
+sudo cpupower frequency-set --governor powersave 2>/dev/null || true
+"""

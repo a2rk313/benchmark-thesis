@@ -57,9 +57,6 @@ RUN uv pip install \
     matplotlib \
     seaborn
 
-# Install hyperfine (from Fedora repos, or download binary)
-RUN dnf install -y hyperfine
-
 # ---------- Verification ----------
 RUN python3 - << 'PYEOF'
 import sys

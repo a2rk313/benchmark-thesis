@@ -1,12 +1,12 @@
 # =============================================================================
-# THESIS R ENVIRONMENT – No sf/s2, uses terra for vector ops
-# Version: 2.17.0
+# THESIS R ENVIRONMENT – No sf/s2, uses terra for vector ops + FNN + R.matlab
+# Version: 2.18.0
 # =============================================================================
 
 FROM docker.io/library/fedora:43
 
 LABEL org.opencontainers.image.title="Thesis R Geospatial Lab" \
-      org.opencontainers.image.version="4.5-terra-only"
+      org.opencontainers.image.version="4.5-benchmark-ready"
 
 # ---------- Layer 1: Base development tools ----------
 RUN dnf -y upgrade --refresh && \
@@ -41,10 +41,6 @@ RUN dnf -y install \
         R-data.table \
     && dnf clean all
 
-
-# Install hyperfine (from Fedora repos, or download binary)
-RUN dnf install -y hyperfine
-
 # ---------- R configuration ----------
 ENV R_LIBS_SITE=/usr/local/lib/R/site-library
 
@@ -60,21 +56,25 @@ RUN mkdir -p "${R_LIBS_SITE}" && chmod 755 "${R_LIBS_SITE}"
 RUN Rscript -e "if(file.access(Sys.getenv('R_LIBS_SITE'), 2) != 0) stop('Directory not writable')"
 RUN curl -Is https://cloud.r-project.org | head -1 && echo "Network OK" || echo "WARNING: CRAN unreachable"
 
-# ---------- Install terra from CRAN (no sf) ----------
-# R.matlab package
-RUN Rscript -e 'install.packages("R.matlab", repos="https://cloud.r-project.org/", lib=Sys.getenv("R_LIBS_SITE"))'
+# ---------- Install terra (pinned version) ----------
+RUN Rscript - <<'EOF'
+if (!require("remotes", quietly = TRUE)) {
+  install.packages("remotes", repos = "https://cloud.r-project.org/", lib = Sys.getenv("R_LIBS_SITE"))
+  library(remotes)
+}
+remotes::install_version("terra", version = "1.8-29", repos = "https://cloud.r-project.org/", upgrade = "never", lib = Sys.getenv("R_LIBS_SITE"))
+EOF
 
-# Install remotes
-RUN Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org/")'
-
-RUN Rscript -e 'remotes::install_version("terra", version="1.8-29", repos="https://cloud.r-project.org/", upgrade="never")'
-
-# Install FNN for KD-tree based IDW interpolation
-RUN Rscript -e 'install.packages("FNN", repos="https://cloud.r-project.org/")'
+# ---------- Install additional CRAN packages for benchmarks ----------
+# R.matlab: read .mat files (Cuprite dataset)
+# FNN: fast k‑d tree for IDW interpolation
+RUN Rscript - <<'EOF'
+install.packages(c("R.matlab", "FNN"), repos = "https://cloud.r-project.org/", lib = Sys.getenv("R_LIBS_SITE"))
+EOF
 
 # ---------- Verification ----------
 RUN Rscript - <<'EOF'
-pkgs <- c("terra", "data.table", "jsonlite", "digest")
+pkgs <- c("terra", "data.table", "jsonlite", "digest", "R.matlab", "FNN")
 for (p in pkgs) {
     library(p, character.only = TRUE)
     cat(sprintf("%-12s %s\n", p, as.character(packageVersion(p))))

@@ -1,6 +1,9 @@
 #!/usr/bin/env Rscript
 ################################################################################
-# SCENARIO B: Vector Point-in-Polygon + Haversine – R (terra only)
+# SCENARIO B: Complex Vector Operations – R Implementation (terra only)
+################################################################################
+# Task: Point-in-Polygon spatial join + Haversine distance calculation
+# Uses terra for vector operations (no sf dependency)
 ################################################################################
 
 suppressPackageStartupMessages({
@@ -9,15 +12,18 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
+#' Vectorized Haversine distance calculation
 haversine_vectorized <- function(lat1, lon1, lat2, lon2) {
   R <- 6371000.0
   lat1_rad <- lat1 * pi / 180
   lat2_rad <- lat2 * pi / 180
   dlat <- (lat2 - lat1) * pi / 180
   dlon <- (lon2 - lon1) * pi / 180
+
   a <- sin(dlat / 2)^2 +
        cos(lat1_rad) * cos(lat2_rad) *
        sin(dlon / 2)^2
+
   c <- 2 * atan2(sqrt(a), sqrt(1 - a))
   R * c
 }
@@ -27,60 +33,82 @@ main <- function() {
   cat("R (terra) - Scenario B: Vector Point-in-Polygon + Haversine\n")
   cat(strrep("=", 70), "\n")
 
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   # 1. Data Loading
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   cat("\n[1/4] Loading data...\n")
+
+  # Load polygon dataset (Natural Earth countries) as SpatVector
   polys <- vect("data/natural_earth_countries.gpkg")
   cat(sprintf("  ✓ Loaded %d polygons\n", nrow(polys)))
+
+  # Load point dataset
   points_df <- read.csv("data/gps_points_1m.csv")
   points <- vect(points_df, geom = c("lon", "lat"), crs = "EPSG:4326")
   cat(sprintf("  ✓ Loaded %d points\n", nrow(points)))
 
-  # ---------------------------------------------------------------------------
-  # 2. Spatial Join using terra::extract
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
+  # 2. Spatial Join (Point-in-Polygon) using terra::extract
+  # ===========================================================================
   cat("\n[2/4] Performing spatial join...\n")
-  extracted <- extract(polys, points)
+
+  # Extract polygon indices for each point
+  # terra::extract returns a data.frame with polygon ID for each point
+  extracted <- extract(polys, points, ID = TRUE)
+  # Remove points that fall outside any polygon (NA in the extracted attributes)
   matched <- extracted[!is.na(extracted[,2]), , drop = FALSE]
+
+  # The polygon ID is in column 1 (ID)
   matched_poly_ids <- matched[,1]
   matched_point_indices <- as.integer(rownames(matched))
+
   cat(sprintf("  ✓ Matched %d points to polygons\n", nrow(matched)))
   cat(sprintf("  ✓ Match rate: %.2f%%\n", 100 * nrow(matched) / nrow(points)))
 
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   # 3. Distance Calculation
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   cat("\n[3/4] Calculating Haversine distances...\n")
+
+  # Extract point coordinates
   point_coords <- crds(points)[matched_point_indices, ]
   point_lats <- point_coords[, "y"]
   point_lons <- point_coords[, "x"]
+
+  # Compute centroids of matched polygons
   poly_centroids <- centroids(polys[matched_poly_ids])
   centroid_coords <- crds(poly_centroids)
   centroid_lats <- centroid_coords[, "y"]
   centroid_lons <- centroid_coords[, "x"]
+
+  # Vectorized Haversine
   distances <- haversine_vectorized(
     point_lats, point_lons,
     centroid_lats, centroid_lons
   )
 
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   # 4. Results & Validation
-  # ---------------------------------------------------------------------------
+  # ===========================================================================
   cat("\n[4/4] Computing metrics...\n")
+
   total_distance <- sum(distances)
   mean_distance <- mean(distances)
   median_distance <- median(distances)
   max_distance <- max(distances)
+
   cat(sprintf("  ✓ Total distance: %s meters\n", format(total_distance, big.mark = ",")))
   cat(sprintf("  ✓ Mean distance: %s meters\n", format(mean_distance, big.mark = ",")))
   cat(sprintf("  ✓ Median distance: %s meters\n", format(median_distance, big.mark = ",")))
   cat(sprintf("  ✓ Max distance: %s meters\n", format(max_distance, big.mark = ",")))
 
+  # Generate validation hash
   result_str <- sprintf("%.6f_%d_%.6f", total_distance, nrow(matched), mean_distance)
   result_hash <- substr(digest(result_str, algo = "sha256"), 1, 16)
+
   cat(sprintf("  ✓ Validation hash: %s\n", result_hash))
 
+  # Export results
   results <- list(
     language = "r",
     scenario = "vector_pip",
@@ -94,9 +122,16 @@ main <- function() {
   )
 
   dir.create("validation", showWarnings = FALSE)
-  write_json(results, "validation/vector_r_results.json", pretty = TRUE, auto_unbox = TRUE)
+  write_json(
+    results,
+    "validation/vector_r_results.json",
+    pretty = TRUE,
+    auto_unbox = TRUE
+  )
+
   cat("\n  ✓ Results saved to validation/vector_r_results.json\n")
   cat(strrep("=", 70), "\n")
+
   return(0)
 }
 
