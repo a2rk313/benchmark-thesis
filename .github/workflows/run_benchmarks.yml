@@ -1,0 +1,55 @@
+name: Run Benchmarks
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Build and Push Thesis Containers]
+    types: [completed]
+    if: ${{ workflow_run.conclusion == 'success' }}
+
+jobs:
+  run-benchmarks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull containers
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/thesis-python:latest
+          docker pull ghcr.io/${{ github.repository_owner }}/thesis-julia:latest
+          docker pull ghcr.io/${{ github.repository_owner }}/thesis-r:latest
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y podman hyperfine
+
+      - name: Run benchmarks
+        run: |
+          # Override tags to use pulled images
+          export PYTHON_TAG="thesis-python:latest"
+          export JULIA_TAG="thesis-julia:latest"
+          export R_TAG="thesis-r:latest"
+          ./run_benchmarks.sh
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: results/
+
+      - name: Upload validation
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-results
+          path: validation/

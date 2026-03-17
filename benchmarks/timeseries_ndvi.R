@@ -39,7 +39,7 @@ generate_synthetic_landsat <- function(width=500, height=500, n_dates=12, seed=4
   }
   
   list(red=red_bands, nir=nir_bands)
-end
+}  # <-- This was incorrectly 'end' before
 
 calculate_ndvi <- function(red, nir) {
   epsilon <- 1e-8

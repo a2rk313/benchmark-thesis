@@ -13,18 +13,18 @@ import sys
 import json
 import time
 
-def benchmark_matrix_creation_transpose_reshape(n=2500):
+def benchmark_matrix_creation_transpose_reshape(n=2400):
     start = time.perf_counter()
     A = np.random.randn(n, n)
     A = A.T
-    new_rows = int(n * 3 / 5)
-    new_cols = int(n * 5 / 3)
+    new_rows = int(n * 3 / 5)   # = 1440
+    new_cols = int(n * 5 / 3)   # = 4000
     A = A.reshape(new_rows, new_cols)
     A = A.T
     elapsed = time.perf_counter() - start
     return elapsed
 
-def benchmark_matrix_power(n=2500):
+def benchmark_matrix_power(n=2400):
     A = np.random.randn(n, n)
     A = np.abs(A) / 2.0
     start = time.perf_counter()
@@ -39,14 +39,14 @@ def benchmark_sorting(n=1_000_000):
     elapsed = time.perf_counter() - start
     return elapsed
 
-def benchmark_crossproduct(n=2500):
+def benchmark_crossproduct(n=2400):
     A = np.random.randn(n, n)
     start = time.perf_counter()
     B = A.T @ A
     elapsed = time.perf_counter() - start
     return elapsed
 
-def benchmark_determinant(n=2500):
+def benchmark_determinant(n=2400):
     A = np.random.randn(n, n)
     start = time.perf_counter()
     det_val = np.linalg.det(A)
@@ -58,7 +58,7 @@ def main():
     print("PYTHON - Matrix Operations Benchmark")
     print("=" * 70)
     
-    n_matrix = 2500
+    n_matrix = 2400
     n_sort = 1_000_000
     n_runs = 10
     

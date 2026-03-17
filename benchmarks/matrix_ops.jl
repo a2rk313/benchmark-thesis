@@ -10,19 +10,19 @@ using Statistics
 using JSON
 using Printf
 
-function benchmark_matrix_creation_transpose_reshape(n=2500)
+function benchmark_matrix_creation_transpose_reshape(n=2400)
     start_time = time()
     A = randn(n, n)
     A = transpose(A)
-    new_rows = Int(n * 3 / 5)
-    new_cols = Int(n * 5 / 3)
+    new_rows = Int(n * 3 / 5)   # = 1440
+    new_cols = Int(n * 5 / 3)   # = 4000
     A = reshape(A, new_rows, new_cols)
     A = transpose(A)
     elapsed = time() - start_time
     return elapsed
 end
 
-function benchmark_matrix_power(n=2500)
+function benchmark_matrix_power(n=2400)
     A = randn(n, n)
     A = abs.(A) ./ 2.0
     start_time = time()
@@ -39,7 +39,7 @@ function benchmark_sorting(n=1_000_000)
     return elapsed
 end
 
-function benchmark_crossproduct(n=2500)
+function benchmark_crossproduct(n=2400)
     A = randn(n, n)
     start_time = time()
     B = A' * A
@@ -47,7 +47,7 @@ function benchmark_crossproduct(n=2500)
     return elapsed
 end
 
-function benchmark_determinant(n=2500)
+function benchmark_determinant(n=2400)
     A = randn(n, n)
     start_time = time()
     det_val = det(A)
@@ -60,7 +60,7 @@ function main()
     println("JULIA - Matrix Operations Benchmark")
     println("=" ^ 70)
     
-    n_matrix = 2500
+    n_matrix = 2400
     n_sort = 1_000_000
     n_runs = 10
     

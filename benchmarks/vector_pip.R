@@ -41,7 +41,7 @@ main <- function() {
   # 2. Spatial Join using terra::extract
   # ---------------------------------------------------------------------------
   cat("\n[2/4] Performing spatial join...\n")
-  extracted <- extract(polys, points, ID = TRUE)
+  extracted <- extract(polys, points)
   matched <- extracted[!is.na(extracted[,2]), , drop = FALSE]
   matched_poly_ids <- matched[,1]
   matched_point_indices <- as.integer(rownames(matched))

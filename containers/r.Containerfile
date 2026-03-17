@@ -61,14 +61,13 @@ RUN Rscript -e "if(file.access(Sys.getenv('R_LIBS_SITE'), 2) != 0) stop('Directo
 RUN curl -Is https://cloud.r-project.org | head -1 && echo "Network OK" || echo "WARNING: CRAN unreachable"
 
 # ---------- Install terra from CRAN (no sf) ----------
-RUN Rscript - <<'EOF'
-# Ensure remotes is available
-if (!require("remotes", quietly = TRUE)) {
-  install.packages("remotes", repos = "https://cloud.r-project.org/", lib = Sys.getenv("R_LIBS_SITE"))
-  library(remotes)
-}
-remotes::install_version("terra", version = "1.8-29", repos = "https://cloud.r-project.org/", upgrade = "never", lib = Sys.getenv("R_LIBS_SITE"))
-EOF
+# R.matlab package
+RUN Rscript -e 'install.packages("R.matlab", repos="https://cloud.r-project.org/", lib=Sys.getenv("R_LIBS_SITE"))'
+
+# Install remotes
+RUN Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org/")'
+
+RUN Rscript -e 'remotes::install_version("terra", version="1.8-29", repos="https://cloud.r-project.org/", upgrade="never")'
 
 # ---------- Verification ----------
 RUN Rscript - <<'EOF'

@@ -5,19 +5,19 @@
 
 library(jsonlite)
 
-benchmark_matrix_creation_transpose_reshape <- function(n = 2500) {
+benchmark_matrix_creation_transpose_reshape <- function(n = 2400) {
   start_time <- Sys.time()
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
   A <- t(A)
-  new_rows <- as.integer(n * 3 / 5)
-  new_cols <- as.integer(n * 5 / 3)
+  new_rows <- as.integer(n * 3 / 5)   # = 1440
+  new_cols <- as.integer(n * 5 / 3)   # = 4000
   dim(A) <- c(new_rows, new_cols)
   A <- t(A)
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
   return(elapsed)
 }
 
-benchmark_matrix_power <- function(n = 2500) {
+benchmark_matrix_power <- function(n = 2400) {
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
   A <- abs(A) / 2.0
   start_time <- Sys.time()
@@ -34,7 +34,7 @@ benchmark_sorting <- function(n = 1000000) {
   return(elapsed)
 }
 
-benchmark_crossproduct <- function(n = 2500) {
+benchmark_crossproduct <- function(n = 2400) {
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
   start_time <- Sys.time()
   B <- crossprod(A)
@@ -42,7 +42,7 @@ benchmark_crossproduct <- function(n = 2500) {
   return(elapsed)
 }
 
-benchmark_determinant <- function(n = 2500) {
+benchmark_determinant <- function(n = 2400) {
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
   start_time <- Sys.time()
   det_val <- det(A)
@@ -55,7 +55,7 @@ main <- function() {
   cat("R - Matrix Operations Benchmark\n")
   cat(strrep("=", 70), "\n")
   
-  n_matrix <- 2500
+  n_matrix <- 2400
   n_sort <- 1000000
   n_runs <- 10
   

@@ -58,7 +58,7 @@ def main():
     # Load polygon dataset (Natural Earth countries)
     polys = gpd.read_file("data/natural_earth_countries.gpkg")
     print(f"  ✓ Loaded {len(polys)} polygons")
-    print(f"  ✓ Total vertices: {sum(poly.boundary.coords.__len__() for poly in polys.geometry)}")
+    # Vertex count line removed – causes errors on MultiPolygons
     
     # Load point dataset
     points_df = pd.read_csv("data/gps_points_1m.csv")

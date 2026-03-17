@@ -32,30 +32,13 @@ def main():
     # -------------------------------------------------------------------------
     print("\n[1/5] Loading Cuprite dataset...")
     mat = sio.loadmat("data/Cuprite.mat")
-    # Find the first non-metadata key
+    # Print available keys to identify the variable (optional, can be removed later)
+    print("  ✓ MATLAB variables:", [k for k in mat.keys() if not k.startswith('__')])
+    # The actual data variable is the long name; we'll use the first non‑metadata key
     data_key = [k for k in mat.keys() if not k.startswith('__')][0]
-    data_raw = mat[data_key]
-    print(f"  Raw shape: {data_raw.shape}")
-
-    # Determine which dimension is bands (should be 224)
-    dims = data_raw.shape
-    try:
-        band_dim = dims.index(224)
-    except ValueError:
-        raise ValueError(f"Could not find dimension with size 224 (bands). Found sizes: {dims}")
-
-    # Permute so that bands become the first dimension
-    if band_dim == 0:
-        data = data_raw
-    elif band_dim == 1:
-        data = np.transpose(data_raw, (1,0,2))
-    elif band_dim == 2:
-        data = np.transpose(data_raw, (2,0,1))
-    else:
-        raise ValueError("Unexpected number of dimensions")
-
+    data = mat[data_key]  # Expected shape: (bands, rows, cols)
     n_bands, n_rows, n_cols = data.shape
-    print(f"  ✓ Dataset shape (after reordering): {n_bands} bands, {n_rows}×{n_cols} pixels")
+    print(f"  ✓ Dataset shape: {n_bands} bands, {n_rows}×{n_cols} pixels")
 
     # Generate reference spectrum (normalized)
     np.random.seed(42)
@@ -64,7 +47,7 @@ def main():
     print(f"  ✓ Reference spectrum hash: {hashlib.sha256(reference_spectrum.tobytes()).hexdigest()[:16]}")
 
     # -------------------------------------------------------------------------
-    # 2. Process in chunks
+    # 2. Process in chunks (same as before)
     # -------------------------------------------------------------------------
     print("\n[2/5] Processing hyperspectral data (chunked)...")
     chunk_size = 256
@@ -76,9 +59,7 @@ def main():
         for col in range(0, n_cols, chunk_size):
             r_end = min(row + chunk_size, n_rows)
             c_end = min(col + chunk_size, n_cols)
-            # Extract chunk: (bands, h, w)
             chunk = data[:, row:r_end, col:c_end]
-            # Reshape to (pixels, bands)
             pixel_spectra = chunk.reshape(n_bands, -1).T.astype(np.float32)
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)
             sam_results.extend(sam_angles.tolist())
@@ -90,7 +71,7 @@ def main():
     print(f"    Processed {chunks_processed} chunks ({pixels_processed:,} pixels)... Done!")
 
     # -------------------------------------------------------------------------
-    # 3. Statistics
+    # 3. Statistics and validation (unchanged)
     # -------------------------------------------------------------------------
     print("\n[3/5] Computing statistics...")
     sam_array = np.array(sam_results)
@@ -103,9 +84,6 @@ def main():
     print(f"  ✓ Median SAM: {median_sam:.6f} rad")
     print(f"  ✓ Std Dev: {std_sam:.6f} rad")
 
-    # -------------------------------------------------------------------------
-    # 4. Validation
-    # -------------------------------------------------------------------------
     print("\n[4/5] Generating validation data...")
     result_str = f"{mean_sam:.8f}_{pixels_processed}_{median_sam:.8f}"
     result_hash = hashlib.sha256(result_str.encode()).hexdigest()[:16]
