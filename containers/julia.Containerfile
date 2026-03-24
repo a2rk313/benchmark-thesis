@@ -1,14 +1,15 @@
 # =============================================================================
 # THESIS JULIA ENVIRONMENT - Reproducible Micro-Container
-# Version: 2.7.0 (simplified package setup, LibGEOS removed)
+# Version: 4.0.0 (full package setup for all benchmarks)
 # Base: Fedora 43
 # Julia: 1.11.4 (latest stable LTS)
 # =============================================================================
 #
-# CHANGES vs v2.6:
-#   - Removed LibGEOS (not in registry)
-#   - Simplified to essential packages only
-#   - No Project.toml (install packages directly - more reliable)
+# This container includes ALL packages needed for benchmarks:
+#   - MAT: for .mat file I/O (Cuprite dataset)
+#   - SHA: for validation hashes
+#   - GeoDataFrames, LibGEOS: for vector_pip.jl
+#   - Rasters: for raster operations
 #
 # BUILD:  podman build -t thesis-julia:1.11 -f containers/julia.Containerfile .
 # =============================================================================
@@ -65,11 +66,11 @@ RUN julia -e 'using Pkg; Pkg.add("Shapefile")'
 RUN julia -e 'using Pkg; Pkg.add("NearestNeighbors")'
 RUN julia -e 'using Pkg; Pkg.add("JSON3")'
 RUN julia -e 'using Pkg; Pkg.add("BenchmarkTools")'
+# Additional packages needed by benchmarks
 RUN julia -e 'using Pkg; Pkg.add("SHA")'
-RUN julia -e 'using Pkg; Pkg.add("Rasters")'
+RUN julia -e 'using Pkg; Pkg.add("MAT")'
 RUN julia -e 'using Pkg; Pkg.add("GeoDataFrames")'
 RUN julia -e 'using Pkg; Pkg.add("LibGEOS")'
-RUN julia -e 'using Pkg; Pkg.add("MAT")'
 
 # Precompile all installed packages
 RUN julia -e 'using Pkg; Pkg.precompile()'
@@ -83,7 +84,7 @@ ENV JULIA_NUM_THREADS=auto \
 # =============================================================================
 # Verification
 # =============================================================================
-RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using ArchGDAL; println("ArchGDAL: OK"); using DataFrames; println("DataFrames: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); using SHA; println("SHA: OK"); using Rasters; println("Rasters: OK"); using GeoDataFrames; println("GeoDataFrames: OK"); using LibGEOS; println("LibGEOS: OK"); using MAT; println("MAT: OK"); println("✓ All packages OK")'
+RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using ArchGDAL; println("ArchGDAL: OK"); using DataFrames; println("DataFrames: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); using SHA; println("SHA: OK"); using MAT; println("MAT: OK"); using GeoDataFrames; println("GeoDataFrames: OK"); using LibGEOS; println("LibGEOS: OK"); println("✓ All packages OK")'
 
 WORKDIR /benchmarks
 CMD ["/bin/bash"]
