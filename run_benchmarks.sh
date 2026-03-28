@@ -155,14 +155,14 @@ if [ "$ENABLE_VECTOR" = "true" ]; then
 fi
 
 if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
-    if [ ! -d "$DDIR/jasperRidge2_R198" ]; then
-        echo "  Downloading hyperspectral data (~600 MB)..."
+    if [ ! -f "$DDIR/Cuprite.mat" ]; then
+        echo "  Downloading hyperspectral data (Cuprite dataset, ~100 MB)..."
         podman run --rm \
             -v "$DDIR":/benchmarks/data:Z \
             -v "$(pwd)/tools":/benchmarks/tools:Z \
-            "$PYTHON_TAG" python3 tools/download_hsi.py
+            "$PYTHON_TAG" python3 tools/download_cuprite.py
     else
-        echo "  ✓ Hyperspectral data exists"
+        echo "  ✓ Hyperspectral data exists (Cuprite.mat)"
     fi
 fi
 
