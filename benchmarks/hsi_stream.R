@@ -71,7 +71,17 @@ main <- function() {
   cat(sprintf("  ✓ Loading MAT file: %s\n", hsi_path))
   mat_data <- readMat(hsi_path)
   data_key <- names(mat_data)[1]
-  data <- mat_data[[data_key]]
+  raw_data <- mat_data[[data_key]]
+  
+  # Cuprite.mat has shape (512, 614, 224) but AVIRIS Cuprite has 224 bands
+  # Transpose from (bands_wrong, rows, cols) to (bands_correct, rows, cols)
+  if (dim(raw_data)[1] == 512 && dim(raw_data)[3] == 224) {
+    data <- aperm(raw_data, c(3, 1, 2))  # (512, 614, 224) -> (224, 614, 512)
+    data <- data[1:224, , ]  # Take first 224 bands
+    cat("  ✓ Transposed data to (bands, rows, cols)\n")
+  } else {
+    data <- raw_data
+  }
   
   n_bands <- dim(data)[1]
   n_rows <- dim(data)[2]
@@ -106,12 +116,15 @@ main <- function() {
       row_end <- min(row_start + chunk_size - 1, n_rows)
       col_end <- min(col_start + chunk_size - 1, n_cols)
       
-      # Extract chunk from the array
+      # Extract chunk: shape (n_bands, chunk_rows, chunk_cols)
       chunk <- data[, row_start:row_end, col_start:col_end, drop = FALSE]
+      chunk_rows <- row_end - row_start + 1
+      chunk_cols <- col_end - col_start + 1
       
       # Convert to matrix: rows = pixels, cols = bands
-      pixel_matrix <- matrix(chunk, nrow = n_bands)
-      pixel_matrix <- t(pixel_matrix)  # Transpose to (pixels, bands)
+      # chunk is (n_bands, chunk_rows, chunk_cols) -> need (pixels, bands)
+      dim(chunk) <- c(n_bands, chunk_rows * chunk_cols)
+      pixel_matrix <- t(chunk)  # Transpose to (pixels, bands)
       
       # Remove NA values if any
       pixel_matrix <- pixel_matrix[complete.cases(pixel_matrix), , drop = FALSE]

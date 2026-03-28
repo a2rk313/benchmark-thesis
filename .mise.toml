@@ -6,7 +6,7 @@ min_version = "2024.1.0"
 
 [tools]
 # Exact versions for reproducibility
-python = "3.13.12"
+python = "3.13.3"
 julia = "1.11.2"
 node = "20.11.0"  # For any visualization tools
 
