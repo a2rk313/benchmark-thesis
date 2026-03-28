@@ -62,13 +62,8 @@ def main():
     # Load polygon dataset (Natural Earth countries)
     polys = gpd.read_file("data/natural_earth_countries.gpkg")
     print(f"  ✓ Loaded {len(polys)} polygons")
-    # Count vertices (handle both single and multi-polygons)
-    total_vertices = sum(
-        len(poly.boundary.coords)
-        if hasattr(poly.boundary, "coords")
-        else shapely.get_coordinates(poly.boundary).shape[0]
-        for poly in polys.geometry
-    )
+    # Count vertices - use shapely.get_coordinates for all geometries
+    total_vertices = shapely.get_coordinates(polys.geometry.buffer(0).boundary).shape[0]
     print(f"  ✓ Total vertices: {total_vertices}")
 
     # Load point dataset
