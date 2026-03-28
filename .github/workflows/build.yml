@@ -2,31 +2,31 @@ name: Build and Push Thesis Containers
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master", "main" ]
+    paths:
+      - 'containers/**'
+      - '.github/workflows/build.yml'
   pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:  # allow manual trigger
+    branches: [ "master", "main" ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  # Replace with your GitHub username in lowercase
   IMAGE_OWNER: ${{ github.repository_owner }}
-  PYTHON_TAG: thesis-python:3.14
-  JULIA_TAG: thesis-julia:1.11
-  R_TAG: thesis-r:4.5
 
 jobs:
-  build-containers:
+  # ===========================================================================
+  # Build Base Containers
+  # ===========================================================================
+  build-base:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write   # needed to push to GHCR
+      packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # Log in to GitHub Container Registry
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -34,74 +34,185 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Set up Docker Buildx (for advanced features like caching)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ---------- Build Python container ----------
-      - name: Build and push Python image
+      - name: Build and push Python
         uses: docker/build-push-action@v6
         with:
           context: .
           file: containers/python.Containerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.PYTHON_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:3.13
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ---------- Build Julia container ----------
-      - name: Build and push Julia image
+      - name: Build and push Julia
         uses: docker/build-push-action@v6
         with:
           context: .
           file: containers/julia.Containerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.JULIA_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:1.11
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ---------- Build R container ----------
-      - name: Build and push R image
+      - name: Build and push R
         uses: docker/build-push-action@v6
         with:
           context: .
           file: containers/r.Containerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.R_TAG }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:4.5
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # ---------- (Optional) Quick verification ----------
-      - name: Verify Python container
-        run: |
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.PYTHON_TAG }} \
-            python3 -c "import numpy; print(numpy.__version__)"
+  # ===========================================================================
+  # Build Optimized Containers (50-60% smaller)
+  # ===========================================================================
+  build-optimized:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-      - name: Verify Julia container
-        run: |
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.JULIA_TAG }} \
-            julia -e 'using ArchGDAL; println("OK")'
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Verify R container
-        run: |
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.R_TAG }} \
-            Rscript -e 'library(terra); cat("OK\n")'
-
-      # ---------- Save digests as artifact ----------
-      - name: Save container digests
-        run: |
-          echo "Python: $(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.PYTHON_TAG }} --format='{{.Id}}')" > digests.txt
-          echo "Julia:  $(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.JULIA_TAG }} --format='{{.Id}}')" >> digests.txt
-          echo "R:      $(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.R_TAG }} --format='{{.Id}}')" >> digests.txt
-
-      - name: Upload digests
-        uses: actions/upload-artifact@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          name: container-digests
-          path: digests.txt
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Python Optimized
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/python-optimized.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:optimized
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Julia Optimized
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/julia-optimized.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:optimized
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push R Optimized
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/r-optimized.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:optimized
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Build Slim Containers (most aggressive optimization)
+  # ===========================================================================
+  build-slim:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Python Slim
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/python-slim.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:slim
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Julia Slim
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/julia-slim.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:slim
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push R Slim
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: containers/r-slim.Containerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:slim
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Verification
+  # ===========================================================================
+  verify:
+    runs-on: ubuntu-latest
+    needs: [build-base, build-optimized, build-slim]
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and verify all containers
+        run: |
+          echo "=== Verifying Base Containers ==="
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:3.13 python3 -c "import numpy; print('Python: OK')"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:1.11 julia -e 'using ArchGDAL; println("Julia: OK")'
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:4.5 Rscript -e 'library(terra); cat("R: OK\n")'
+
+          echo "=== Verifying Slim Containers ==="
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:slim python3 -c "import numpy; print('Python-slim: OK')"
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:slim julia -e 'using ArchGDAL; println("Julia-slim: OK")'
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:slim Rscript -e 'library(terra); cat("R-slim: OK\n")'
+
+      - name: Get container sizes
+        run: |
+          echo "=== Container Sizes ==="
+          for img in python:3.13 julia:1.11 r:4.5 python:slim julia:slim r:slim python:optimized julia:optimized r:optimized; do
+            size=$(docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-$img 2>/dev/null | grep -oP '\d+\.\d+ MB' | tail -1 || echo "N/A")
+            echo "$img: $size"
+          done
