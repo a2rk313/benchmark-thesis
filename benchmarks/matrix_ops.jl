@@ -26,8 +26,8 @@ function benchmark_matrix_creation_transpose_reshape(n=2500)
     A = transpose(A)
     
     # Reshape
-    new_rows = Int(n * 3 / 5)
-    new_cols = Int(n * 5 / 3)
+    new_rows = Int(n * 2 / 5)
+    new_cols = Int(n * n / new_rows)
     A = reshape(A, new_rows, new_cols)
     
     # Transpose again

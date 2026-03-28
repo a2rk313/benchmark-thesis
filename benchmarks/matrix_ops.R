@@ -20,8 +20,8 @@ benchmark_matrix_creation_transpose_reshape <- function(n = 2500) {
   A <- t(A)
   
   # Reshape
-  new_rows <- as.integer(n * 3 / 5)
-  new_cols <- as.integer(n * 5 / 3)
+  new_rows <- as.integer(n * 2 / 5)
+  new_cols <- as.integer(n * n / new_rows)
   dim(A) <- c(new_rows, new_cols)
   
   # Transpose again
