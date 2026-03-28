@@ -76,6 +76,7 @@ RUN dnf -y install \
         flexiblas \
         gdal-libs proj geos sqlite udunits2 \
         openssl libcurl libxml2 \
+        hyperfine time \
         --setopt=install_weak_deps=False \
     && dnf clean all \
     && rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*

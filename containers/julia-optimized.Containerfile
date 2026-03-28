@@ -63,6 +63,7 @@ FROM fedora:43
 # Install ONLY runtime libraries
 RUN dnf -y install \
         gdal-libs proj geos sqlite \
+        hyperfine time \
     && dnf clean all \
     && rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*
 

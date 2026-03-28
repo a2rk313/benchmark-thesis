@@ -73,6 +73,8 @@ RUN microdnf install -y \
         proj \
         geos \
         sqlite-libs \
+        hyperfine \
+        time \
     && microdnf clean all && rm -rf /var/cache/dnf/*
 
 # Copy ONLY the virtual environment from builder

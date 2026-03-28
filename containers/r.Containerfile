@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.title="Thesis R Geospatial Lab" \
 RUN dnf -y upgrade --refresh && \
     dnf -y install \
         gcc gcc-c++ make cmake git wget tar bzip2 curl \
-        time sysstat \
+        time sysstat hyperfine \
     && dnf clean all
 
 # ---------- Layer 2: Geospatial system libraries ----------

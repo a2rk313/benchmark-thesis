@@ -61,6 +61,8 @@ RUN microdnf install -y \
         gdal-libs \
         proj \
         geos \
+        hyperfine \
+        time \
     && microdnf clean all && rm -rf /var/cache/dnf/*
 
 # Copy Julia installation

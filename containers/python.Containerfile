@@ -77,6 +77,9 @@ import numpy as np
 np.show_config()
 PYEOF
 
+# ---------- Utilities ----------
+RUN dnf install -y hyperfine time sysstat && dnf clean all
+
 # ---------- Runtime ----------
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

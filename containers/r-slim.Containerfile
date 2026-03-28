@@ -67,6 +67,8 @@ RUN microdnf install -y \
         freetype \
         libpng \
         libjpeg-turbo \
+        hyperfine \
+        time \
     && microdnf clean all && rm -rf /var/cache/dnf/*
 
 # Copy R installation and packages

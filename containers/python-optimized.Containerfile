@@ -68,6 +68,7 @@ RUN dnf install -y \
         python3.13 \
         openblas lapack \
         gdal-libs proj geos sqlite \
+        hyperfine time \
     && dnf clean all \
     && rm -rf /var/cache/dnf/* /tmp/* /var/tmp/*
 

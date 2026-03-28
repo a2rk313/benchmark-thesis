@@ -25,7 +25,7 @@ LABEL org.opencontainers.image.title="Thesis Julia Geospatial Lab" \
 RUN dnf -y upgrade --refresh && \
     dnf -y install \
         gcc gcc-c++ make cmake git wget tar bzip2 \
-        time sysstat \
+        time sysstat hyperfine \
         gdal gdal-devel \
         proj proj-devel \
         geos geos-devel \
