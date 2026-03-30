@@ -19,23 +19,23 @@ Both studies use matrix operations to benchmark programming language performance
 ### Cross-Product (A'A)
 | Language | Your Result | Tedesco et al. | Ratio | Consistent? |
 |----------|-------------|----------------|-------|-------------|
-| Python | 0.3511s | 0.0330s | 10.64× | ⚠ |
-| Julia | 0.4324s | 0.1820s | 2.38× | ⚠ |
-| R | 10.2983s | 0.0340s | 302.89× | ⚠ |
+| Python | 0.1638s | 0.0330s | 4.96× | ⚠ |
+| Julia | 0.1600s | 0.1820s | 0.88× | ✓ |
+| R | 9.8058s | 0.0340s | 288.41× | ⚠ |
 
 ### Matrix Determinant
 | Language | Your Result | Tedesco et al. | Ratio | Consistent? |
 |----------|-------------|----------------|-------|-------------|
-| Python | 0.6665s | 0.1180s | 5.65× | ⚠ |
-| Julia | 0.2799s | 0.1520s | 1.84× | ✓ |
-| R | 3.6780s | 0.0440s | 83.59× | ⚠ |
+| Python | 0.1884s | 0.1180s | 1.60× | ✓ |
+| Julia | 0.1374s | 0.1520s | 0.90× | ✓ |
+| R | 3.5503s | 0.0440s | 80.69× | ⚠ |
 
 ### Sorting (1M values)
 | Language | Your Result | Tedesco et al. | Ratio | Consistent? |
 |----------|-------------|----------------|-------|-------------|
-| Python | 0.0240s | 0.0070s | 3.43× | ⚠ |
-| Julia | 0.0627s | 0.0310s | 2.02× | ⚠ |
-| R | 0.1165s | 0.0770s | 1.51× | ✓ |
+| Python | 0.0150s | 0.0070s | 2.15× | ⚠ |
+| Julia | 0.0265s | 0.0310s | 0.86× | ✓ |
+| R | 0.0848s | 0.0770s | 1.10× | ✓ |
 
 ## Interpretation
 

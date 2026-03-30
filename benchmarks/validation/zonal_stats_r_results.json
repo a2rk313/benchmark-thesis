@@ -3,9 +3,9 @@
   "scenario": "zonal_statistics",
   "results": {
     "zonal_mean": {
-      "min_time_s": 0.006,
-      "mean_time_s": 0.0067,
-      "std_time_s": 0.0011,
+      "min_time_s": 0.005,
+      "mean_time_s": 0.0065,
+      "std_time_s": 0.0015,
       "n_zones": 10,
       "hash": "4f53cda18c2baa0c"
     }

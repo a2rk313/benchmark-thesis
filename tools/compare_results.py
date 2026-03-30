@@ -258,12 +258,12 @@ def generate_report(scenarios: List[str]) -> str:
 
 
 def main():
-    # Define available scenarios
+    # Define available scenarios (matches actual file naming)
     scenarios = [
         "matrix_ops",
         "io_ops",
-        "hsi_stream",
-        "vector_pip",
+        "raster",  # hsi_stream scenario
+        "vector",  # vector_pip scenario
         "interpolation",
         "timeseries",
         "raster_algebra",

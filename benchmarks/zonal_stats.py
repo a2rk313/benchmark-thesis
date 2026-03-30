@@ -121,9 +121,8 @@ def load_nlcd_data():
     return None, 0, 0
 
 
-def create_latitude_zones(n_zones):
+def create_latitude_zones(rows, cols, n_zones):
     """Create simple latitude-based zones for benchmarking."""
-    rows, cols = 180, 360
     mask = np.zeros((rows, cols), dtype=np.int32)
     zone_height = rows // n_zones
 
@@ -205,6 +204,7 @@ def run_zonal_stats_benchmark():
 
     print("\n[1/4] Loading data...")
     polys, raster, lats, lons = load_or_create_data()
+    rows, cols = raster.shape
     print(f"  ✓ Loaded {len(polys)} polygons")
     print(f"  ✓ Raster shape: {raster.shape} ({raster.size:,} cells)")
 
@@ -217,10 +217,10 @@ def run_zonal_stats_benchmark():
 
     # Use latitude-based zones for faster testing
     n_zones = 10
-    mask = create_latitude_zones(n_zones)
+    mask = create_latitude_zones(rows, cols, n_zones)
 
     def mask_task():
-        return create_latitude_zones(n_zones)
+        return create_latitude_zones(rows, cols, n_zones)
 
     times, peak = run_benchmark(mask_task, runs=5, warmup=1)
 

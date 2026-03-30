@@ -7,6 +7,10 @@ Key principles:
 2. Timing measurements are NOT i.i.d. (violates classical stats)
 3. Bootstrap confidence intervals for robust comparison
 4. Shapiro-Wilk normality tests to validate assumptions
+5. Increased runs (50) for statistical validity
+
+Academic Citation:
+Chen, D., & Revels, J. (2016). "Benchmarking Julia against R and Python."
 """
 
 import numpy as np
@@ -16,6 +20,10 @@ from typing import List, Tuple, Dict, Callable, Optional, Any
 from dataclasses import dataclass, field
 import json
 import hashlib
+
+# Default runs increased for statistical validity (Chen & Revels recommend 50+)
+DEFAULT_RUNS = 50
+DEFAULT_WARMUP = 5
 
 
 @dataclass
@@ -35,6 +43,8 @@ class BenchmarkResult:
     is_normal: Optional[bool] = None
     ci_95_lower: Optional[float] = None
     ci_95_upper: Optional[float] = None
+    cv: Optional[float] = None  # Coefficient of variation
+    iqr: Optional[float] = None  # Interquartile range
 
     # Scaling info (if multi-size)
     sizes_tested: Optional[List[int]] = None
@@ -54,6 +64,8 @@ class BenchmarkResult:
             "normality_p_value": self.normality_p_value,
             "is_normal": self.is_normal,
             "ci_95": [self.ci_95_lower, self.ci_95_upper] if self.ci_95_lower else None,
+            "cv": self.cv,  # Coefficient of variation
+            "iqr": self.iqr,  # Interquartile range
             "sizes_tested": self.sizes_tested,
             "scaling_factor": self.scaling_factor,
         }
@@ -223,8 +235,8 @@ def estimate_scaling(times: List[float], sizes: List[int]) -> float:
 
 def run_benchmark(
     func: Callable,
-    runs: int = 10,
-    warmup: int = 2,
+    runs: int = DEFAULT_RUNS,
+    warmup: int = DEFAULT_WARMUP,
     track_memory: bool = True,
     memory_unit: str = "MB",
 ) -> Tuple[List[float], Optional[float]]:
@@ -277,8 +289,8 @@ def analyze_benchmark(
     name: str,
     language: str,
     func: Callable,
-    runs: int = 10,
-    warmup: int = 2,
+    runs: int = DEFAULT_RUNS,
+    warmup: int = DEFAULT_WARMUP,
     track_memory: bool = True,
     validator_func: Optional[Callable] = None,
 ) -> BenchmarkResult:
@@ -289,8 +301,8 @@ def analyze_benchmark(
         name: Benchmark name
         language: Programming language
         func: Function to benchmark
-        runs: Number of runs
-        warmup: Warmup runs
+        runs: Number of runs (default 50 for statistical validity)
+        warmup: Warmup runs (default 5)
         track_memory: Track memory usage
         validator_func: Optional function to generate output hash
 
@@ -312,6 +324,13 @@ def analyze_benchmark(
     std_time = times_arr.std()
     median_time = np.median(times_arr)
 
+    # Coefficient of variation (CV) - measure of relative variability
+    cv = (std_time / mean_time) if mean_time > 0 else 0.0
+
+    # Interquartile range (IQR) - robust measure of spread
+    q75, q25 = np.percentile(times_arr, [75, 25])
+    iqr = q75 - q25
+
     # Normality test
     p_value, is_normal = shapiro_wilk_test(times_arr)
 
@@ -332,6 +351,8 @@ def analyze_benchmark(
         is_normal=is_normal,
         ci_95_lower=ci_lower,
         ci_95_upper=ci_upper,
+        cv=cv,
+        iqr=iqr,
     )
 
 
@@ -444,6 +465,12 @@ def print_benchmark_summary(result: BenchmarkResult):
     print(f"  Median:         {result.median_time:.4f}s")
     print(f"  Runs:           {result.runs}")
 
+    if result.cv is not None:
+        print(f"  CV:             {result.cv:.2%}")  # Coefficient of variation
+
+    if result.iqr is not None:
+        print(f"  IQR:            {result.iqr:.4f}s")
+
     if result.ci_95_lower:
         print(f"  95% CI:         [{result.ci_95_lower:.4f}, {result.ci_95_upper:.4f}]")
 
@@ -462,4 +489,5 @@ def print_benchmark_summary(result: BenchmarkResult):
             f"  Scaling Factor: {result.scaling_factor:.2f} (O(n^{result.scaling_factor:.1f}))"
         )
 
+    print(f"\n  Note: Minimum time is primary metric (Chen & Revels 2016)")
     print(f"{'=' * 60}\n")

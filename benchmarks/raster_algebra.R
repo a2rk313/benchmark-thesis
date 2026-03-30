@@ -10,14 +10,30 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
+# Get script directory
+get_script_dir <- function() {
+  cmdArgs <- commandArgs(trailingOnly = FALSE)
+  fileArg <- cmdArgs[grep("^--file=", cmdArgs)]
+  if (length(fileArg) == 0) {
+    return(".")
+  }
+  filePath <- sub("^--file=", "", fileArg)
+  return(dirname(filePath))
+}
+
+script_dir <- get_script_dir()
 OUTPUT_DIR <- "validation"
 RESULTS_DIR <- "results"
 
-source("common_hash.R")
+source(file.path(script_dir, "common_hash.R"))
 
 load_cuprite_bands <- function() {
+  # Use project root for data
+  data_dir <- if (file.exists("data")) "data" else file.path(dirname(script_dir), "data")
+  mat_path <- file.path(data_dir, "Cuprite.mat")
+  
   tryCatch({
-    mat_data <- R.matlab::readMat("data/Cuprite.mat")
+    mat_data <- R.matlab::readMat(mat_path)
     data <- mat_data[[1]]
     
     # Preserve matrix dimensions using aperm

@@ -12,10 +12,22 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
+# Get script directory
+get_script_dir <- function() {
+  cmdArgs <- commandArgs(trailingOnly = FALSE)
+  fileArg <- cmdArgs[grep("^--file=", cmdArgs)]
+  if (length(fileArg) == 0) {
+    return(".")
+  }
+  filePath <- sub("^--file=", "", fileArg)
+  return(dirname(filePath))
+}
+
+script_dir <- get_script_dir()
 OUTPUT_DIR <- "validation"
 RESULTS_DIR <- "results"
 
-source("common_hash.R")
+source(file.path(script_dir, "common_hash.R"))
 
 deg2rad <- function(deg) deg * pi / 180
 rad2deg <- function(rad) rad * 180 / pi
