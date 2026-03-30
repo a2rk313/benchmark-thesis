@@ -77,11 +77,13 @@ function benchmark_binary_read()
     Task 4: Read Binary File
     """
     input_path = "data/io_test_julia.bin"
+    n = 1_000_000
     
     # Timed operation
     start_time = time()
     arr = open(input_path, "r") do io
-        read(io, Float64, filesize(io) ÷ sizeof(Float64))
+        bytes = read(io)
+        reinterpret(Float64, bytes)
     end
     elapsed = time() - start_time
     

@@ -72,40 +72,52 @@ function main()
     points_geom = [ArchGDAL.createpoint(row.lon, row.lat) for row in eachrow(points_df)]
     
     # =========================================================================
-    # 2. Spatial Join (Point-in-Polygon) - Parallel Processing
+    # 2. Spatial Join (Point-in-Polygon) - Using bounding box + within
     # =========================================================================
-    println("\n[2/4] Performing spatial join (using $(Threads.nthreads()) threads)...")
+    println("\n[2/4] Performing spatial join...")
     
-    # Build spatial index using LibGEOS STRtree
-    rtree = LibGEOS.STRtree(polys.geometry)
+    n_points = nrow(points_df)
+    
+    # Pre-compute bounding boxes for polygons
+    bbox_min_x = Float64[]
+    bbox_max_x = Float64[]
+    bbox_min_y = Float64[]
+    bbox_max_y = Float64[]
+    
+    for poly in polys.geometry
+        env = ArchGDAL.envelope(poly)
+        push!(bbox_min_x, env.MinX)
+        push!(bbox_max_x, env.MaxX)
+        push!(bbox_min_y, env.MinY)
+        push!(bbox_max_y, env.MaxY)
+    end
     
     # Pre-calculate centroids
-    centroids = [ArchGDAL.centroid(geom) for geom in polys.geometry]
+    centroids = [ArchGDAL.centroid(poly) for poly in polys.geometry]
     
-    # Prepare thread-safe storage
-    n_points = length(points_geom)
-    matched_indices = Vector{Union{Nothing, Int}}(nothing, n_points)
+    # Query for each point using bounding box filter
+    n_matched = 0
+    matched_point_indices = Int[]
+    matched_poly_indices = Int[]
     
-    # Parallel spatial join
-    Threads.@threads for i in 1:n_points
-        point = points_geom[i]
+    for (pt_idx, pt) in enumerate(points_geom)
+        pt_x, pt_y = ArchGDAL.getx(pt, 0), ArchGDAL.gety(pt, 0)
         
-        # Query spatial index for candidate polygons
-        candidates = LibGEOS.query(rtree, point)
+        # Filter candidates by bounding box first
+        candidates = findall(i -> (bbox_min_x[i] <= pt_x <= bbox_max_x[i] && 
+                                   bbox_min_y[i] <= pt_y <= bbox_max_y[i]), 
+                            1:nrow(polys))
         
-        # Test exact topology (GEOS within predicate)
+        # Test exact within predicate
         for poly_idx in candidates
-            if LibGEOS.within(point, polys.geometry[poly_idx])
-                matched_indices[i] = poly_idx
+            if GeoInterface.within(pt, polys.geometry[poly_idx])
+                n_matched += 1
+                push!(matched_point_indices, pt_idx)
+                push!(matched_poly_indices, poly_idx)
                 break  # First match is sufficient
             end
         end
     end
-    
-    # Filter to matched points only
-    matched_mask = matched_indices .!== nothing
-    matched_point_indices = findall(matched_mask)
-    matched_poly_indices = matched_indices[matched_mask]
     
     n_matches = length(matched_point_indices)
     println("  ✓ Matched $n_matches points to polygons")

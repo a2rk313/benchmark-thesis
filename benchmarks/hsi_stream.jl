@@ -65,7 +65,7 @@ function main()
     reference_spectrum ./= norm(reference_spectrum)  # Normalize
     
     println("  ✓ Reference spectrum: $n_bands bands")
-    ref_hash = bytes2hex(sha256(reference_spectrum))[1:16]
+    ref_hash = bytes2hex(sha256(reinterpret(UInt8, reference_spectrum)))[1:16]
     println("  ✓ Reference spectrum hash: $ref_hash")
     
     # =========================================================================
@@ -76,12 +76,14 @@ function main()
     hsi_path = "data/Cuprite.mat"
     
     println("  ✓ Loading MAT file: $hsi_path")
-    mat_file = matopen(hsi_path)
-    data_keys = names(mat_file)
-    data_key = data_keys[1]
+    mat_file = matopen(hsi_path, "r")
+    data_keys = keys(mat_file)
+    data_key = first(data_keys)
     data = read(mat_file, data_key)
     close(mat_file)
     
+    # Data is stored as (rows, cols, bands) - permute to get (bands, rows, cols)
+    data = permutedims(data, (3, 1, 2))
     n_bands = size(data, 1)
     n_rows = size(data, 2)
     n_cols = size(data, 3)
@@ -119,9 +121,9 @@ function main()
             # Extract chunk
             chunk = data[:, row_start:row_end, col_start:col_end]
             
-            # Reshape to (n_pixels, n_bands)
+            # Reshape to (n_pixels, n_bands) and convert to Float32
             n_pixels_chunk = (row_end - row_start + 1) * (col_end - col_start + 1)
-            pixel_spectra = reshape(chunk, n_pixels_chunk, n_bands)
+            pixel_spectra = Float32.(reshape(chunk, n_pixels_chunk, n_bands))
             
             # Calculate SAM
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)

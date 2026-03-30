@@ -55,7 +55,8 @@ RUN uv pip install \
     psutil \
     tqdm \
     matplotlib \
-    seaborn
+    seaborn \
+    h5py
 
 # ---------- Verification ----------
 RUN python3 - << 'PYEOF'

@@ -38,9 +38,9 @@ ENV JULIA_DEPOT_PATH="/julia-depot"
 RUN mkdir -p /julia-depot
 
 # Install Julia packages (with precompilation)
-RUN julia -e 'using Pkg; Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "Statistics", "LinearAlgebra", "Random", "Dates", "ArchGDAL", "GeoDataFrames", "Shapefile"])' && \
+RUN julia -e 'using Pkg; Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "Statistics", "LinearAlgebra", "Random", "Dates", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"])' && \
     julia -e 'using Pkg; Pkg.precompile()' && \
-    julia -e 'using BenchmarkTools, CSV, DataFrames, ArchGDAL; println("✓ Packages OK")'
+    julia -e 'using BenchmarkTools, CSV, DataFrames, SHA, MAT, ArchGDAL, GeoDataFrames, NearestNeighbors; println("✓ Packages OK")'
 
 # Clean up Julia depot (AGGRESSIVE)
 RUN rm -rf /julia-depot/logs && \
@@ -79,7 +79,7 @@ ENV PATH="/opt/julia-1.11.2/bin:$PATH" \
 RUN ln -s /opt/julia-1.11.2/bin/julia /usr/local/bin/julia
 
 # Verification
-RUN julia -e 'using BenchmarkTools, CSV, DataFrames, ArchGDAL; println("✓ All packages OK")' && \
+RUN julia -e 'using BenchmarkTools, CSV, DataFrames, SHA, MAT, ArchGDAL, GeoDataFrames, LibGEOS, NearestNeighbors, JSON3, Shapefile; println("✓ All packages OK")' && \
     julia -e 'using LinearAlgebra; BLAS.vendor()' | grep -i openblas || true
 
 WORKDIR /benchmarks

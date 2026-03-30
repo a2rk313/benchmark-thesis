@@ -59,16 +59,15 @@ RUN set -eux && \
 # =============================================================================
 
 # Install essential packages one by one (easier debugging if one fails)
-RUN julia -e 'using Pkg; Pkg.add("ArchGDAL")'
-RUN julia -e 'using Pkg; Pkg.add("DataFrames")'
 RUN julia -e 'using Pkg; Pkg.add("CSV")'
-RUN julia -e 'using Pkg; Pkg.add("Shapefile")'
-RUN julia -e 'using Pkg; Pkg.add("NearestNeighbors")'
+RUN julia -e 'using Pkg; Pkg.add("DataFrames")'
 RUN julia -e 'using Pkg; Pkg.add("JSON3")'
+RUN julia -e 'using Pkg; Pkg.add("Shapefile")'
 RUN julia -e 'using Pkg; Pkg.add("BenchmarkTools")'
-# Additional packages needed by benchmarks
 RUN julia -e 'using Pkg; Pkg.add("SHA")'
 RUN julia -e 'using Pkg; Pkg.add("MAT")'
+RUN julia -e 'using Pkg; Pkg.add("ArchGDAL")'
+RUN julia -e 'using Pkg; Pkg.add("NearestNeighbors")'
 RUN julia -e 'using Pkg; Pkg.add("GeoDataFrames")'
 RUN julia -e 'using Pkg; Pkg.add("LibGEOS")'
 
@@ -84,7 +83,7 @@ ENV JULIA_NUM_THREADS=auto \
 # =============================================================================
 # Verification
 # =============================================================================
-RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using ArchGDAL; println("ArchGDAL: OK"); using DataFrames; println("DataFrames: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); using SHA; println("SHA: OK"); using MAT; println("MAT: OK"); using GeoDataFrames; println("GeoDataFrames: OK"); using LibGEOS; println("LibGEOS: OK"); println("✓ All packages OK")'
+RUN julia -e 'println("Julia version: ", VERSION); println("Threads: ", Threads.nthreads()); using CSV; println("CSV: OK"); using DataFrames; println("DataFrames: OK"); using JSON3; println("JSON3: OK"); using Shapefile; println("Shapefile: OK"); using BenchmarkTools; println("BenchmarkTools: OK"); using SHA; println("SHA: OK"); using MAT; println("MAT: OK"); using ArchGDAL; println("ArchGDAL: OK"); using NearestNeighbors; println("NearestNeighbors: OK"); using GeoDataFrames; println("GeoDataFrames: OK"); using LibGEOS; println("LibGEOS: OK"); println("✓ All packages OK")'
 
 WORKDIR /benchmarks
 CMD ["/bin/bash"]

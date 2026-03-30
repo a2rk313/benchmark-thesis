@@ -43,8 +43,9 @@ RUN JULIA_URL="https://julialang-s3.julialang.org/bin/linux/x64/${JULIA_MAJOR}/j
 
 # Install all packages in one layer (faster, smaller)
 RUN julia -e 'using Pkg; \
-    Pkg.add(["ArchGDAL", "DataFrames", "CSV", "Shapefile", \
-             "NearestNeighbors", "JSON3", "BenchmarkTools"]); \
+    Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", \
+             "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", \
+             "Shapefile", "JSON3"]); \
     Pkg.precompile()'
 
 # Clean up Julia depot (remove build artifacts, git repos, etc.)
@@ -79,7 +80,7 @@ ENV JULIA_PATH=/usr/local/julia \
 ENV JULIA_NUM_THREADS=auto
 
 # Verify installation
-RUN julia -e 'using ArchGDAL, DataFrames, CSV, BenchmarkTools; println("✓ Core packages OK")'
+RUN julia -e 'using BenchmarkTools, CSV, DataFrames, SHA, MAT, ArchGDAL, GeoDataFrames, LibGEOS, NearestNeighbors, JSON3, Shapefile; println("✓ All packages OK")'
 
 WORKDIR /benchmarks
 CMD ["/bin/bash"]

@@ -56,7 +56,8 @@ RUN uv pip install --no-cache \
     psutil \
     tqdm \
     matplotlib \
-    seaborn
+    seaborn \
+    h5py
 
 # ============================================
 # STAGE 2: Runtime stage (minimal dependencies only)

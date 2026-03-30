@@ -52,7 +52,8 @@ RUN uv pip install --no-cache \
     psutil \
     tqdm \
     matplotlib \
-    seaborn
+    seaborn \
+    h5py
 
 # Remove unnecessary files from venv
 RUN find /venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \

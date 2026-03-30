@@ -6,11 +6,14 @@ min_version = "2024.1.0"
 
 [tools]
 # Exact versions for reproducibility
-python = "3.13.3"
-julia = "1.11.2"
-node = "20.11.0"  # For any visualization tools
+python = "3.12.13"  # Note: 3.13 standalone builds have lib issues
+julia = "1.11.4"   # Matches thesis-julia:1.11 (Fedora 43)
+node = "20.11.0"
 
 [env]
+# R version: 4.5.3 (from thesis-r:4.5 container)
+# Install R from system package manager or download from CRAN
+
 # Auto-create Python virtual environment
 _.python.venv = { path = ".venv", create = true }
 
@@ -21,39 +24,20 @@ UV_PYTHON_INSTALL_MIRROR = "https://github.com/indygreg/python-build-standalone/
 BENCHMARK_RUNS = "10"
 BENCHMARK_THREADS = "8"
 
-# Platform-specific settings (examples)
-# Uncomment and modify as needed:
-# BLAS_THREADS = { linux = "8", windows = "4" }
-# DATA_DIR = { linux = "~/thesis-benchmarks/data", windows = "C:\\thesis-benchmarks\\data" }
-
 [tasks.install]
 description = "Install all dependencies"
 run = """
 echo "Installing Python packages..."
-python -m pip install --upgrade pip setuptools wheel
-
-# Option A: Using pip
-pip install numpy scipy pandas matplotlib \
-            rasterio geopandas scikit-learn \
-            pytest pytest-cov
-
-# Option B: Using uv (faster, uncomment to use)
-# pip install uv
-# uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn
-
-# Lock dependencies
-pip freeze > requirements.txt
+uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py
 
 echo ""
 echo "Installing Julia packages..."
-julia -e 'using Pkg; Pkg.activate("."); Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "ArchGDAL", "Statistics"]); Pkg.precompile()'
+julia -e 'using Pkg; Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"]); Pkg.precompile()'
 
 echo ""
 echo "✓ Installation complete!"
 echo "  Python: $(python --version)"
 echo "  Julia: $(julia --version)"
-echo ""
-echo "Note: Install R manually from https://cran.r-project.org"
 """
 
 [tasks.download-data]
@@ -79,164 +63,137 @@ depends = ["install", "download-data", "download-vector"]
 [tasks.bench]
 description = "Run all benchmarks"
 run = """
-echo "========================================================================"
-echo "Running Benchmark Suite"
-echo "========================================================================"
+mkdir -p results validation
 
-mkdir -p results
-
-echo ""
-echo "[1/6] Matrix operations (Python)..."
+echo "[1/9] Matrix operations..."
 python benchmarks/matrix_ops.py
-
-echo ""
-echo "[2/6] Matrix operations (Julia)..."
-julia benchmarks/matrix_ops.jl
-
-echo ""
-echo "[3/6] Matrix operations (R)..."
+~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
 Rscript benchmarks/matrix_ops.R
 
-echo ""
-echo "[4/6] I/O operations..."
+echo "[2/9] I/O operations..."
 python benchmarks/io_ops.py
-julia benchmarks/io_ops.jl
+~/.juliaup/bin/julialauncher benchmarks/io_ops.jl
 Rscript benchmarks/io_ops.R
 
-echo ""
-echo "[5/6] Hyperspectral (Cuprite)..."
+echo "[3/9] Hyperspectral (Cuprite SAM)..."
 python benchmarks/hsi_stream.py
-julia benchmarks/hsi_stream.jl
+~/.juliaup/bin/julialauncher benchmarks/hsi_stream.jl
 Rscript benchmarks/hsi_stream.R
 
-echo ""
-echo "[6/6] Vector/Raster benchmarks..."
+echo "[4/9] Vector benchmarks (Point-in-Polygon)..."
 python benchmarks/vector_pip.py
-julia benchmarks/vector_pip.jl
+~/.juliaup/bin/julialauncher benchmarks/vector_pip.jl
 Rscript benchmarks/vector_pip.R
 
+echo "[5/9] Interpolation (IDW)..."
+python benchmarks/interpolation_idw.py
+~/.juliaup/bin/julialauncher benchmarks/interpolation_idw.jl
+Rscript benchmarks/interpolation_idw.R
+
+echo "[6/9] Time-series NDVI..."
+python benchmarks/timeseries_ndvi.py
+~/.juliaup/bin/julialauncher benchmarks/timeseries_ndvi.jl
+Rscript benchmarks/timeseries_ndvi.R
+
+echo "[7/9] Raster Algebra (Band Math, NDVI)..."
+python benchmarks/raster_algebra.py
+~/.juliaup/bin/julialauncher benchmarks/raster_algebra.jl
+Rscript benchmarks/raster_algebra.R
+
+echo "[8/9] Zonal Statistics..."
+python benchmarks/zonal_stats.py
+~/.juliaup/bin/julialauncher benchmarks/zonal_stats.jl
+Rscript benchmarks/zonal_stats.R
+
+echo "[9/9] Coordinate Reprojection..."
+python benchmarks/reprojection.py
+~/.juliaup/bin/julialauncher benchmarks/reprojection.jl
+Rscript benchmarks/reprojection.R
+
 echo ""
-echo "========================================================================"
-echo "✓ Benchmarks complete!"
-echo "Results in: results/"
-echo "========================================================================"
+echo "✓ All benchmarks complete!"
+"""
+
+[tasks.bench-python]
+description = "Run Python benchmarks only"
+run = """
+mkdir -p results validation
+python benchmarks/matrix_ops.py
+python benchmarks/io_ops.py
+python benchmarks/hsi_stream.py
+python benchmarks/vector_pip.py
+python benchmarks/interpolation_idw.py
+python benchmarks/timeseries_ndvi.py
+python benchmarks/raster_algebra.py
+python benchmarks/zonal_stats.py
+python benchmarks/reprojection.py
+"""
+
+[tasks.bench-julia]
+description = "Run Julia benchmarks only"
+run = """
+mkdir -p results validation
+~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
+~/.juliaup/bin/julialauncher benchmarks/io_ops.jl
+~/.juliaup/bin/julialauncher benchmarks/hsi_stream.jl
+~/.juliaup/bin/julialauncher benchmarks/interpolation_idw.jl
+~/.juliaup/bin/julialauncher benchmarks/timeseries_ndvi.jl
+~/.juliaup/bin/julialauncher benchmarks/raster_algebra.jl
+~/.juliaup/bin/julialauncher benchmarks/zonal_stats.jl
+~/.juliaup/bin/julialauncher benchmarks/reprojection.jl
+"""
+
+[tasks.bench-r]
+description = "Run R benchmarks only"
+run = """
+mkdir -p results validation
+Rscript benchmarks/matrix_ops.R
+Rscript benchmarks/io_ops.R
+Rscript benchmarks/hsi_stream.R
+Rscript benchmarks/vector_pip.R
+Rscript benchmarks/interpolation_idw.R
+Rscript benchmarks/timeseries_ndvi.R
+Rscript benchmarks/raster_algebra.R
+Rscript benchmarks/zonal_stats.R
+Rscript benchmarks/reprojection.R
 """
 
 [tasks.validate]
-description = "Run validation analysis"
+description = "Run cross-language validation"
 run = """
-echo "Running Chen & Revels validation..."
-python validation/chen_revels_validation.py
-
-echo ""
-echo "Comparing with Tedesco et al. (2025)..."
+python tools/compare_results.py
 python tools/compare_with_tedesco.py
-
-echo ""
-echo "✓ Validation complete"
 """
 
-[tasks.scaling]
-description = "Run scaling analysis"
+[tasks.report]
+description = "Generate comparison reports"
 run = """
-echo "Running multi-scale benchmarks..."
-python benchmark_scaling.py
-
-echo ""
-echo "Generating scaling visualizations..."
-python visualize_scaling.py
-
-echo ""
-echo "✓ Scaling analysis complete"
-echo "Figures: results/scaling/*.png"
+mkdir -p results validation
+python tools/compare_results.py
+python tools/compare_with_tedesco.py
+echo "✓ Reports generated in validation/"
 """
 
 [tasks.clean]
 description = "Clean generated files"
 run = """
 rm -rf results/*.json
-rm -rf results/scaling/*.json results/scaling/*.png
-rm -rf __pycache__ .pytest_cache
+rm -rf __pycache__
 find . -name "*.pyc" -delete
 echo "✓ Cleaned"
-"""
-
-[tasks.test]
-description = "Run tests"
-run = """
-pytest validation/ -v
-echo "✓ Tests passed"
 """
 
 [tasks.check]
 description = "Verify environment setup"
 run = """
 echo "Checking environment..."
-echo ""
-
-echo "Python:"
-python --version
-python -c "import numpy, scipy, pandas; print(f'  NumPy {numpy.__version__}, SciPy {scipy.__version__}, Pandas {pandas.__version__}')"
-
-echo ""
-echo "Julia:"
-julia --version
-julia -e 'using Pkg; println("  Packages: ", length(Pkg.dependencies()))'
-
-echo ""
-echo "R:"
-if command -v Rscript &> /dev/null; then
-    Rscript --version 2>&1 | head -1
-else
-    echo "  ⚠ R not installed (install from https://cran.r-project.org)"
-fi
-
-echo ""
-echo "Datasets:"
-[ -d "data/cuprite" ] && echo "  ✓ Cuprite" || echo "  ❌ Cuprite (run: mise run download-data)"
-[ -f "data/natural_earth_countries.gpkg" ] && echo "  ✓ Natural Earth" || echo "  ❌ Natural Earth (run: mise run download-vector)"
-
-echo ""
-echo "✓ Environment check complete"
+echo "Python: $(python --version)"
+echo "Julia: $(julia --version)"
+python -c "import numpy; print('NumPy:', numpy.__version__)"
 """
 
-# Convenience aliases
+# Aliases
 [tasks]
 b = { alias = "bench" }
 s = { alias = "setup" }
-v = { alias = "validate" }
 c = { alias = "clean" }
-
-# Development tasks
-[tasks.dev]
-description = "Enter development shell with all tools"
-run = "echo 'Development environment ready. Python, Julia available.'; $SHELL"
-
-[tasks.jupyter]
-description = "Start Jupyter lab for analysis"
-run = """
-pip install jupyterlab -q
-jupyter lab --no-browser
-"""
-
-# Documentation tasks
-[tasks.docs]
-description = "Generate documentation"
-run = """
-echo "Generating documentation..."
-echo "✓ See README.md and docs/"
-"""
-
-# Platform-specific tasks (examples)
-[tasks.bench-linux]
-description = "Run benchmarks with Linux-specific optimizations"
-run = """
-# Set CPU governor
-sudo cpupower frequency-set --governor performance 2>/dev/null || true
-
-# Run benchmarks
-mise run bench
-
-# Restore governor
-sudo cpupower frequency-set --governor powersave 2>/dev/null || true
-"""

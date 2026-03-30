@@ -33,10 +33,10 @@ RUN echo "options(Ncpus = parallel::detectCores())" >> /usr/lib64/R/etc/Rprofile
     echo "MAKEFLAGS = -j$(nproc)" >> /usr/lib64/R/etc/Renviron.site
 
 # Install R packages
-RUN R -e 'install.packages(c("terra", "sf", "data.table", "dplyr", "tictoc", "ggplot2"), repos="https://cloud.r-project.org", clean=TRUE)'
+RUN R -e 'install.packages(c("terra", "R.matlab", "FNN", "jsonlite", "digest", "data.table"), repos="https://cloud.r-project.org", clean=TRUE)'
 
 # Verify packages
-RUN R -e 'library(terra); library(sf); library(data.table); cat("✓ All packages OK\n")'
+RUN R -e 'library(terra); library(R.matlab); library(FNN); library(jsonlite); library(digest); library(data.table); cat("✓ All packages OK\n")'
 
 # Clean up R library (AGGRESSIVE)
 RUN find /usr/lib64/R/library -name "help" -type d -exec rm -rf {} + 2>/dev/null || true && \
@@ -80,7 +80,7 @@ ENV R_LIBS_USER="/usr/local/lib/R/site-library" \
     OPENBLAS_NUM_THREADS=8
 
 # Verification
-RUN R -e 'library(terra); library(sf); library(data.table); cat("✓ All packages OK\n")'
+RUN R -e 'library(terra); library(R.matlab); library(FNN); library(jsonlite); library(digest); library(data.table); cat("✓ All packages OK\n")'
 
 WORKDIR /benchmarks
 CMD ["/bin/bash"]

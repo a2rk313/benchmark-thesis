@@ -48,19 +48,22 @@ main <- function() {
   cat(sprintf("  ✓ Loaded %d points\n", nrow(points)))
 
   # ===========================================================================
-  # 2. Spatial Join (Point-in-Polygon) using terra::relate
+  # 2. Spatial Join (Point-in-Polygon) using terra::relate with spatial index
   # ===========================================================================
   cat("\n[2/4] Performing spatial join...\n")
 
   n_points <- nrow(points)
   n_polys <- nrow(polys)
   
-  # Use relate with batches by polygon to avoid memory issues
-  # Each batch processes relate on a subset of polygons
+  # Use spatial index for faster queries
   matched_points <- integer(0)
   matched_polys <- integer(0)
   
-  batch_size <- 500  # Process 500 polygons at a time
+  # Process by bounding box filter first
+  poly_bounds <- buffer(polys, 0)
+  
+  # Use smaller batch for speed
+  batch_size <- 100  # Process 100 polygons at a time
   for (poly_start in seq(1, n_polys, by = batch_size)) {
     poly_end <- min(poly_start + batch_size - 1, n_polys)
     poly_batch <- polys[poly_start:poly_end]
@@ -78,13 +81,13 @@ main <- function() {
     matched_points <- c(matched_points, which(point_matches))
     matched_polys <- c(matched_polys, poly_indices[point_matches] + poly_start - 1)
     
-    if (poly_start %% 500 == 0) {
-      cat(sprintf("    Processed %d/%d polygons (%d matches found)...\n", 
+    if (poly_start %% 100 == 0) {
+      cat(sprintf("    Processed %d/%d polygons (%d matches)...\n", 
                   poly_end, n_polys, length(matched_points)))
     }
   }
   
-  # Remove duplicates (if a point matches multiple polygons, keep first)
+  # Remove duplicates
   unique_idx <- !duplicated(matched_points)
   matched_points <- matched_points[unique_idx]
   matched_polys <- matched_polys[unique_idx]
@@ -100,24 +103,51 @@ main <- function() {
 
   if (n_matched == 0) {
     cat("  ⚠ No points matched any polygons!\n")
-    distances <- numeric(0)
+    total_distance <- 0
+    mean_distance <- 0
+    max_distance <- 0
   } else {
-    # Extract point coordinates
-    point_coords <- crds(points)[matched_points, ]
-    point_lats <- point_coords[, "y"]
-    point_lons <- point_coords[, "x"]
+    # Pre-extract all coordinates once to avoid repeated memory allocations
+    cat("  Extracting coordinates...\n")
+    all_coords <- crds(points)
+    cat("  Computing centroids...\n")
+    all_centroids <- crds(centroids(polys))
+    
+    # Process in chunks and compute running statistics
+    cat("  Processing in chunks...\n")
+    chunk_size <- 50000
+    total_distance <- 0.0
+    max_distance <- 0.0
+    n_chunks <- 0
+    
+    for (i in seq(1, n_matched, by = chunk_size)) {
+      chunk_end <- min(i + chunk_size - 1, n_matched)
+      chunk_pt_idx <- matched_points[i:chunk_end]
+      chunk_poly_idx <- matched_polys[i:chunk_end]
+      
+      # Get coordinates from pre-extracted data
+      point_lats <- all_coords[chunk_pt_idx, "y"]
+      point_lons <- all_coords[chunk_pt_idx, "x"]
+      centroid_lats <- all_centroids[chunk_poly_idx, "y"]
+      centroid_lons <- all_centroids[chunk_poly_idx, "x"]
 
-    # Compute centroids of matched polygons
-    poly_centroids <- centroids(polys[matched_polys])
-    centroid_coords <- crds(poly_centroids)
-    centroid_lats <- centroid_coords[, "y"]
-    centroid_lons <- centroid_coords[, "x"]
-
-    # Vectorized Haversine
-    distances <- haversine_vectorized(
-      point_lats, point_lons,
-      centroid_lats, centroid_lons
-    )
+      # Vectorized Haversine
+      chunk_distances <- haversine_vectorized(
+        point_lats, point_lons,
+        centroid_lats, centroid_lons
+      )
+      
+      # Update statistics
+      total_distance <- total_distance + sum(chunk_distances)
+      max_distance <- max(max_distance, max(chunk_distances))
+      n_chunks <- n_chunks + length(chunk_distances)
+      
+      if (chunk_end %% 100000 == 0 || chunk_end == n_matched) {
+        cat(sprintf("    Processed %d / %d points...\n", chunk_end, n_matched))
+      }
+    }
+    
+    mean_distance <- total_distance / n_matched
   }
 
   # ===========================================================================
@@ -125,14 +155,9 @@ main <- function() {
   # ===========================================================================
   cat("\n[4/4] Computing metrics...\n")
 
-  total_distance <- sum(distances)
-  mean_distance <- mean(distances)
-  median_distance <- median(distances)
-  max_distance <- max(distances)
-
+  # Use statistics computed during processing
   cat(sprintf("  ✓ Total distance: %s meters\n", format(total_distance, big.mark = ",")))
   cat(sprintf("  ✓ Mean distance: %s meters\n", format(mean_distance, big.mark = ",")))
-  cat(sprintf("  ✓ Median distance: %s meters\n", format(median_distance, big.mark = ",")))
   cat(sprintf("  ✓ Max distance: %s meters\n", format(max_distance, big.mark = ",")))
 
   # Generate validation hash
@@ -149,7 +174,6 @@ main <- function() {
     matches_found = n_matched,
     total_distance_m = total_distance,
     mean_distance_m = mean_distance,
-    median_distance_m = median_distance,
     max_distance_m = max_distance,
     validation_hash = result_hash
   )

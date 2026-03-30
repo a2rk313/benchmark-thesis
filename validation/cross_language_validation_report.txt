@@ -1,0 +1,210 @@
+================================================================================
+CROSS-LANGUAGE BENCHMARK VALIDATION REPORT
+================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: MATRIX_OPS
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✗ Python: Missing
+  ✗ R: Missing
+  ✗ Julia: Missing
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+
+[Performance Summary]
+
+[Warnings]
+  ⚠ Missing languages: ['python', 'r', 'julia']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: IO_OPS
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✗ Python: Missing
+  ✗ R: Missing
+  ✗ Julia: Missing
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+
+[Performance Summary]
+
+[Warnings]
+  ⚠ Missing languages: ['python', 'r', 'julia']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: HSI_STREAM
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✗ Python: Missing
+  ✗ R: Missing
+  ✗ Julia: Missing
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+
+[Performance Summary]
+
+[Warnings]
+  ⚠ Missing languages: ['python', 'r', 'julia']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: VECTOR_PIP
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✗ Python: Missing
+  ✗ R: Missing
+  ✗ Julia: Missing
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+
+[Performance Summary]
+
+[Warnings]
+  ⚠ Missing languages: ['python', 'r', 'julia']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: INTERPOLATION
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✓ Python: Present
+  ✓ R: Present
+  ✓ Julia: Present
+
+[Hash Comparison]
+  ✓ All languages produce identical results
+
+[Performance Summary]
+
+[Speedup Matrix (vs Python)]
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: TIMESERIES
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✓ Python: Present
+  ✓ R: Present
+  ✓ Julia: Present
+
+[Hash Comparison]
+  ✓ All languages produce identical results
+
+[Performance Summary]
+
+[Speedup Matrix (vs Python)]
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: RASTER_ALGEBRA
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✓ Python: Present
+  ✓ R: Present
+  ✓ Julia: Present
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+    python: 1073ce5d13eb9584
+    r: 5c2b99b5b669e8d3
+    julia: 0d483801d200414b
+
+[Performance Summary]
+  ndvi: python (0.0003s)
+  band_arithmetic: python (0.0016s)
+  convolution_3x3: python (0.0009s)
+
+[Speedup Matrix (vs Python)]
+  R:
+    ndvi: 0.02x slower
+    band_arithmetic: 0.05x slower
+    convolution_3x3: 0.04x slower
+  Julia:
+    ndvi: 0.16x slower
+    band_arithmetic: 0.24x slower
+    convolution_3x3: 0.87x slower
+
+[Warnings]
+  ⚠ Hash mismatch: ['1073ce5d13eb9584', '5c2b99b5b669e8d3', '0d483801d200414b']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: ZONAL_STATS
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✓ Python: Present
+  ✗ R: Missing
+  ✓ Julia: Present
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+    python: f50033d5ec2007ea
+    julia: 5af223f3ef75fd02
+
+[Performance Summary]
+  mask_creation: python (0.0000s)
+  zonal_mean: julia (0.0009s)
+  zonal_stats: julia (0.0009s)
+
+[Speedup Matrix (vs Python)]
+  Julia:
+    zonal_stats: 2.73x faster
+    zonal_mean: 4.40x faster
+    mask_creation: 0.85x slower
+
+[Warnings]
+  ⚠ Missing languages: ['r']
+
+────────────────────────────────────────────────────────────────────────────────
+SCENARIO: REPROJECTION
+────────────────────────────────────────────────────────────────────────────────
+
+[Language Presence]
+  ✓ Python: Present
+  ✓ R: Present
+  ✗ Julia: Missing
+
+[Hash Comparison]
+  ✗ Hash mismatch detected!
+    python: 0b8fcf629f2fb8fc
+    r: 603c58de344d267141c15c7414dfc273879682878453eba5839437bac54132cc
+
+[Performance Summary]
+  mercator_10000: python (0.0021s)
+  utm_10000: python (0.0884s)
+  mercator_50000: python (0.0097s)
+  utm_50000: python (0.2571s)
+  mercator_100000: python (0.0186s)
+  utm_100000: python (0.4614s)
+  mercator_500000: python (0.0906s)
+  utm_500000: python (2.2214s)
+  mercator_1000: r (0.0010s)
+  utm_1000: r (0.1700s)
+  mercator_5000: r (0.0060s)
+  utm_5000: r (3.4120s)
+
+[Speedup Matrix (vs Python)]
+  R:
+    utm_10000: 0.01x slower
+    mercator_10000: 0.15x slower
+
+[Warnings]
+  ⚠ Missing languages: ['julia']
+
+================================================================================
+SUMMARY
+================================================================================
+
+Scenarios with all languages: 3/9
+Scenarios with matching hashes: 2/9
+
+⚠ Some scenarios have hash mismatches - review needed
