@@ -85,29 +85,24 @@ def get_all_results() -> Dict:
     """Load all benchmark results from results/ and validation/ directories."""
     results = {}
 
-    for json_file in RESULTS_DIR.glob("*_python.json"):
-        if "tedesco" in json_file.name:
-            continue
-        name = json_file.stem.replace("_python", "")
+    def process_file(filepath: Path, name: str, lang: str):
+        """Add a result file to the results dict."""
         if name not in results:
             results[name] = {}
-        if "python" not in results[name]:
-            results[name]["python"] = load_json(json_file)
+        if lang not in results[name]:
+            results[name][lang] = load_json(filepath)
+        elif results[name][lang] is None:
+            results[name][lang] = load_json(filepath)
 
-    for json_file in RESULTS_DIR.glob("*_julia.json"):
-        name = json_file.stem.replace("_julia", "")
-        if name not in results:
-            results[name] = {}
-        if "julia" not in results[name]:
-            results[name]["julia"] = load_json(json_file)
+    # Load from results/ directory (Python, Julia, R files)
+    for suffix in ["python", "julia", "r"]:
+        for json_file in RESULTS_DIR.glob(f"*_{suffix}.json"):
+            if "tedesco" in json_file.name or "hardware" in json_file.name:
+                continue
+            name = json_file.stem.replace(f"_{suffix}", "")
+            process_file(json_file, name, suffix)
 
-    for json_file in RESULTS_DIR.glob("*_r.json"):
-        name = json_file.stem.replace("_r", "")
-        if name not in results:
-            results[name] = {}
-        if "r" not in results[name]:
-            results[name]["r"] = load_json(json_file)
-
+    # Load from validation/ directory (scenarios with _results.json suffix)
     for json_file in VALIDATION_DIR.glob("*_results.json"):
         name = json_file.stem.replace("_results", "")
         lang = None
@@ -116,12 +111,9 @@ def get_all_results() -> Dict:
                 lang = suffix.replace("_", "")
                 name = name.replace(suffix, "")
                 break
-        if not lang:
-            continue
-        if name not in results:
-            results[name] = {}
-        if lang not in results[name]:
-            results[name][lang] = load_json(json_file)
+
+        if lang:
+            process_file(json_file, name, lang)
 
     return results
 
@@ -134,6 +126,8 @@ def extract_timing_data(results: Dict) -> Tuple[List[str], Dict[str, List[float]
     for scenario_name, lang_results in sorted(results.items()):
         if not lang_results:
             continue
+
+        py_time = jl_time = r_time = np.nan
 
         for lang in ["python", "julia", "r"]:
             if lang in lang_results and lang_results[lang]:
@@ -150,10 +144,17 @@ def extract_timing_data(results: Dict) -> Tuple[List[str], Dict[str, List[float]
                             min_time = t
 
                 if min_time < float("inf"):
-                    timing_data[lang].append(min_time)
+                    if lang == "python":
+                        py_time = min_time
+                    elif lang == "julia":
+                        jl_time = min_time
+                    elif lang == "r":
+                        r_time = min_time
 
-        if any(timing_data[lang] for lang in ["python", "julia", "r"]):
-            scenarios.append(scenario_name.replace("_", " ").title())
+        timing_data["python"].append(py_time)
+        timing_data["julia"].append(jl_time)
+        timing_data["r"].append(r_time)
+        scenarios.append(scenario_name.replace("_", " ").title())
 
     return scenarios, timing_data
 
