@@ -7,30 +7,107 @@
 # IMPORTANT VERSION NOTES:
 # - Container images use Fedora 43 with Python 3.13, R 4.5.x, Julia 1.11
 # - Python 3.13 introduced experimental features - must match for fairness
-# - Julia: Managed by mise (1.11.4) - exact match with container
-# - R: Managed by asdf (4.5.0) - MUST use asdf to match container version
+# - All languages are managed by mise with explicit backend declarations
 # - For thesis reproducibility, prefer container execution
 #
 # https://mise.jdx.dev
 
 min_version = "2024.1.0"
 
+# =============================================================================
+# TOOL VERSIONS - Must match container for fair benchmarks
+# =============================================================================
 [tools]
-# Julia: Matches container version exactly
+# Python 3.13.12 - managed by mise (uses uv backend)
+python = "3.13.12"
+
+# Julia 1.11.4 - managed by mise (asdf backend)
 julia = "1.11.4"
 
-# Python: Managed by uv (see tasks.install-python-313)
-# Python 3.13 is installed via: uv python install 3.13.12
+# R 4.5.3 - managed by mise (asdf backend)
+# Note: R plugin from mise-plugins/mise-r
+r = "4.5.3"
 
 node = "20.11.0"
 
+# =============================================================================
+# PLUGIN CONFIGURATION - Explicit backend declarations
+# =============================================================================
+[plugins]
+# Julia plugin for asdf
+julia = "https://github.com/mise-plugins/mise-julia"
+
+# R plugin for asdf
+r = "https://github.com/mise-plugins/mise-r"
+
+# =============================================================================
+# ENVIRONMENT VARIABLES
+# =============================================================================
 [env]
 # Use fast Python installer
 UV_PYTHON_INSTALL_MIRROR = "https://github.com/indygreg/python-build-standalone/releases/download"
 
+# Julia configuration
+JULIA_DEPOT_PATH = "{{config_root}}/.julia:{{env.HOME}}/.julia"
+JULIA_PROJECT = "{{config_root}}"
+
+# R configuration
+R_LIBS_USER = "{{config_root}}/.r-libs"
+R_LIBS_SITE = ""
+R_PROFILE_USER = "/dev/null"
+
 # Benchmark configuration
 BENCHMARK_RUNS = "50"
 BENCHMARK_THREADS = "8"
+
+# Reproducibility
+REPRODUCIBILITY_SEED = "42"
+
+[settings]
+# Auto-confirm plugin/tool installations
+yes = true
+
+# =============================================================================
+# TASKS: Installation
+# =============================================================================
+[tasks.install]
+description = "Install all language tools and dependencies"
+run = """
+echo "=============================================="
+echo "Installing mise plugins..."
+echo "=============================================="
+mise plugin install julia https://github.com/mise-plugins/mise-julia || true
+mise plugin install r https://github.com/mise-plugins/mise-r || true
+
+echo ""
+echo "=============================================="
+echo "Installing language versions..."
+echo "=============================================="
+mise install
+
+echo ""
+echo "=============================================="
+echo "Installing Python packages..."
+echo "=============================================="
+source .venv/bin/activate
+uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
+
+echo ""
+echo "=============================================="
+echo "Installing Julia packages..."
+echo "=============================================="
+julia -e 'using Pkg
+Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"])
+Pkg.precompile()'
+
+echo ""
+echo "=============================================="
+echo "Installation Complete"
+echo "=============================================="
+echo "Python: $(python --version)"
+echo "Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
+echo "R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
+"""
 
 [tasks.install-python-313]
 description = "Install Python 3.13 (REQUIRED for fair comparison)"
@@ -57,47 +134,6 @@ echo "Python 3.13 installed. Activate with:"
 echo "  source .venv/bin/activate"
 """
 
-[tasks.install]
-description = "Install all dependencies (run install-python-313 first)"
-run = """
-echo "=============================================="
-echo "Installing Python packages..."
-echo "=============================================="
-source .venv/bin/activate
-python --version
-echo ""
-
-uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
-
-echo ""
-echo "=============================================="
-echo "Installing Julia packages..."
-echo "=============================================="
-julia -e 'using Pkg
-Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"])
-Pkg.precompile()'
-
-echo ""
-echo "=============================================="
-echo "Checking R installation..."
-echo "=============================================="
-if command -v R &> /dev/null; then
-    echo "R found: $(R --version | head -1)"
-    echo "To install R packages, run:"
-    echo '  Rscript -e "install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))"'
-else
-    echo "WARNING: R not found!"
-fi
-
-echo ""
-echo "=============================================="
-echo "Installation Complete"
-echo "=============================================="
-echo "Python: $(python --version)"
-echo "Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
-echo "R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
-"""
-
 [tasks.install-julia]
 description = "Install Julia packages only"
 run = """
@@ -107,48 +143,27 @@ Pkg.precompile()'
 """
 
 [tasks.install-r]
-description = "Install R 4.5.0 via asdf (MUST for version matching)"
+description = "Install R 4.5.3 via mise"
 run = """
 echo "=============================================="
-echo "Installing R 4.5.0 via asdf..."
+echo "Installing R 4.5.3 via mise..."
 echo "=============================================="
 echo ""
-echo "IMPORTANT: R must be version 4.5.0 to match container!"
-echo "Using system R (4.5.3) will cause version mismatch."
-echo ""
+echo "IMPORTANT: R must be version 4.5.3 to match container!"
 
-# Check if asdf is installed
-if ! command -v asdf &> /dev/null; then
-    echo "Installing asdf..."
-    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
-fi
-
-# Source asdf
-export PATH="$HOME/.asdf/asdf.sh"
-source "$HOME/.asdf/asdf.sh" 2>/dev/null || true
-
-# Add R plugin if not present
-if ! asdf plugin list 2>/dev/null | grep -q "^r$"; then
-    echo "Adding R plugin to asdf..."
-    asdf plugin add r
-fi
-
-# Install R 4.5.3
-echo "Installing R 4.5.3..."
-asdf install r 4.5.3
-asdf global r 4.5.3
-asdf reshim r 4.5.3
-
-# Add to PATH
-echo 'export PATH="$HOME/.asdf/installs/r/4.5.3/bin:$PATH"' >> ~/.bashrc
+mise plugin install r https://github.com/mise-plugins/mise-r || true
+mise install r@4.5.3
 
 echo ""
 echo "=============================================="
 echo "R 4.5.3 installed!"
 echo "=============================================="
-R --version | head -1
+mise exec r@4.5.3 -- R --version | head -1
 """
 
+# =============================================================================
+# TASKS: Data
+# =============================================================================
 [tasks.download-data]
 description = "Download benchmark datasets"
 run = """
@@ -161,17 +176,15 @@ echo "✓ All datasets ready"
 
 [tasks.setup]
 description = "Complete setup (install + download data)"
-depends = ["install-python-313", "install", "download-data"]
+depends = ["install", "download-data"]
 
+# =============================================================================
+# TASKS: Benchmarks
+# =============================================================================
 [tasks.bench]
 description = "Run all benchmarks (native execution)"
 run = """
 mkdir -p results validation
-
-# Source asdf R configuration (ensures R 4.5.0 is used)
-if [ -f .bashrc_r ]; then source .bashrc_r; fi
-
-source .venv/bin/activate
 
 echo ""
 echo "=============================================="
@@ -289,6 +302,9 @@ Rscript benchmarks/zonal_stats.R
 Rscript benchmarks/reprojection.R
 """
 
+# =============================================================================
+# TASKS: Validation & Visualization
+# =============================================================================
 [tasks.validate]
 description = "Run cross-language validation"
 run = """
@@ -312,6 +328,9 @@ python tools/compare_with_tedesco.py
 echo "✓ Reports generated in validation/"
 """
 
+# =============================================================================
+# TASKS: Utilities
+# =============================================================================
 [tasks.clean]
 description = "Clean generated files"
 run = """
@@ -331,9 +350,6 @@ echo "=============================================="
 echo "Environment Information"
 echo "=============================================="
 echo ""
-if [ -f .venv/bin/activate ]; then
-    source .venv/bin/activate
-fi
 echo "Native Execution (this machine):"
 echo "  System: $(uname -s) $(uname -r)"
 echo "  Python: $(python --version)"
@@ -341,51 +357,37 @@ echo "  Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
 echo "  R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
 echo ""
 echo "Container Versions (for reference):"
-echo "  Python: 3.13 (Fedora 43)"
-echo "  Julia:  1.11 (Fedora 43)"
-echo "  R:      4.5 (Fedora 43)"
+echo "  Python: 3.13.12 (Fedora 43)"
+echo "  Julia:  1.11.4 (Fedora 43)"
+echo "  R:      4.5.3 (Fedora 43)"
+echo ""
+echo "Managed by mise with explicit backends:"
+echo "  - python: mise (uv backend)"
+echo "  - julia:  mise (asdf backend)"
+echo "  - r:      mise (asdf backend)"
 echo ""
 if [ -f .venv/bin/activate ]; then
     echo "Python packages:"
     python -c "import numpy, scipy, pandas, matplotlib, rasterio, geopandas; print(f'  numpy={numpy.__version__}, scipy={scipy.__version__}, pandas={pandas.__version__}'); print(f'  matplotlib={matplotlib.__version__}, rasterio={rasterio.__version__}, geopandas={geopandas.__version__}')"
-else
-    echo "Python packages: Not installed (run 'mise run install-python-313' first)"
-fi
-echo ""
-echo "=============================================="
-echo "Version Matching Status"
-echo "=============================================="
-PY_VERSION=$(python --version 2>/dev/null | cut -d' ' -f2 | cut -d'.' -f1,2)
-if [ "$PY_VERSION" = "3.13" ]; then
-    echo "✓ Python version matches container (3.13)"
-else
-    echo "⚠ WARNING: Python version ($PY_VERSION) does NOT match container (3.13)"
-    echo "  Run: mise run install-python-313"
-fi
-
-echo "✓ Julia version matches container (1.11.x) (managed by mise)"
-
-echo ""
-R_VERSION=$(R --version 2>/dev/null | head -1 | awk '{print $3}' || echo "not found")
-if [ "$R_VERSION" = "4.5.3" ]; then
-    echo "✓ R version matches container (4.5.3) (managed by asdf)"
-elif [ "$R_VERSION" = "not found" ]; then
-    echo "⚠ WARNING: R not found!"
-    echo "  Run: mise run install-r"
-else
-    echo "⚠ WARNING: R version ($R_VERSION) does NOT match container (4.5.3)"
-    echo "  Run: mise run install-r"
 fi
 """
 
 [tasks.check]
 description = "Verify environment setup"
 run = """
-source .venv/bin/activate 2>/dev/null || true
 echo "Checking environment..."
 python --version && python -c "import numpy; print('NumPy:', numpy.__version__)"
 julia --version 2>/dev/null && echo "Julia OK" || echo "Julia not found"
 R --version 2>/dev/null | head -1 && echo "R OK" || echo "R not found"
+"""
+
+[tasks.versions]
+description = "List all installed tool versions"
+run = """
+echo "=============================================="
+echo "Installed Tool Versions"
+echo "=============================================="
+mise list
 """
 
 # Task aliases
