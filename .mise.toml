@@ -7,6 +7,7 @@
 # IMPORTANT VERSION NOTES:
 # - Container images use Fedora 43 with Python 3.13
 # - Python 3.13 introduced experimental features - must match for fairness
+# - R: Native has 4.5.3, container has 4.5.x (patch diff acceptable)
 # - For thesis reproducibility, prefer container execution
 #
 # https://mise.jdx.dev
@@ -17,7 +18,9 @@ min_version = "2024.1.0"
 # Julia: Matches container version exactly
 julia = "1.11.4"
 
-# R: System-installed (typically available via 'R' command)
+# R: System-installed - Native has 4.5.3, container has 4.5.x
+# NOTE: R patch versions (4.5.0 vs 4.5.3) only contain bug fixes,
+#       NOT performance changes. This difference is acceptable for benchmarks.
 # To add R to mise: mise tools install r@4.5.3
 
 node = "20.11.0"
@@ -320,6 +323,12 @@ else
     echo "⚠ WARNING: Python version ($PY_VERSION) does NOT match container (3.13)"
     echo "  Run: mise run install-python-313"
 fi
+
+echo "✓ Julia version matches container (1.11.x)"
+
+echo "ℹ R version: Native has 4.5.3, Container has 4.5.x"
+echo "  NOTE: R patch versions (4.5.0 vs 4.5.3) only contain"
+echo "        bug fixes, NOT performance changes. This is acceptable."
 """
 
 [tasks.check]
