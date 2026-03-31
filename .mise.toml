@@ -5,10 +5,10 @@
 # For container-based execution, use run_benchmarks.sh instead.
 #
 # IMPORTANT VERSION NOTES:
-# - Container images use Fedora 43 with Python 3.13
+# - Container images use Fedora 43 with Python 3.13, R 4.5.x, Julia 1.11
 # - Python 3.13 introduced experimental features - must match for fairness
 # - Julia: Managed by mise (1.11.4) - exact match with container
-# - R: System-installed (mise does NOT support R yet - see GitHub #8268)
+# - R: Managed by asdf (4.5.0) - MUST use asdf to match container version
 # - For thesis reproducibility, prefer container execution
 #
 # https://mise.jdx.dev
@@ -21,19 +21,6 @@ julia = "1.11.4"
 
 # Python: Managed by uv (see tasks.install-python-313)
 # Python 3.13 is installed via: uv python install 3.13.12
-
-# R: NOT SUPPORTED BY MISE
-# ----------------------
-# mise does not natively support R (see https://github.com/jdx/mise/discussions/8268)
-# R must be installed via system package manager:
-#   macOS: brew install r
-#   Ubuntu/Debian: sudo apt install r-base r-base-dev
-#   Fedora/RHEL: sudo dnf install R-core R-core-devel
-#   Arch: sudo pacman -S r
-#
-# Current R status:
-#   - Native: 4.5.3 (from system package manager)
-#   - Container: 4.5.x (patch version diff is acceptable)
 
 node = "20.11.0"
 
@@ -120,10 +107,46 @@ Pkg.precompile()'
 """
 
 [tasks.install-r]
-description = "Print R installation instructions"
+description = "Install R 4.5.0 via asdf (MUST for version matching)"
 run = """
-echo "R packages installation (run in R):"
-echo 'install.packages(c("terra", "data.table", "jsonlite", "digest", "R.matlab", "FNN"), repos="https://cloud.r-project.org/")'
+echo "=============================================="
+echo "Installing R 4.5.0 via asdf..."
+echo "=============================================="
+echo ""
+echo "IMPORTANT: R must be version 4.5.0 to match container!"
+echo "Using system R (4.5.3) will cause version mismatch."
+echo ""
+
+# Check if asdf is installed
+if ! command -v asdf &> /dev/null; then
+    echo "Installing asdf..."
+    git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
+fi
+
+# Source asdf
+export PATH="$HOME/.asdf/asdf.sh"
+source "$HOME/.asdf/asdf.sh" 2>/dev/null || true
+
+# Add R plugin if not present
+if ! asdf plugin list 2>/dev/null | grep -q "^r$"; then
+    echo "Adding R plugin to asdf..."
+    asdf plugin add r
+fi
+
+# Install R 4.5.0
+echo "Installing R 4.5.0..."
+asdf install r 4.5.0
+asdf global r 4.5.0
+asdf reshim r 4.5.0
+
+# Add to PATH
+echo 'export PATH="$HOME/.asdf/installs/r/4.5.0/bin:$PATH"' >> ~/.bashrc
+
+echo ""
+echo "=============================================="
+echo "R 4.5.0 installed!"
+echo "=============================================="
+R --version | head -1
 """
 
 [tasks.download-data]
@@ -144,6 +167,10 @@ depends = ["install-python-313", "install", "download-data"]
 description = "Run all benchmarks (native execution)"
 run = """
 mkdir -p results validation
+
+# Source asdf R configuration (ensures R 4.5.0 is used)
+if [ -f .bashrc_r ]; then source .bashrc_r; fi
+
 source .venv/bin/activate
 
 echo ""
@@ -339,10 +366,16 @@ fi
 echo "✓ Julia version matches container (1.11.x) (managed by mise)"
 
 echo ""
-echo "ℹ R: NOT managed by mise (see https://github.com/jdx/mise/discussions/8268)"
-echo "  - Native: 4.5.3 (system package manager)"
-echo "  - Container: 4.5.x"
-echo "  - Patch version diff is acceptable (bug fixes only)"
+R_VERSION=$(R --version 2>/dev/null | head -1 | awk '{print $3}' || echo "not found")
+if [ "$R_VERSION" = "4.5.0" ]; then
+    echo "✓ R version matches container (4.5.0) (managed by asdf)"
+elif [ "$R_VERSION" = "not found" ]; then
+    echo "⚠ WARNING: R not found!"
+    echo "  Run: mise run install-r"
+else
+    echo "⚠ WARNING: R version ($R_VERSION) does NOT match container (4.5.0)"
+    echo "  Run: mise run install-r"
+fi
 """
 
 [tasks.check]

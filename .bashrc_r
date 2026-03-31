@@ -1,0 +1,11 @@
+# =============================================================================
+# asdf R Configuration
+# =============================================================================
+# R is installed via asdf (not mise) to match container version 4.5.0
+# Add asdf R to PATH
+# =============================================================================
+
+# Add asdf R 4.5.0 to PATH (must be version 4.5.0 to match container)
+if [ -d "$HOME/.asdf/installs/r/4.5.0/bin" ]; then
+    export PATH="$HOME/.asdf/installs/r/4.5.0/bin:$PATH"
+fi
