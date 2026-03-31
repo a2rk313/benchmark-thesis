@@ -119,15 +119,26 @@ def create_summary_chart(results: Dict):
         for lang, data in lang_results.items():
             if data and isinstance(data, dict):
                 res = data.get("results", {})
-                if not res:
-                    res = data
 
-                for task_name, task_data in res.items():
-                    if isinstance(task_data, dict):
-                        t = task_data.get("min_time_s") or task_data.get("min_time")
-                        if t and t < min_time:
-                            min_time = t
-                            min_lang = lang
+                # Check if we have execution_time_s at top level (validation files)
+                exec_time = data.get("execution_time_s")
+                if exec_time and not res:
+                    # No results dict, use execution_time_s directly
+                    if exec_time < min_time:
+                        min_time = exec_time
+                        min_lang = lang
+                elif res:
+                    for task_name, task_data in res.items():
+                        if isinstance(task_data, dict):
+                            t = (
+                                task_data.get("min_time_s")
+                                or task_data.get("min_time")
+                                or task_data.get("execution_time_s")
+                                or task_data.get("min")
+                            )
+                            if t and t < min_time:
+                                min_time = t
+                                min_lang = lang
 
         if min_lang:
             scenarios.append(scenario_name.replace("_", " ").title())
@@ -199,17 +210,28 @@ def create_speedup_chart(results: Dict):
         for lang, data in lang_results.items():
             if data and isinstance(data, dict):
                 res = data.get("results", {})
-                if not res:
-                    res = data
 
-                for task_name, task_data in res.items():
-                    if isinstance(task_data, dict):
-                        t = task_data.get("min_time_s") or task_data.get("min_time")
-                        if t:
-                            if lang == "python":
-                                py_time = min(py_time or float("inf"), t)
-                            elif lang == "julia":
-                                jl_time = min(jl_time or float("inf"), t)
+                exec_time = data.get("execution_time_s")
+                if exec_time and not res:
+                    t = exec_time
+                    if lang == "python":
+                        py_time = min(py_time or float("inf"), t)
+                    elif lang == "julia":
+                        jl_time = min(jl_time or float("inf"), t)
+                elif res:
+                    for task_name, task_data in res.items():
+                        if isinstance(task_data, dict):
+                            t = (
+                                task_data.get("min_time_s")
+                                or task_data.get("min_time")
+                                or task_data.get("execution_time_s")
+                                or task_data.get("min")
+                            )
+                            if t:
+                                if lang == "python":
+                                    py_time = min(py_time or float("inf"), t)
+                                elif lang == "julia":
+                                    jl_time = min(jl_time or float("inf"), t)
 
         if py_time and jl_time and py_time > 0:
             scenarios.append(scenario_name.replace("_", " ").title())
@@ -282,13 +304,20 @@ def create_language_heatmap(results: Dict):
                 data = lang_results[lang]
                 if data and isinstance(data, dict):
                     res = data.get("results", {})
-                    if not res:
-                        res = data
-                    for task_data in res.values():
-                        if isinstance(task_data, dict):
-                            t = task_data.get("min_time_s") or task_data.get("min_time")
-                            if t:
-                                min_time = min(min_time, t)
+                    exec_time = data.get("execution_time_s")
+                    if exec_time and not res:
+                        min_time = exec_time
+                    elif res:
+                        for task_data in res.values():
+                            if isinstance(task_data, dict):
+                                t = (
+                                    task_data.get("min_time_s")
+                                    or task_data.get("min_time")
+                                    or task_data.get("execution_time_s")
+                                    or task_data.get("min")
+                                )
+                                if t:
+                                    min_time = min(min_time, t)
             row.append(min_time if min_time < float("inf") else None)
 
         if any(row):
@@ -358,15 +387,24 @@ def create_quick_stats_table(results: Dict):
                 data = lang_results[lang]
                 if data and isinstance(data, dict):
                     res = data.get("results", {})
-                    if not res:
-                        res = data
 
                     min_time = float("inf")
-                    for task_data in res.values():
-                        if isinstance(task_data, dict):
-                            t = task_data.get("min_time_s") or task_data.get("min_time")
-                            if t:
-                                min_time = min(min_time, t)
+
+                    # Check for execution_time_s at top level (validation files)
+                    exec_time = data.get("execution_time_s")
+                    if exec_time and not res:
+                        min_time = exec_time
+                    elif res:
+                        for task_data in res.values():
+                            if isinstance(task_data, dict):
+                                t = (
+                                    task_data.get("min_time_s")
+                                    or task_data.get("min_time")
+                                    or task_data.get("execution_time_s")
+                                    or task_data.get("min")
+                                )
+                                if t:
+                                    min_time = min(min_time, t)
 
                     if min_time < float("inf"):
                         print(f"  {lang.upper():8}: {min_time:.4f}s")

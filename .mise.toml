@@ -60,6 +60,12 @@ R_PROFILE_USER = "/dev/null"
 BENCHMARK_RUNS = "50"
 BENCHMARK_THREADS = "8"
 
+# Thread configuration for fair benchmarking
+# All languages should use same number of threads for BLAS operations
+JULIA_NUM_THREADS = "8"
+OPENBLAS_NUM_THREADS = "8"
+OMP_NUM_THREADS = "8"
+
 # Reproducibility
 REPRODUCIBILITY_SEED = "42"
 
@@ -184,6 +190,10 @@ depends = ["install", "download-data"]
 [tasks.bench]
 description = "Run all benchmarks (native execution)"
 run = """
+export JULIA_NUM_THREADS=8
+export OPENBLAS_NUM_THREADS=8
+export OMP_NUM_THREADS=8
+
 mkdir -p results validation
 
 echo ""
@@ -193,6 +203,9 @@ echo "=============================================="
 echo "Python: $(python --version)"
 echo "Julia: $(julia --version 2>/dev/null | head -1)"
 echo "R: $(R --version 2>/dev/null | head -1)"
+echo "BLAS: $(R --version 2>/dev/null | grep -i blas || echo 'OpenBLAS')"
+echo ""
+echo "Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS, OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS"
 echo ""
 echo "For container execution (recommended for thesis):"
 echo "  ./run_benchmarks.sh"
@@ -201,8 +214,8 @@ echo ""
 
 echo "[1/9] Matrix operations..."
 python benchmarks/matrix_ops.py
-~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
-Rscript benchmarks/matrix_ops.R
+JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
+OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R
 
 echo "[2/9] I/O operations..."
 python benchmarks/io_ops.py
@@ -276,8 +289,9 @@ python benchmarks/reprojection.py
 [tasks.bench-julia]
 description = "Run Julia benchmarks only"
 run = """
+export JULIA_NUM_THREADS=8
 mkdir -p results validation
-~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
+JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl
 ~/.juliaup/bin/julialauncher benchmarks/io_ops.jl
 ~/.juliaup/bin/julialauncher benchmarks/hsi_stream.jl
 ~/.juliaup/bin/julialauncher benchmarks/interpolation_idw.jl
@@ -290,8 +304,9 @@ mkdir -p results validation
 [tasks.bench-r]
 description = "Run R benchmarks only"
 run = """
+export OPENBLAS_NUM_THREADS=8
 mkdir -p results validation
-Rscript benchmarks/matrix_ops.R
+OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R
 Rscript benchmarks/io_ops.R
 Rscript benchmarks/hsi_stream.R
 Rscript benchmarks/vector_pip.R
