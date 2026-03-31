@@ -7,7 +7,8 @@
 # IMPORTANT VERSION NOTES:
 # - Container images use Fedora 43 with Python 3.13
 # - Python 3.13 introduced experimental features - must match for fairness
-# - R: Native has 4.5.3, container has 4.5.x (patch diff acceptable)
+# - Julia: Managed by mise (1.11.4) - exact match with container
+# - R: System-installed (mise does NOT support R yet - see GitHub #8268)
 # - For thesis reproducibility, prefer container execution
 #
 # https://mise.jdx.dev
@@ -18,10 +19,21 @@ min_version = "2024.1.0"
 # Julia: Matches container version exactly
 julia = "1.11.4"
 
-# R: System-installed - Native has 4.5.3, container has 4.5.x
-# NOTE: R patch versions (4.5.0 vs 4.5.3) only contain bug fixes,
-#       NOT performance changes. This difference is acceptable for benchmarks.
-# To add R to mise: mise tools install r@4.5.3
+# Python: Managed by uv (see tasks.install-python-313)
+# Python 3.13 is installed via: uv python install 3.13.12
+
+# R: NOT SUPPORTED BY MISE
+# ----------------------
+# mise does not natively support R (see https://github.com/jdx/mise/discussions/8268)
+# R must be installed via system package manager:
+#   macOS: brew install r
+#   Ubuntu/Debian: sudo apt install r-base r-base-dev
+#   Fedora/RHEL: sudo dnf install R-core R-core-devel
+#   Arch: sudo pacman -S r
+#
+# Current R status:
+#   - Native: 4.5.3 (from system package manager)
+#   - Container: 4.5.x (patch version diff is acceptable)
 
 node = "20.11.0"
 
@@ -324,11 +336,13 @@ else
     echo "  Run: mise run install-python-313"
 fi
 
-echo "✓ Julia version matches container (1.11.x)"
+echo "✓ Julia version matches container (1.11.x) (managed by mise)"
 
-echo "ℹ R version: Native has 4.5.3, Container has 4.5.x"
-echo "  NOTE: R patch versions (4.5.0 vs 4.5.3) only contain"
-echo "        bug fixes, NOT performance changes. This is acceptable."
+echo ""
+echo "ℹ R: NOT managed by mise (see https://github.com/jdx/mise/discussions/8268)"
+echo "  - Native: 4.5.3 (system package manager)"
+echo "  - Container: 4.5.x"
+echo "  - Patch version diff is acceptable (bug fixes only)"
 """
 
 [tasks.check]
