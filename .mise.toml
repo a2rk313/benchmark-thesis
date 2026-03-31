@@ -1,19 +1,33 @@
+# =============================================================================
 # .mise.toml - Cross-Platform Benchmark Environment Configuration
-# Works on Linux (Fedora Atomic), Windows, and macOS
+# =============================================================================
+# This configuration is designed for NATIVE (non-container) execution.
+# For container-based execution, use run_benchmarks.sh instead.
+#
+# IMPORTANT VERSION NOTES:
+# - Container images use Fedora 43 with specific package versions
+# - Native execution may have different package versions (OS-dependent)
+# - For thesis reproducibility, prefer container execution (run_benchmarks.sh)
+#
 # https://mise.jdx.dev
 
 min_version = "2024.1.0"
 
 [tools]
-# Exact versions for reproducibility
-python = "3.12.13"  # Note: 3.13 standalone builds have lib issues
-julia = "1.11.4"   # Matches thesis-julia:1.11 (Fedora 43)
+# Python: 3.13 from containers, 3.12 available in mise
+# Note: 3.13 may have lib issues on some systems, 3.12 is stable fallback
+python = "3.12.13"
+
+# Julia: Matches container version exactly
+julia = "1.11.4"
+
+# R: NOT in mise by default (system-installed)
+# To add R to mise: mise tools install r@4.5.3
+# Or use system R (typically available via 'R' command)
+
 node = "20.11.0"
 
 [env]
-# R version: 4.5.3 (from thesis-r:4.5 container)
-# Install R from system package manager or download from CRAN
-
 # Auto-create Python virtual environment
 _.python.venv = { path = ".venv", create = true }
 
@@ -21,49 +35,120 @@ _.python.venv = { path = ".venv", create = true }
 UV_PYTHON_INSTALL_MIRROR = "https://github.com/indygreg/python-build-standalone/releases/download"
 
 # Benchmark configuration
-BENCHMARK_RUNS = "10"
+BENCHMARK_RUNS = "50"
 BENCHMARK_THREADS = "8"
 
 [tasks.install]
-description = "Install all dependencies"
+description = "Install all dependencies for native execution"
 run = """
+echo "=============================================="
 echo "Installing Python packages..."
-uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py
+echo "=============================================="
+uv pip install --system numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
 
 echo ""
+echo "=============================================="
 echo "Installing Julia packages..."
-julia -e 'using Pkg; Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"]); Pkg.precompile()'
+echo "=============================================="
+julia -e 'using Pkg
+Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"])
+Pkg.precompile()'
 
 echo ""
-echo "✓ Installation complete!"
+echo "=============================================="
+echo "Checking R installation..."
+echo "=============================================="
+if command -v R &> /dev/null; then
+    echo "R found: $(R --version | head -1)"
+    echo "To install R packages, run in R:"
+    echo '  install.packages(c("terra", "data.table", "jsonlite", "digest", "R.matlab", "FNN"))'
+else
+    echo "WARNING: R not found!"
+    echo "Install R for your OS:"
+    echo "  macOS: brew install r"
+    echo "  Ubuntu/Debian: sudo apt install r-base r-base-dev"
+    echo "  Fedora/RHEL: sudo dnf install R-core R-core-devel"
+fi
+
+echo ""
+echo "=============================================="
+echo "Installation Summary"
+echo "=============================================="
 echo "  Python: $(python --version)"
-echo "  Julia: $(julia --version)"
+echo "  Julia: $(julia --version 2>/dev/null || echo 'not found')"
+echo "  R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
+echo ""
+echo "Note: For reproducible thesis results, use containers:"
+echo "  ./run_benchmarks.sh"
+"""
+
+[tasks.install-python]
+description = "Install Python dependencies only"
+run = """
+uv pip install --system numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
+"""
+
+[tasks.install-julia]
+description = "Install Julia packages only"
+run = """
+julia -e 'using Pkg
+Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "MAT", "ArchGDAL", "GeoDataFrames", "LibGEOS", "NearestNeighbors", "Shapefile", "JSON3"])
+Pkg.precompile()'
+"""
+
+[tasks.install-r]
+description = "Print R installation instructions"
+run = """
+echo "R installation instructions:"
+echo ""
+echo "macOS:"
+echo "  brew install r"
+echo ""
+echo "Ubuntu/Debian:"
+echo "  sudo apt install r-base r-base-dev"
+echo "  Rscript -e 'install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))'"
+echo ""
+echo "Fedora/RHEL:"
+echo "  sudo dnf install R-core R-core-devel"
+echo "  Rscript -e 'install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))'"
 """
 
 [tasks.download-data]
-description = "Download Cuprite hyperspectral dataset"
+description = "Download benchmark datasets"
 run = """
+mkdir -p data
 echo "Downloading AVIRIS Cuprite dataset..."
 python tools/download_cuprite.py
-echo "✓ Cuprite dataset ready"
-"""
-
-[tasks.download-vector]
-description = "Download Natural Earth vector data"
-run = """
-echo "Downloading Natural Earth countries dataset..."
+echo ""
+echo "Downloading Natural Earth vector data..."
 python tools/gen_vector_data.py
-echo "✓ Vector data ready"
+echo ""
+echo "Downloading SRTM/MODIS/NLCD data..."
+python tools/download_real_data.py
+echo "✓ All datasets ready"
 """
 
 [tasks.setup]
 description = "Complete setup (install + download data)"
-depends = ["install", "download-data", "download-vector"]
+depends = ["install", "download-data"]
 
 [tasks.bench]
-description = "Run all benchmarks"
+description = "Run all benchmarks (native execution)"
 run = """
 mkdir -p results validation
+
+echo ""
+echo "=============================================="
+echo "RUNNING ALL BENCHMARKS (Native)"
+echo "=============================================="
+echo "Python: $(python --version)"
+echo "Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
+echo "R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
+echo ""
+echo "For container execution (recommended for thesis):"
+echo "  ./run_benchmarks.sh"
+echo "=============================================="
+echo ""
 
 echo "[1/9] Matrix operations..."
 python benchmarks/matrix_ops.py
@@ -111,7 +196,16 @@ python benchmarks/reprojection.py
 Rscript benchmarks/reprojection.R
 
 echo ""
+echo "=============================================="
+echo "Generating visualizations..."
+echo "=============================================="
+python tools/visualize_benchmarks.py --all
+python tools/scientific_visualizations.py --all
+
+echo ""
 echo "✓ All benchmarks complete!"
+echo "Results: results/*.json"
+echo "Figures: results/figures/"
 """
 
 [tasks.bench-python]
@@ -165,6 +259,13 @@ python tools/compare_results.py
 python tools/compare_with_tedesco.py
 """
 
+[tasks.viz]
+description = "Generate all visualizations"
+run = """
+python tools/visualize_benchmarks.py --all
+python tools/scientific_visualizations.py --all
+"""
+
 [tasks.report]
 description = "Generate comparison reports"
 run = """
@@ -179,21 +280,51 @@ description = "Clean generated files"
 run = """
 rm -rf results/*.json
 rm -rf __pycache__
+rm -rf benchmarks/__pycache__
+rm -rf tools/__pycache__
 find . -name "*.pyc" -delete
+find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 echo "✓ Cleaned"
+"""
+
+[tasks.info]
+description = "Show environment and version information"
+run = """
+echo "=============================================="
+echo "Environment Information"
+echo "=============================================="
+echo ""
+echo "Native Execution (this machine):"
+echo "  System: $(uname -s) $(uname -r)"
+echo "  Python: $(python --version)"
+echo "  Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
+echo "  R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
+echo ""
+echo "Container Versions (for reference):"
+echo "  Python: 3.13 (Fedora 43)"
+echo "  Julia:  1.11 (Fedora 43)"
+echo "  R:      4.5 (Fedora 43)"
+echo ""
+echo "Python packages:"
+python -c "import numpy, scipy, pandas, matplotlib, rasterio, geopandas; print(f'  numpy={numpy.__version__}, scipy={scipy.__version__}, pandas={pandas.__version__}'); print(f'  matplotlib={matplotlib.__version__}, rasterio={rasterio.__version__}, geopandas={geopandas.__version__}')"
+echo ""
+echo "For reproducible thesis results, use containers:"
+echo "  ./run_benchmarks.sh"
 """
 
 [tasks.check]
 description = "Verify environment setup"
 run = """
 echo "Checking environment..."
-echo "Python: $(python --version)"
-echo "Julia: $(julia --version)"
-python -c "import numpy; print('NumPy:', numpy.__version__)"
+python --version && python -c "import numpy; print('NumPy:', numpy.__version__)"
+julia --version 2>/dev/null && echo "Julia OK" || echo "Julia not found"
+R --version 2>/dev/null | head -1 && echo "R OK" || echo "R not found"
 """
 
-# Aliases
+# Task aliases
 [tasks]
-b = { alias = "bench" }
-s = { alias = "setup" }
-c = { alias = "clean" }
+b = "bench"
+s = "setup"
+c = "clean"
+i = "info"
+v = "validate"
