@@ -133,18 +133,18 @@ if ! asdf plugin list 2>/dev/null | grep -q "^r$"; then
     asdf plugin add r
 fi
 
-# Install R 4.5.0
-echo "Installing R 4.5.0..."
-asdf install r 4.5.0
-asdf global r 4.5.0
-asdf reshim r 4.5.0
+# Install R 4.5.3
+echo "Installing R 4.5.3..."
+asdf install r 4.5.3
+asdf global r 4.5.3
+asdf reshim r 4.5.3
 
 # Add to PATH
-echo 'export PATH="$HOME/.asdf/installs/r/4.5.0/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.asdf/installs/r/4.5.3/bin:$PATH"' >> ~/.bashrc
 
 echo ""
 echo "=============================================="
-echo "R 4.5.0 installed!"
+echo "R 4.5.3 installed!"
 echo "=============================================="
 R --version | head -1
 """
@@ -367,13 +367,13 @@ echo "✓ Julia version matches container (1.11.x) (managed by mise)"
 
 echo ""
 R_VERSION=$(R --version 2>/dev/null | head -1 | awk '{print $3}' || echo "not found")
-if [ "$R_VERSION" = "4.5.0" ]; then
-    echo "✓ R version matches container (4.5.0) (managed by asdf)"
+if [ "$R_VERSION" = "4.5.3" ]; then
+    echo "✓ R version matches container (4.5.3) (managed by asdf)"
 elif [ "$R_VERSION" = "not found" ]; then
     echo "⚠ WARNING: R not found!"
     echo "  Run: mise run install-r"
 else
-    echo "⚠ WARNING: R version ($R_VERSION) does NOT match container (4.5.0)"
+    echo "⚠ WARNING: R version ($R_VERSION) does NOT match container (4.5.3)"
     echo "  Run: mise run install-r"
 fi
 """
