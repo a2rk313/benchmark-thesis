@@ -5,46 +5,67 @@
 # For container-based execution, use run_benchmarks.sh instead.
 #
 # IMPORTANT VERSION NOTES:
-# - Container images use Fedora 43 with specific package versions
-# - Native execution may have different package versions (OS-dependent)
-# - For thesis reproducibility, prefer container execution (run_benchmarks.sh)
+# - Container images use Fedora 43 with Python 3.13
+# - Python 3.13 introduced experimental features - must match for fairness
+# - For thesis reproducibility, prefer container execution
 #
 # https://mise.jdx.dev
 
 min_version = "2024.1.0"
 
 [tools]
-# Python: 3.13 from containers, 3.12 available in mise
-# Note: 3.13 may have lib issues on some systems, 3.12 is stable fallback
-python = "3.12.13"
-
 # Julia: Matches container version exactly
 julia = "1.11.4"
 
-# R: NOT in mise by default (system-installed)
+# R: System-installed (typically available via 'R' command)
 # To add R to mise: mise tools install r@4.5.3
-# Or use system R (typically available via 'R' command)
 
 node = "20.11.0"
 
 [env]
-# Auto-create Python virtual environment
-_.python.venv = { path = ".venv", create = true }
-
-# Use fast Python installer (optional but recommended)
+# Use fast Python installer
 UV_PYTHON_INSTALL_MIRROR = "https://github.com/indygreg/python-build-standalone/releases/download"
 
 # Benchmark configuration
 BENCHMARK_RUNS = "50"
 BENCHMARK_THREADS = "8"
 
+[tasks.install-python-313]
+description = "Install Python 3.13 (REQUIRED for fair comparison)"
+run = """
+echo "=============================================="
+echo "Installing Python 3.13..."
+echo "=============================================="
+echo ""
+echo "IMPORTANT: Python 3.13 is REQUIRED because:"
+echo "  - Container uses Python 3.13 from Fedora 43"
+echo "  - Python 3.13 has different optimizations than 3.12"
+echo "  - Using 3.12 would invalidate benchmark comparisons"
+echo ""
+
+# Install Python 3.13 if not already installed
+uv python install 3.13.12
+
+# Create virtual environment with Python 3.13
+rm -rf .venv
+uv venv .venv --python 3.13.12
+
+echo ""
+echo "Python 3.13 installed. Activate with:"
+echo "  source .venv/bin/activate"
+"""
+
 [tasks.install]
-description = "Install all dependencies for native execution"
+description = "Install all dependencies (run install-python-313 first)"
 run = """
 echo "=============================================="
 echo "Installing Python packages..."
 echo "=============================================="
-uv pip install --system numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
+source .venv/bin/activate
+python --version
+echo ""
+
+uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
 
 echo ""
 echo "=============================================="
@@ -60,32 +81,19 @@ echo "Checking R installation..."
 echo "=============================================="
 if command -v R &> /dev/null; then
     echo "R found: $(R --version | head -1)"
-    echo "To install R packages, run in R:"
-    echo '  install.packages(c("terra", "data.table", "jsonlite", "digest", "R.matlab", "FNN"))'
+    echo "To install R packages, run:"
+    echo '  Rscript -e "install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))"'
 else
     echo "WARNING: R not found!"
-    echo "Install R for your OS:"
-    echo "  macOS: brew install r"
-    echo "  Ubuntu/Debian: sudo apt install r-base r-base-dev"
-    echo "  Fedora/RHEL: sudo dnf install R-core R-core-devel"
 fi
 
 echo ""
 echo "=============================================="
-echo "Installation Summary"
+echo "Installation Complete"
 echo "=============================================="
-echo "  Python: $(python --version)"
-echo "  Julia: $(julia --version 2>/dev/null || echo 'not found')"
-echo "  R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
-echo ""
-echo "Note: For reproducible thesis results, use containers:"
-echo "  ./run_benchmarks.sh"
-"""
-
-[tasks.install-python]
-description = "Install Python dependencies only"
-run = """
-uv pip install --system numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
+echo "Python: $(python --version)"
+echo "Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
+echo "R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
 """
 
 [tasks.install-julia]
@@ -99,51 +107,37 @@ Pkg.precompile()'
 [tasks.install-r]
 description = "Print R installation instructions"
 run = """
-echo "R installation instructions:"
-echo ""
-echo "macOS:"
-echo "  brew install r"
-echo ""
-echo "Ubuntu/Debian:"
-echo "  sudo apt install r-base r-base-dev"
-echo "  Rscript -e 'install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))'"
-echo ""
-echo "Fedora/RHEL:"
-echo "  sudo dnf install R-core R-core-devel"
-echo "  Rscript -e 'install.packages(c(\"terra\", \"data.table\", \"jsonlite\", \"digest\", \"R.matlab\", \"FNN\"))'"
+echo "R packages installation (run in R):"
+echo 'install.packages(c("terra", "data.table", "jsonlite", "digest", "R.matlab", "FNN"), repos="https://cloud.r-project.org/")'
 """
 
 [tasks.download-data]
 description = "Download benchmark datasets"
 run = """
 mkdir -p data
-echo "Downloading AVIRIS Cuprite dataset..."
 python tools/download_cuprite.py
-echo ""
-echo "Downloading Natural Earth vector data..."
 python tools/gen_vector_data.py
-echo ""
-echo "Downloading SRTM/MODIS/NLCD data..."
 python tools/download_real_data.py
 echo "✓ All datasets ready"
 """
 
 [tasks.setup]
 description = "Complete setup (install + download data)"
-depends = ["install", "download-data"]
+depends = ["install-python-313", "install", "download-data"]
 
 [tasks.bench]
 description = "Run all benchmarks (native execution)"
 run = """
 mkdir -p results validation
+source .venv/bin/activate
 
 echo ""
 echo "=============================================="
-echo "RUNNING ALL BENCHMARKS (Native)"
+echo "RUNNING ALL BENCHMARKS"
 echo "=============================================="
 echo "Python: $(python --version)"
-echo "Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
-echo "R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
+echo "Julia: $(julia --version 2>/dev/null | head -1)"
+echo "R: $(R --version 2>/dev/null | head -1)"
 echo ""
 echo "For container execution (recommended for thesis):"
 echo "  ./run_benchmarks.sh"
@@ -212,6 +206,7 @@ echo "Figures: results/figures/"
 description = "Run Python benchmarks only"
 run = """
 mkdir -p results validation
+source .venv/bin/activate
 python benchmarks/matrix_ops.py
 python benchmarks/io_ops.py
 python benchmarks/hsi_stream.py
@@ -294,6 +289,9 @@ echo "=============================================="
 echo "Environment Information"
 echo "=============================================="
 echo ""
+if [ -f .venv/bin/activate ]; then
+    source .venv/bin/activate
+fi
 echo "Native Execution (this machine):"
 echo "  System: $(uname -s) $(uname -r)"
 echo "  Python: $(python --version)"
@@ -305,16 +303,29 @@ echo "  Python: 3.13 (Fedora 43)"
 echo "  Julia:  1.11 (Fedora 43)"
 echo "  R:      4.5 (Fedora 43)"
 echo ""
-echo "Python packages:"
-python -c "import numpy, scipy, pandas, matplotlib, rasterio, geopandas; print(f'  numpy={numpy.__version__}, scipy={scipy.__version__}, pandas={pandas.__version__}'); print(f'  matplotlib={matplotlib.__version__}, rasterio={rasterio.__version__}, geopandas={geopandas.__version__}')"
+if [ -f .venv/bin/activate ]; then
+    echo "Python packages:"
+    python -c "import numpy, scipy, pandas, matplotlib, rasterio, geopandas; print(f'  numpy={numpy.__version__}, scipy={scipy.__version__}, pandas={pandas.__version__}'); print(f'  matplotlib={matplotlib.__version__}, rasterio={rasterio.__version__}, geopandas={geopandas.__version__}')"
+else
+    echo "Python packages: Not installed (run 'mise run install-python-313' first)"
+fi
 echo ""
-echo "For reproducible thesis results, use containers:"
-echo "  ./run_benchmarks.sh"
+echo "=============================================="
+echo "Version Matching Status"
+echo "=============================================="
+PY_VERSION=$(python --version 2>/dev/null | cut -d' ' -f2 | cut -d'.' -f1,2)
+if [ "$PY_VERSION" = "3.13" ]; then
+    echo "✓ Python version matches container (3.13)"
+else
+    echo "⚠ WARNING: Python version ($PY_VERSION) does NOT match container (3.13)"
+    echo "  Run: mise run install-python-313"
+fi
 """
 
 [tasks.check]
 description = "Verify environment setup"
 run = """
+source .venv/bin/activate 2>/dev/null || true
 echo "Checking environment..."
 python --version && python -c "import numpy; print('NumPy:', numpy.__version__)"
 julia --version 2>/dev/null && echo "Julia OK" || echo "Julia not found"
