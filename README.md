@@ -1,15 +1,13 @@
 # Computational Benchmarking: Julia vs Python vs R for GIS/RS Workflows
 
-**Cross-Platform Native Benchmarking with mise**
+**Cross-Platform Native Benchmarking with mise - Academic Rigor Edition**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![Julia 1.11](https://img.shields.io/badge/julia-1.11-purple.svg)](https://julialang.org/)
-[![R 4.4](https://img.shields.io/badge/R-4.4-blue.svg)](https://www.r-project.org/)
+[![R 4.5](https://img.shields.io/badge/R-4.5-blue.svg)](https://www.r-project.org/)
 
-## 🚀 Quick Start (5 Minutes)
-
-### On Fedora Atomic (Aurora) / Linux
+## Quick Start
 
 ```bash
 # Install mise
@@ -19,181 +17,183 @@ source ~/.bashrc
 
 # Clone and setup
 cd thesis-benchmarks
-
-# Install languages and packages
 mise install
-mise run install
 
-# Download datasets
-mise run download-data
+# Install system dependencies (Fedora)
+sudo dnf install -y openblas openblas-devel hyperfine
 
-# Run benchmarks
+# Run full suite
 mise run bench
 ```
 
-### On Windows
+## Key Features
 
-```powershell
-# Install mise
-winget install jdx.mise
+- **Unified Infrastructure**: Single scripts for data, visualization, and validation
+- **Academic Rigor**: Statistical tests, confidence intervals, CPU pinning
+- **Fair Comparison**: Same BLAS (OpenBLAS, 8 threads) for all languages
+- **Containerized**: Docker/Podman for reproducible environments
+- **Real Datasets**: AVIRIS Cuprite, Natural Earth, SRTM DEM
 
-# Clone and setup
-cd thesis-benchmarks
-
-# Install languages and packages
-mise install
-mise run install
-
-# Download datasets
-mise run download-data
-
-# Run benchmarks
-mise run bench
-```
-
-**That's it!** Same commands work on both platforms.
-
----
-
-## 📚 What's New
-
-### ⭐ Version 4.0 - mise + Cuprite Update
-
-**Major Improvements**:
-
-1. **mise Integration** - Cross-platform version manager
-   - Single `.mise.toml` config for all platforms
-   - No containers needed (native performance)
-   - No 6-month Windows package lag
-   - 5-minute setup
-
-2. **Cuprite Dataset** - Replaced Jasper Ridge
-   - Industry standard (1000+ citations)
-   - Freely available (NASA public domain)
-   - Better reproducibility
-   - Equivalent computational characteristics
-
-3. **Scaling Analysis** - Multi-scale benchmarking
-   - 4 data scales per benchmark
-   - Complexity validation (O(n²), O(n³), etc.)
-   - Comparison with Tedesco et al. (2025)
-
-4. **Native Benchmarking** - Container overhead analysis
-   - Bare-metal performance testing
-   - Container vs native comparison
-   - CPU optimization scripts
-
----
-
-## 📊 Benchmarks
-
-| Benchmark | Dataset | Complexity | Languages |
-|-----------|---------|------------|-----------|
-| **Matrix Operations** | Synthetic | O(n³) | Python, Julia, R |
-| **I/O Operations** | Synthetic | O(n) | Python, Julia, R |
-| **Hyperspectral** | AVIRIS Cuprite | 224 bands | Python, Julia, R |
-| **Vector PiP** | Natural Earth | 255 polygons | Python, Julia, R |
-| **IDW Interpolation** | Natural Earth | O(n²) | Python, Julia, R |
-| **NDVI Time Series** | Synthetic | Temporal | Python, Julia, R |
-
-**Real Data: 60%** (Natural Earth, AVIRIS Cuprite, Derived IDW)
-
----
-
-## 🎯 Usage
+## Quick Commands
 
 ```bash
-# List all tasks
-mise tasks
-
-# Setup
-mise run install          # Install dependencies
-mise run download-data    # Download Cuprite
-
-# Run
-mise run bench           # All benchmarks
-mise run validate        # Validation
-mise run scaling         # Multi-scale
-
-# Analyze
-mise run check           # Verify setup
-mise run clean           # Clean results
+mise run bench        # Run all benchmarks
+mise run viz          # Generate visualizations
+mise run validate     # Cross-language validation
+mise run check        # Verify setup
+mise run download-data # Download/verify datasets
 ```
 
----
+## Benchmark Scenarios
 
-## 📖 Documentation
+| Scenario | Dataset | Languages |
+|----------|---------|----------|
+| Matrix Operations | Synthetic 2500×2500 | Python, Julia, R |
+| I/O Operations | CSV/Binary | Python, Julia, R |
+| Hyperspectral SAM | AVIRIS Cuprite | Python, Julia, R |
+| Vector PiP | Natural Earth | Python, Julia, R |
+| IDW Interpolation | Synthetic | Python, Julia, R |
+| NDVI Time Series | Synthetic | Python, Julia, R |
+| Raster Algebra | SRTM DEM | Python, Julia, R |
+| Zonal Statistics | NLCD | Python, Julia, R |
+| Reprojection | Synthetic | Python, Julia, R |
 
-**Quick Start**:
-- [QUICK_START_MISE.md](QUICK_START_MISE.md) - 5-minute guide
-- [MISE_CUPRITE_GUIDE.md](MISE_CUPRITE_GUIDE.md) - Complete guide
+## Fair Benchmarking Requirements
 
-**Methodology**:
-- [METHODOLOGY_CHEN_REVELS.md](METHODOLOGY_CHEN_REVELS.md) - Why minimum > mean
-- [DATA_PROVENANCE.md](DATA_PROVENANCE.md) - Dataset justification
+### BLAS Configuration
+All languages use **OpenBLAS** with **8 threads** for matrix operations:
 
-**Advanced**:
-- [NATIVE_BARE_METAL_GUIDE.md](NATIVE_BARE_METAL_GUIDE.md) - Native benchmarking
-- [CUPRITE_VS_JASPER_RIDGE.md](CUPRITE_VS_JASPER_RIDGE.md) - Dataset comparison
+```bash
+# Python/Julia (environment variables)
+export OPENBLAS_NUM_THREADS=8
+export JULIA_NUM_THREADS=8
 
----
-
-## 🔬 Methodology
-
-Following **Chen & Revels (2016)**:
-- Use **minimum time** (not mean/median)
-- Mathematical proof: T_measured = T_true + Σ(delays)
-- Delays ≥ 0, so minimum approximates truth
-
-Validated against **Tedesco et al. (2025)** spatio-temporal benchmarks.
-
----
-
-## 🌍 Cross-Platform
-
-Tested on:
-- ✅ Fedora Atomic (Aurora)
-- ✅ Ubuntu 22.04 / 24.04
-- ✅ Windows 11
-- ✅ macOS (Ventura+)
-
-Lock files:
-- Python: `requirements.txt`
-- Julia: `Manifest.toml`
-- R: `renv.lock`
-
----
-
-## 📚 Citations
-
-**Dataset**:
-```
-Boardman, J. W., Kruse, F. A., & Green, R. O. (1995). 
-Mapping target signatures via partial unmixing of AVIRIS data.
+# R (link to OpenBLAS)
+# Already linked in mise installation
 ```
 
-**Methodology**:
+### R OpenBLAS Setup
+R uses reference BLAS by default (65× slower!). Ensure OpenBLAS:
+
+```bash
+# Fedora
+sudo dnf install openblas
+
+# Ubuntu
+sudo apt install libopenblas-dev
+
+# Arch/CachyOS
+sudo pacman -S openblas
 ```
-Chen, J., & Revels, J. (2016). Robust benchmarking in noisy environments.
-arXiv:1608.04295.
 
-Tedesco, L., et al. (2025). Computational benchmark study in spatio-temporal statistics.
-Environmetrics. doi:10.1002/env.70017
+## Directory Structure
+
+```
+thesis-benchmarks/
+├── benchmarks/           # Benchmark scripts per language
+│   ├── matrix_ops.py/jl/R
+│   ├── io_ops.py/jl/R
+│   └── ...
+├── tools/                # Unified infrastructure
+│   ├── download_data.py  # All data downloading
+│   └── thesis_viz.py     # All visualizations
+├── validation/           # Validation suite
+│   └── thesis_validation.py
+├── results/              # Output directory
+│   ├── figures/          # Generated plots
+│   └── *.json            # Benchmark results
+├── containers/           # Dockerfiles
+└── .mise.toml           # Version configuration
 ```
 
----
+## Methodology
 
-## 🎓 Thesis Support
+### Chen & Revels (2016) Estimator Selection
+- **Primary metric**: Minimum time (not mean/median)
+- **Rationale**: T_measured = T_true + Σ(delays), delays ≥ 0
+- **50 runs** per benchmark for statistical power
 
-This code supports: **"Computational Benchmarking of Julia vs Python vs R for GIS/RS Workflows"**
+### Academic Rigor Features
+- CPU pinning (taskset) for consistent timings
+- Warmup runs (5 + 3 cache iterations)
+- Bootstrap confidence intervals (95%, 99%)
+- Wilcoxon signed-rank test
+- Friedman test for multiple comparisons
+- Shapiro-Wilk normality testing
 
-**Key Findings** (Expected):
-- Julia: Best for matrix ops, compile-once workflows
-- Python: Best ecosystem, library availability
-- R: Best for stats, I/O with data.table
-- Platform variance: <5% for compute tasks
+## Results
 
----
+Benchmark results saved to `results/*.json`:
 
-**Version**: 4.0.0 - mise + Cuprite Update  
-**Last Updated**: March 15, 2026
+```bash
+# Generate visualizations
+python tools/thesis_viz.py --all
+
+# Run validation
+python validation/thesis_validation.py --all
+
+# Generate LaTeX tables
+python benchmarks/academic_stats.py --latex
+```
+
+## Container Support
+
+```bash
+# Build containers
+./run_benchmarks.sh --build
+
+# Run with containers
+./run_benchmarks.sh --container-only
+
+# Native + container comparison
+./run_benchmarks.sh --full
+```
+
+## Dependencies
+
+### System (Fedora)
+```bash
+sudo dnf install -y \
+    openblas openblas-devel \
+    hyperfine \
+    time sysstat \
+    podman
+```
+
+### Python
+```bash
+pip install -r requirements.txt
+```
+
+### Julia
+```bash
+julia -e 'using Pkg; Pkg.instantiate()'
+```
+
+### R
+```r
+install.packages(c("jsonlite", "sf", "terra"))
+```
+
+## Citation
+
+```
+Thesis: Computational Benchmarking of Julia vs Python vs R 
+        for GIS/Remote Sensing Workflows
+
+Methodology:
+  Chen, J., & Revels, J. (2016). Robust benchmarking in noisy 
+  environments. arXiv:1608.04295.
+
+  Tedesco, L., et al. (2025). Computational benchmark study 
+  in spatio-temporal statistics. Environmetrics.
+  doi:10.1002/env.70017
+
+Dataset:
+  Boardman, J. W., et al. (1995). Mapping target signatures 
+  via partial unmixing of AVIRIS data.
+```
+
+## License
+
+MIT License
