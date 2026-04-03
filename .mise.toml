@@ -259,8 +259,7 @@ echo ""
 echo "=============================================="
 echo "Generating visualizations..."
 echo "=============================================="
-python tools/visualize_benchmarks.py --all
-python tools/scientific_visualizations.py --all
+python tools/thesis_viz.py --all
 
 echo ""
 echo "✓ All benchmarks complete!"
@@ -319,26 +318,24 @@ Rscript benchmarks/reprojection.R
 # TASKS: Validation & Visualization
 # =============================================================================
 [tasks.validate]
-description = "Run cross-language validation"
+description = "Run cross-language validation (unified)"
 run = """
-python tools/compare_results.py
-python tools/compare_with_tedesco.py
+python validation/thesis_validation.py --all
 """
 
 [tasks.viz]
-description = "Generate all visualizations"
+description = "Generate all visualizations (unified)"
 run = """
-python tools/visualize_benchmarks.py --all
-python tools/scientific_visualizations.py --all
+python tools/thesis_viz.py --all
+echo "✓ Visualizations in results/figures/"
 """
 
 [tasks.report]
-description = "Generate comparison reports"
+description = "Generate validation report (unified)"
 run = """
 mkdir -p results validation
-python tools/compare_results.py
-python tools/compare_with_tedesco.py
-echo "✓ Reports generated in validation/"
+python validation/thesis_validation.py --all
+echo "✓ Report: results/thesis_validation_report.md"
 """
 
 # =============================================================================
