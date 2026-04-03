@@ -78,7 +78,7 @@ RUN julia -e 'using Pkg; Pkg.precompile()'
 # =============================================================================
 # Julia Performance Configuration
 # =============================================================================
-ENV JULIA_NUM_THREADS=auto \
+ENV JULIA_NUM_THREADS=8 \
     JULIA_DEPOT_PATH=/root/.julia
 
 # =============================================================================

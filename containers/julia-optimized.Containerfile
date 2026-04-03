@@ -79,7 +79,7 @@ ENV JULIA_PATH=/usr/local/julia \
     PATH="/usr/local/julia/bin:${PATH}"
 
 # Performance configuration
-ENV JULIA_NUM_THREADS=auto
+ENV JULIA_NUM_THREADS=8
 
 # Verify installation
 RUN julia -e 'using BenchmarkTools, CSV, DataFrames, SHA, MAT, ArchGDAL, GeoDataFrames, LibGEOS, NearestNeighbors, JSON3, Shapefile; println("✓ All packages OK")'
