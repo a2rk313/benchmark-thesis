@@ -26,6 +26,10 @@ sudo dnf install -y openblas openblas-devel hyperfine
 mise run bench
 ```
 
+## Documentation
+
+See the [docs/](docs/) folder for all guides and documentation.
+
 ## Key Features
 
 - **Unified Infrastructure**: Single scripts for data, visualization, and validation
@@ -54,126 +58,6 @@ mise run download-data # Download/verify datasets
 | Vector PiP | Natural Earth | Python, Julia, R |
 | IDW Interpolation | Synthetic | Python, Julia, R |
 | NDVI Time Series | Synthetic | Python, Julia, R |
-| Raster Algebra | SRTM DEM | Python, Julia, R |
-| Zonal Statistics | NLCD | Python, Julia, R |
-| Reprojection | Synthetic | Python, Julia, R |
-
-## Fair Benchmarking Requirements
-
-### BLAS Configuration
-All languages use **OpenBLAS** with **8 threads** for matrix operations:
-
-```bash
-# Python/Julia (environment variables)
-export OPENBLAS_NUM_THREADS=8
-export JULIA_NUM_THREADS=8
-
-# R (link to OpenBLAS)
-# Already linked in mise installation
-```
-
-### R OpenBLAS Setup
-R uses reference BLAS by default (65× slower!). Ensure OpenBLAS:
-
-```bash
-# Fedora
-sudo dnf install openblas
-
-# Ubuntu
-sudo apt install libopenblas-dev
-
-# Arch/CachyOS
-sudo pacman -S openblas
-```
-
-## Directory Structure
-
-```
-thesis-benchmarks/
-├── benchmarks/           # Benchmark scripts per language
-│   ├── matrix_ops.py/jl/R
-│   ├── io_ops.py/jl/R
-│   └── ...
-├── tools/                # Unified infrastructure
-│   ├── download_data.py  # All data downloading
-│   └── thesis_viz.py     # All visualizations
-├── validation/           # Validation suite
-│   └── thesis_validation.py
-├── results/              # Output directory
-│   ├── figures/          # Generated plots
-│   └── *.json            # Benchmark results
-├── containers/           # Dockerfiles
-└── .mise.toml           # Version configuration
-```
-
-## Methodology
-
-### Chen & Revels (2016) Estimator Selection
-- **Primary metric**: Minimum time (not mean/median)
-- **Rationale**: T_measured = T_true + Σ(delays), delays ≥ 0
-- **50 runs** per benchmark for statistical power
-
-### Academic Rigor Features
-- CPU pinning (taskset) for consistent timings
-- Warmup runs (5 + 3 cache iterations)
-- Bootstrap confidence intervals (95%, 99%)
-- Wilcoxon signed-rank test
-- Friedman test for multiple comparisons
-- Shapiro-Wilk normality testing
-
-## Results
-
-Benchmark results saved to `results/*.json`:
-
-```bash
-# Generate visualizations
-python tools/thesis_viz.py --all
-
-# Run validation
-python validation/thesis_validation.py --all
-
-# Generate LaTeX tables
-python benchmarks/academic_stats.py --latex
-```
-
-## Container Support
-
-```bash
-# Build containers
-./run_benchmarks.sh --build
-
-# Run with containers
-./run_benchmarks.sh --container-only
-
-# Native + container comparison
-./run_benchmarks.sh --full
-```
-
-## Dependencies
-
-### System (Fedora)
-```bash
-sudo dnf install -y \
-    openblas openblas-devel \
-    hyperfine \
-    time sysstat \
-    podman
-```
-
-### Python
-```bash
-pip install -r requirements.txt
-```
-
-### Julia
-```bash
-julia -e 'using Pkg; Pkg.instantiate()'
-```
-
-### R
-```r
-install.packages(c("jsonlite", "sf", "terra"))
-```
 
 ## Citation
 
@@ -187,11 +71,6 @@ Methodology:
 
   Tedesco, L., et al. (2025). Computational benchmark study 
   in spatio-temporal statistics. Environmetrics.
-  doi:10.1002/env.70017
-
-Dataset:
-  Boardman, J. W., et al. (1995). Mapping target signatures 
-  via partial unmixing of AVIRIS data.
 ```
 
 ## License
