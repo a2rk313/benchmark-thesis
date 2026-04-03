@@ -34,7 +34,7 @@ RUN dnf install -y \
     && dnf clean all
 
 # ---------- Configure OpenBLAS as default BLAS ----------
-RUN flexiblas set OpenBLAS
+RUN flexiblas set-system OpenBLAS
 
 # ---------- Layer 4: R packages available from Fedora ----------
 RUN dnf -y install \
