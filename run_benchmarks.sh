@@ -36,9 +36,12 @@ BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
 MAGENTA='\033[0;35m'
 
 # ── Configuration ─────────────────────────────────────────────────────────────
+# Academic rigor settings
 COLD_START_RUNS=5
-BENCHMARK_RUNS=10
-WARMUP_RUNS=3
+BENCHMARK_RUNS=50          # Increased from 10 for statistical validity
+WARMUP_RUNS=5              # Increased from 3 for JIT settling
+CACHE_WARMUP=3             # Extra iterations for cache effects
+FULL_SUITE_REPEATS=3       # Run full suite multiple times for variance
 
 # Container image tags — must match Containerfile LABEL versions
 PYTHON_TAG="thesis-python:3.13"
@@ -50,11 +53,23 @@ export JULIA_NUM_THREADS=8
 export OPENBLAS_NUM_THREADS=8
 export OMP_NUM_THREADS=8
 
+# CPU pinning configuration (for consistent timings)
+CPU_PIN_ENABLED=true
+CPU_CORES=""  # Empty = use all cores; "0" = core 0 only; "0-3" = cores 0-3
+
+# NUMA configuration
+NUMA_ENABLED=true
+NUMA_NODE=0  # Pin to first NUMA node
+
 # Scenario toggles
 ENABLE_VECTOR=true
 ENABLE_INTERPOLATION=true
 ENABLE_TIMESERIES=true
 ENABLE_HYPERSPECTRAL=true
+
+# Statistical settings
+CONFIDENCE_LEVEL=0.95
+SIGNIFICANCE_LEVEL=0.05
 
 # ── Banner ────────────────────────────────────────────────────────────────────
 echo -e "${BOLD}${BLUE}"
@@ -84,7 +99,12 @@ echo "    R      : $(R --version 2>/dev/null | head -1 | cut -d' ' -f3 || echo '
 echo ""
 echo "  Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS, OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS"
 echo ""
-echo "  Cold runs: $COLD_START_RUNS   Warm runs: $BENCHMARK_RUNS  (warmup: $WARMUP_RUNS)"
+echo "  Academic rigor settings:"
+echo "    Benchmark runs: $BENCHMARK_RUNS (increased for statistical power)"
+echo "    Warmup runs: $WARMUP_RUNS + $CACHE_WARMUP cache warmup"
+echo "    Full suite repeats: $FULL_SUITE_REPEATS (for variance estimation)"
+echo "    CPU pinning: $CPU_PIN_ENABLED"
+echo "    NUMA binding: $NUMA_ENABLED"
 echo ""
 echo "  Enabled scenarios:"
 [ "$ENABLE_VECTOR" = "true" ]         && echo "    ✓ Vector topology (Point-in-Polygon)"
@@ -93,8 +113,8 @@ echo "  Enabled scenarios:"
 [ "$ENABLE_HYPERSPECTRAL" = "true" ]  && echo "    ✓ Hyperspectral SAM"
 echo ""
 
-# ── [0/8] Dependency check ────────────────────────────────────────────────────
-echo -e "${BLUE}[0/8] Checking dependencies...${NC}"
+# ── [0/10] Dependency check ────────────────────────────────────────────────────
+echo -e "${BLUE}[0/10] Checking dependencies...${NC}"
 for cmd in podman hyperfine; do
     if ! command -v "$cmd" &>/dev/null; then
         echo -e "${RED}❌ $cmd not found.${NC}"
@@ -104,6 +124,79 @@ for cmd in podman hyperfine; do
     fi
     echo "  ✓ $cmd: $($cmd --version 2>&1 | head -1)"
 done
+
+# ── System Preparation ───────────────────────────────────────────────────────
+echo ""
+echo -e "${BLUE}System Preparation for Academic Rigor...${NC}"
+
+# CPU Pinning
+if [[ "$CPU_PIN_ENABLED" == "true" ]]; then
+    if command -v taskset &>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} CPU pinning enabled (taskset available)"
+        if [[ -n "$CPU_CORES" ]]; then
+            echo "    Using cores: $CPU_CORES"
+        else
+            echo "    Using all available cores"
+        fi
+    else
+        echo -e "  ${YELLOW}⚠${NC} taskset not found - CPU pinning disabled"
+        CPU_PIN_ENABLED=false
+    fi
+fi
+
+# NUMA
+if [[ "$NUMA_ENABLED" == "true" ]]; then
+    if command -v numactl &>/dev/null; then
+        echo -e "  ${GREEN}✓${NC} NUMA binding enabled (numactl available)"
+        numactl --hardware 2>/dev/null | head -1 || true
+    else
+        echo -e "  ${YELLOW}⚠${NC} numactl not found - NUMA binding disabled"
+        NUMA_ENABLED=false
+    fi
+fi
+
+# CPU Frequency
+CPU_FREQ=""
+if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
+    echo -e "  ${GREEN}✓${NC} CPU frequency monitoring available"
+    CPU_FREQ=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
+    [[ -n "$CPU_FREQ" ]] && echo "    Current freq: $((CPU_FREQ / 1000)) MHz"
+else
+    echo -e "  ${YELLOW}⚠${NC} CPU frequency monitoring not available"
+fi
+
+# Turbo Boost warning
+if [[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
+    TURBO_DISABLED=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null)
+    if [[ "$TURBO_DISABLED" == "0" ]]; then
+        echo -e "  ${YELLOW}⚠${NC} Warning: Turbo Boost ENABLED (may cause variance)"
+        echo "    Disable with: echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo"
+    else
+        echo -e "  ${GREEN}✓${NC} Turbo Boost disabled (consistent timings)"
+    fi
+fi
+
+# Helper function for CPU/NUMA pinning
+run_pinned() {
+    local cmd="$1"
+    local pin_args=""
+    
+    if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
+        pin_args="-c $CPU_CORES"
+    fi
+    
+    if [[ "$NUMA_ENABLED" == "true" ]]; then
+        if command -v numactl &>/dev/null; then
+            eval numactl $pin_args --cpunodebind=$NUMA_NODE --membind=$NUMA_NODE $cmd
+        else
+            eval taskset $pin_args $cmd
+        fi
+    elif [[ -n "$pin_args" ]]; then
+        eval taskset $pin_args $cmd
+    else
+        eval $cmd
+    fi
+}
 
 # ── [1/9] Build containers (with caching for speed) ───────────────────────────
 echo ""
@@ -480,25 +573,69 @@ else
     echo "  ⚠ Matrix operations results not found — run matrix benchmarks first"
 fi
 
-# ── [12/12] NATIVE BENCHMARKS ────────────────────────────────────────────────
+# ── [12/13] NATIVE BENCHMARKS ────────────────────────────────────────────────
 if [[ "$MODE" == "container" ]]; then
     echo ""
-    echo -e "${BLUE}[12/12] Native System Benchmarks (skipped - container mode)${NC}"
+    echo -e "${BLUE}[12/13] Native System Benchmarks (skipped - container mode)${NC}"
 else
     echo ""
-    echo -e "${BLUE}[12/12] Native System Benchmarks${NC}"
-    echo -e "${YELLOW}  Running on host system for real-world performance comparison${NC}"
+    echo -e "${BLUE}[12/13] Native System Benchmarks${NC}"
+    echo -e "${YELLOW}  Running on host system with CPU pinning for academic rigor${NC}"
     echo ""
-    echo "  Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS, OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS"
+    echo "  Academic settings:"
+    echo "    Runs: $BENCHMARK_RUNS, Warmup: $WARMUP_RUNS + $CACHE_WARMUP"
+    echo "    CPU pinning: $CPU_PIN_ENABLED, NUMA: $NUMA_ENABLED"
+    echo "    Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS"
     echo ""
 
-    mkdir -p results/native
+    mkdir -p results/native results/academic
 
+    # Enhanced native runner with pinning and CPU monitoring
     run_native() {
         local lang="$1" cmd="$2" name="$3"
-        echo -e "  ${GREEN}$lang native${NC}: $name"
-        if ! eval "$cmd" 2>&1; then
-            echo -e "    ${RED}❌ Failed${NC}"
+        local output="results/native/${name}_${lang}.json"
+        
+        echo -e "  ${GREEN}$lang${NC}: $name"
+        
+        # Log CPU frequency before
+        local freq_before=""
+        if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
+            freq_before=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
+            echo "    CPU freq before: $((freq_before / 1000)) MHz"
+        fi
+        
+        # Run with pinning if enabled
+        if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
+            taskset -c "$CPU_CORES" bash -c "$cmd" 2>&1 || {
+                echo -e "    ${RED}❌ Failed${NC}"
+                return 1
+            }
+        else
+            eval "$cmd" 2>&1 || {
+                echo -e "    ${RED}❌ Failed${NC}"
+                return 1
+            }
+        fi
+        
+        # Log CPU frequency after
+        if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
+            local freq_after=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
+            echo "    CPU freq after: $((freq_after / 1000)) MHz"
+        fi
+    }
+
+    # Academic stats runner (if academic_stats.py exists)
+    run_academic() {
+        local lang="$1" script="$2" name="$3"
+        local output="results/academic/${name}_${lang}.json"
+        
+        echo -e "  ${MAGENTA}$lang (academic)${NC}: $name"
+        
+        if [[ -f "benchmarks/academic_stats.py" ]]; then
+            source .venv/bin/activate 2>/dev/null || true
+            python3 benchmarks/academic_stats.py "$script" "$output" 2>&1 || {
+                echo -e "    ${YELLOW}⚠ academic_stats not available${NC}"
+            }
         fi
     }
 
@@ -509,7 +646,7 @@ else
         run_native "Python" "python3 benchmarks/matrix_ops.py" "matrix_ops"
     fi
     if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/matrix_ops.jl" "matrix_ops"
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl" "matrix_ops"
     fi
     if command -v Rscript &>/dev/null; then
         run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R" "matrix_ops"
@@ -521,7 +658,7 @@ else
         run_native "Python" "python3 benchmarks/io_ops.py" "io_ops"
     fi
     if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/io_ops.jl" "io_ops"
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/io_ops.jl" "io_ops"
     fi
     if command -v Rscript &>/dev/null; then
         run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/io_ops.R" "io_ops"
@@ -532,89 +669,118 @@ else
     if command -v python3 &>/dev/null; then
         run_native "Python" "python3 benchmarks/raster_algebra.py" "raster_algebra"
 fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/raster_algebra.jl" "raster_algebra"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/raster_algebra.R" "raster_algebra"
-fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/raster_algebra.jl" "raster_algebra"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/raster_algebra.R" "raster_algebra"
+    fi
 
-# Reprojection (native)
-echo -e "${YELLOW}  Coordinate Reprojection:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/reprojection.py" "reprojection"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/reprojection.jl" "reprojection"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/reprojection.R" "reprojection"
-fi
+    # Reprojection (native)
+    echo -e "${YELLOW}  Coordinate Reprojection:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/reprojection.py" "reprojection"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/reprojection.jl" "reprojection"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/reprojection.R" "reprojection"
+    fi
 
-# Zonal Statistics (native)
-echo -e "${YELLOW}  Zonal Statistics:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/zonal_stats.py" "zonal_stats"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/zonal_stats.jl" "zonal_stats"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/zonal_stats.R" "zonal_stats"
-fi
+    # Zonal Statistics (native)
+    echo -e "${YELLOW}  Zonal Statistics:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/zonal_stats.py" "zonal_stats"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/zonal_stats.jl" "zonal_stats"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/zonal_stats.R" "zonal_stats"
+    fi
 
-# Interpolation (native)
-echo -e "${YELLOW}  Spatial Interpolation:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/interpolation_idw.py" "interpolation"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/interpolation_idw.jl" "interpolation"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/interpolation_idw.R" "interpolation"
-fi
+    # Interpolation (native)
+    echo -e "${YELLOW}  Spatial Interpolation:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/interpolation_idw.py" "interpolation"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/interpolation_idw.jl" "interpolation"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/interpolation_idw.R" "interpolation"
+    fi
 
-# Time-Series (native)
-echo -e "${YELLOW}  Time-Series NDVI:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/timeseries_ndvi.py" "timeseries"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/timeseries_ndvi.jl" "timeseries"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/timeseries_ndvi.R" "timeseries"
-fi
+    # Time-Series (native)
+    echo -e "${YELLOW}  Time-Series NDVI:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/timeseries_ndvi.py" "timeseries"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/timeseries_ndvi.jl" "timeseries"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/timeseries_ndvi.R" "timeseries"
+    fi
 
-# Hyperspectral (native)
-echo -e "${YELLOW}  Hyperspectral SAM:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/hsi_stream.py" "hsi_stream"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/hsi_stream.jl" "hsi_stream"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/hsi_stream.R" "hsi_stream"
-fi
+    # Hyperspectral (native)
+    echo -e "${YELLOW}  Hyperspectral SAM:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/hsi_stream.py" "hsi_stream"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/hsi_stream.jl" "hsi_stream"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/hsi_stream.R" "hsi_stream"
+    fi
 
-# Vector PIP (native)
-echo -e "${YELLOW}  Vector Point-in-Polygon:${NC}"
-if command -v python3 &>/dev/null; then
-    run_native "Python" "python3 benchmarks/vector_pip.py" "vector_pip"
-fi
-if command -v julia &>/dev/null; then
-    run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS julia benchmarks/vector_pip.jl" "vector_pip"
-fi
-if command -v Rscript &>/dev/null; then
-    run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/vector_pip.R" "vector_pip"
-fi
+    # Vector PIP (native)
+    echo -e "${YELLOW}  Vector Point-in-Polygon:${NC}"
+    if command -v python3 &>/dev/null; then
+        run_native "Python" "python3 benchmarks/vector_pip.py" "vector_pip"
+    fi
+    if command -v julia &>/dev/null; then
+        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/vector_pip.jl" "vector_pip"
+    fi
+    if command -v Rscript &>/dev/null; then
+        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/vector_pip.R" "vector_pip"
+    fi
 
     echo ""
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
     echo "  Results saved alongside container results in: results/"
 fi  # End of native-only section
+
+# ── [13/13] Generate Academic Report ─────────────────────────────────────────
+echo ""
+echo -e "${BLUE}[13/13] Generating Academic Report with Statistical Analysis...${NC}"
+
+if command -v python3 &>/dev/null; then
+    source .venv/bin/activate 2>/dev/null || true
+    
+    if [[ -f "tools/visualize_benchmarks.py" ]]; then
+        echo "  Generating visualizations..."
+        python3 tools/visualize_benchmarks.py 2>&1 || echo "  ⚠ Visualization failed"
+    fi
+    
+    # Generate statistical comparison
+    if [[ -f "tools/compare_results.py" ]]; then
+        echo "  Running statistical comparison..."
+        python3 tools/compare_results.py 2>&1 || echo "  ⚠ Comparison failed"
+    fi
+    
+    # Generate academic report
+    if [[ -f "validation/generate_report.py" ]]; then
+        echo "  Generating academic report..."
+        python3 validation/generate_report.py 2>&1 || echo "  ⚠ Report generation failed"
+    fi
+    
+    echo -e "${GREEN}  ✓ Academic report complete${NC}"
+else
+    echo "  ⚠ Python not available - skipping report generation"
+fi
 
 # ── [13/13] Summary ───────────────────────────────────────────────────────────
 echo ""
