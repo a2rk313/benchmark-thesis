@@ -313,35 +313,42 @@ echo -e "${BLUE}[3/9] Preparing benchmark datasets...${NC}"
 DDIR="$(pwd)/data"
 mkdir -p "$DDIR"
 
-if [ "$ENABLE_VECTOR" = "true" ]; then
-    if [ ! -f "$DDIR/natural_earth_countries.gpkg" ] || [ ! -f "$DDIR/gps_points_1m.csv" ]; then
-        echo "  Generating vector data..."
-        if [[ "$MODE" != "native" ]] && command -v podman &>/dev/null; then
-            podman run --rm \
-                -v "$DDIR":/benchmarks/data:Z \
-                -v "$(pwd)/tools":/benchmarks/tools:Z \
-                "$PYTHON_TAG" python3 tools/gen_vector_data.py
-        elif command -v python3 &>/dev/null; then
-            python3 tools/gen_vector_data.py
-        fi
-    else
-        echo "  ✓ Vector data exists"
-    fi
-fi
+# Use unified download script
+DOWNLOAD_CMD="python3 tools/download_data.py"
 
-if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
-    if [ ! -f "$DDIR/Cuprite.mat" ]; then
-        echo "  Downloading hyperspectral data (Cuprite dataset, ~100 MB)..."
-        if [[ "$MODE" != "native" ]] && command -v podman &>/dev/null; then
-            podman run --rm \
-                -v "$DDIR":/benchmarks/data:Z \
-                -v "$(pwd)/tools":/benchmarks/tools:Z \
-                "$PYTHON_TAG" python3 tools/download_cuprite.py
-        elif command -v python3 &>/dev/null; then
-            python3 tools/download_cuprite.py
+# Check if unified script exists
+if [[ -f "tools/download_data.py" ]]; then
+    if [[ "$MODE" != "native" ]] && command -v podman &>/dev/null; then
+        echo "  Using unified download script (container mode)..."
+        podman run --rm \
+            -v "$DDIR":/benchmarks/data:Z \
+            -v "$(pwd)/tools":/benchmarks/tools:Z \
+            "$PYTHON_TAG" bash -c "cd /benchmarks && $DOWNLOAD_CMD --all --synthetic"
+    elif command -v python3 &>/dev/null; then
+        echo "  Using unified download script..."
+        source .venv/bin/activate 2>/dev/null || true
+        $DOWNLOAD_CMD --all --synthetic
+    fi
+else
+    # Fallback to legacy scripts
+    echo "  Warning: Unified script not found, using legacy scripts..."
+    
+    if [ "$ENABLE_VECTOR" = "true" ]; then
+        if [ ! -f "$DDIR/natural_earth_countries.gpkg" ] || [ ! -f "$DDIR/gps_points_1m.csv" ]; then
+            echo "  Generating vector data..."
+            python3 tools/gen_vector_data.py
+        else
+            echo "  ✓ Vector data exists"
         fi
-    else
-        echo "  ✓ Hyperspectral data exists (Cuprite.mat)"
+    fi
+
+    if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
+        if [ ! -f "$DDIR/Cuprite.mat" ]; then
+            echo "  Downloading hyperspectral data..."
+            python3 tools/download_cuprite.py
+        else
+            echo "  ✓ Hyperspectral data exists"
+        fi
     fi
 fi
 

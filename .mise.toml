@@ -171,12 +171,10 @@ mise exec r@4.5.3 -- R --version | head -1
 # TASKS: Data
 # =============================================================================
 [tasks.download-data]
-description = "Download benchmark datasets"
+description = "Download/generate benchmark datasets"
 run = """
 mkdir -p data
-python tools/download_cuprite.py
-python tools/gen_vector_data.py
-python tools/download_real_data.py
+python tools/download_data.py --all --synthetic
 echo "✓ All datasets ready"
 """
 
