@@ -523,49 +523,28 @@ else
     }
 fi
 
-# ── [9/9] Validate results ───────────────────────────────────────────────────
+# ── [9/9] Validate results (unified script) ───────────────────────────────────
 echo ""
 echo -e "${BLUE}[9/9] Validating correctness (cross-language hash comparison)...${NC}"
 
-if [ -f "validation/validate_results.py" ]; then
+if [ -f "validation/thesis_validation.py" ]; then
     if [[ "$MODE" != "native" ]]; then
         podman run --rm \
             -v "$(pwd)":/benchmarks:Z \
             "$PYTHON_TAG" \
-            python3 validation/validate_results.py \
+            python3 validation/thesis_validation.py --all \
             && echo "  ✓ Validation passed" \
             || echo "  ⚠ Validation had warnings (check output above)"
     else
-        python3 validation/validate_results.py \
+        python3 validation/thesis_validation.py --all \
             && echo "  ✓ Validation passed" \
             || echo "  ⚠ Validation had warnings (check output above)"
     fi
 else
-    echo "  ⚠ validate_results.py not found — skipping"
+    echo "  ⚠ thesis_validation.py not found — skipping"
 fi
 
-# ── [10/9] Chen & Revels Validation ─────────────────────────────────────────
-echo ""
-echo -e "${BLUE}[10/9] Chen & Revels (2016) Methodology Validation...${NC}"
-
-if [ -f "validation/chen_revels_validation.py" ]; then
-    if [[ "$MODE" != "native" ]]; then
-        podman run --rm \
-            -v "$(pwd)":/benchmarks:Z \
-            "$PYTHON_TAG" \
-            python3 validation/chen_revels_validation.py \
-            && echo "  ✓ Chen & Revels validation complete" \
-            || echo "  ⚠ Validation had errors"
-    else
-        python3 validation/chen_revels_validation.py \
-            && echo "  ✓ Chen & Revels validation complete" \
-            || echo "  ⚠ Validation had errors"
-    fi
-else
-    echo "  ⚠ chen_revels_validation.py not found — skipping"
-fi
-
-# ── [11/9] Tedesco et al. Comparison ─────────────────────────────────────────
+# ── [10/9] Tedesco et al. Comparison ─────────────────────────────────────────
 echo ""
 echo -e "${BLUE}[11/9] Comparison with Tedesco et al. (2025)...${NC}"
 
@@ -762,26 +741,21 @@ fi  # End of native-only section
 
 # ── [13/13] Generate Academic Report ─────────────────────────────────────────
 echo ""
-echo -e "${BLUE}[13/13] Generating Academic Report with Statistical Analysis...${NC}"
+echo -e "${BLUE}[13/13] Generating Academic Report with Unified Scripts...${NC}"
 
 if command -v python3 &>/dev/null; then
     source .venv/bin/activate 2>/dev/null || true
     
-    if [[ -f "tools/visualize_benchmarks.py" ]]; then
-        echo "  Generating visualizations..."
-        python3 tools/visualize_benchmarks.py 2>&1 || echo "  ⚠ Visualization failed"
+    # Unified visualization
+    if [[ -f "tools/thesis_viz.py" ]]; then
+        echo "  Generating visualizations (thesis_viz.py)..."
+        python3 tools/thesis_viz.py --all 2>&1 || echo "  ⚠ Visualization failed"
     fi
     
-    # Generate statistical comparison
-    if [[ -f "tools/compare_results.py" ]]; then
-        echo "  Running statistical comparison..."
-        python3 tools/compare_results.py 2>&1 || echo "  ⚠ Comparison failed"
-    fi
-    
-    # Generate academic report
-    if [[ -f "validation/generate_report.py" ]]; then
-        echo "  Generating academic report..."
-        python3 validation/generate_report.py 2>&1 || echo "  ⚠ Report generation failed"
+    # Unified validation
+    if [[ -f "validation/thesis_validation.py" ]]; then
+        echo "  Running validation (thesis_validation.py)..."
+        python3 validation/thesis_validation.py --all 2>&1 || echo "  ⚠ Validation failed"
     fi
     
     echo -e "${GREEN}  ✓ Academic report complete${NC}"
@@ -811,30 +785,27 @@ find results -name '*.json' -o -name '*.txt' -o -name '*.md' 2>/dev/null | \
     grep -v gitkeep | sort | sed 's/^/    /'
 echo ""
 echo "  Key Outputs:"
-echo "    Core Benchmarks (container):"
+echo "    Core Benchmarks:"
 echo "      - results/matrix_ops_{python,julia,r}.json"
 echo "      - results/io_ops_{python,julia,r}.json"
-echo "    GIS Benchmarks (container):"
-echo "      - results/warm_start/*_warm.json"
-echo "      - results/cold_start/*_cold.json"
-echo "    Analysis:"
-echo "      - results/chen_revels_validation_summary.md"
-echo "      - results/tedesco_comparison.md"
+echo "    Validation:"
+echo "      - results/thesis_validation_report.md"
+echo "      - results/figures/summary_chart.png"
 echo ""
 echo "  Next steps:"
 echo "    1. Review:    ls -lh results/"
-echo "    2. Visualize: python tools/visualize_benchmarks.py"
-echo "    3. Compare:   python tools/compare_with_tedesco.py"
-echo "    4. Report:    python validation/generate_report.py"
+echo "    2. Visualize: python tools/thesis_viz.py --all"
+echo "    3. Validate:  python validation/thesis_validation.py --all"
+echo ""
+echo "  Unified Scripts:"
+echo "    tools/thesis_viz.py           # All visualizations"
+echo "    validation/thesis_validation.py  # All validation"
+echo "    tools/download_data.py          # All data"
 echo ""
 echo "  Usage:"
 echo "    ./run_benchmarks.sh           # Full (container + native)"
 echo "    ./run_benchmarks.sh --container-only  # Container only"
 echo "    ./run_benchmarks.sh --native-only    # Native only"
-echo ""
-echo "  Documentation:"
-echo "    - DATA_PROVENANCE.md"
-echo "    - METHODOLOGY_NOTES_FOR_THESIS.md"
 echo ""
 if [[ "$MODE" != "native" ]] && [ -f results/container_hashes.txt ]; then
     echo "  Container digests saved → results/container_hashes.txt"
