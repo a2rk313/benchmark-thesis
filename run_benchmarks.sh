@@ -43,10 +43,28 @@ WARMUP_RUNS=5              # Increased from 3 for JIT settling
 CACHE_WARMUP=3             # Extra iterations for cache effects
 FULL_SUITE_REPEATS=3       # Run full suite multiple times for variance
 
-# Container image tags — must match Containerfile LABEL versions
-PYTHON_TAG="thesis-python:3.13"
-JULIA_TAG="thesis-julia:1.11"
-R_TAG="thesis-r:4.5"
+# Detect OS for container selection
+detect_os() {
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        echo "${ID:-unknown}"
+    else
+        echo "unknown"
+    fi
+}
+
+OS_TYPE=$(detect_os)
+
+# Container image tags — select based on OS
+if [[ "$OS_TYPE" == "ubuntu" ]]; then
+    PYTHON_TAG="thesis-python:ubuntu"
+    JULIA_TAG="thesis-julia:ubuntu"
+    R_TAG="thesis-r:ubuntu"
+else
+    PYTHON_TAG="thesis-python:3.13"
+    JULIA_TAG="thesis-julia:1.11"
+    R_TAG="thesis-r:4.5"
+fi
 
 # Thread configuration for fair native benchmarking
 export JULIA_NUM_THREADS=8
