@@ -36,6 +36,7 @@ wheels/
 *.egg
 
 # Julia
+.julia/
 Manifest.toml
 *.jl.cov
 *.jl.*.cov
