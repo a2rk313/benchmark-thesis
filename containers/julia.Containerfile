@@ -14,7 +14,7 @@
 # BUILD:  podman build -t thesis-julia:1.11 -f containers/julia.Containerfile .
 # =============================================================================
 
-FROM docker.io/library/fedora:43
+FROM docker.io/library/fedora:41
 
 LABEL org.opencontainers.image.title="Thesis Julia Geospatial Lab" \
       org.opencontainers.image.version="1.11.4-simplified"

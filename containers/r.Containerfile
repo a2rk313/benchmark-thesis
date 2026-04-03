@@ -3,7 +3,7 @@
 # Version: 2.18.0
 # =============================================================================
 
-FROM docker.io/library/fedora:43
+FROM docker.io/library/fedora:41
 
 LABEL org.opencontainers.image.title="Thesis R Geospatial Lab" \
       org.opencontainers.image.version="4.5-benchmark-ready"

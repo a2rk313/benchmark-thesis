@@ -15,7 +15,7 @@
 # =============================================================================
 
 # ============ STAGE 1: BUILD STAGE ============
-FROM fedora:43 AS builder
+FROM fedora:41 AS builder
 
 # Install Julia and build dependencies
 RUN dnf install -y \
@@ -53,7 +53,7 @@ RUN rm -rf /julia-depot/logs && \
     find /julia-depot/packages -name "examples" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # ============ STAGE 2: RUNTIME STAGE (SLIM) ============
-FROM fedora:43-minimal
+FROM fedora:41-minimal
 
 # Install ONLY runtime libraries
 RUN microdnf install -y \
