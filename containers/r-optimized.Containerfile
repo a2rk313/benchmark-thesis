@@ -18,7 +18,7 @@
 # ============================================
 # STAGE 1: Build stage
 # ============================================
-FROM fedora:41 AS builder
+FROM fedora:43 AS builder
 
 # Install build dependencies
 RUN dnf -y install \
@@ -69,7 +69,7 @@ RUN find "${R_LIBS_SITE}" -name "*.o" -delete && \
 # ============================================
 # STAGE 2: Runtime stage
 # ============================================
-FROM fedora:41
+FROM fedora:43
 
 # Install ONLY runtime libraries
 RUN dnf -y install \

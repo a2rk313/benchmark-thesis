@@ -11,7 +11,7 @@
 # BUILD:  podman build -t thesis-python:3.13 -f containers/python.Containerfile .
 # =============================================================================
 
-FROM fedora:41
+FROM fedora:43
 
 # ---------- Build dependencies and geospatial libraries ----------
 RUN dnf install -y \

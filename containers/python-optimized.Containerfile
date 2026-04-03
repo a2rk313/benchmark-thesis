@@ -17,7 +17,7 @@
 # ============================================
 # STAGE 1: Build stage (all build dependencies)
 # ============================================
-FROM fedora:41 AS builder
+FROM fedora:43 AS builder
 
 # Install build dependencies
 RUN dnf install -y \
@@ -62,7 +62,7 @@ RUN uv pip install --no-cache \
 # ============================================
 # STAGE 2: Runtime stage (minimal dependencies only)
 # ============================================
-FROM fedora:41
+FROM fedora:43
 
 # Install ONLY runtime libraries (no build tools!)
 RUN dnf install -y \

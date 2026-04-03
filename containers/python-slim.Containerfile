@@ -15,7 +15,7 @@
 # =============================================================================
 
 # ============ STAGE 1: BUILD STAGE ============
-FROM fedora:41 AS builder
+FROM fedora:43 AS builder
 
 # Install build dependencies
 RUN dnf install -y \
@@ -63,7 +63,7 @@ RUN find /venv -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
     find /venv -name "test" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # ============ STAGE 2: RUNTIME STAGE (SLIM) ============
-FROM fedora:41-minimal
+FROM fedora:43-minimal
 
 # Install ONLY runtime libraries (no build tools!)
 RUN microdnf install -y \
