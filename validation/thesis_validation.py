@@ -423,10 +423,10 @@ class StatisticalAnalyzer:
         t1 = self._extract_time(data1)
         t2 = self._extract_time(data2)
 
-        if not t1 or not t2:
+        if t1 is None or t2 is None or len(t1) == 0 or len(t2) == 0:
             return {}
 
-        speedup = t1 / t2 if t2 > 0 else 1.0
+        speedup = float(np.mean(t1) / np.mean(t2)) if np.mean(t2) > 0 else 1.0
 
         # Non-parametric test
         try:
