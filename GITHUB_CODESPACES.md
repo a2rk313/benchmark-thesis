@@ -2,21 +2,20 @@
 
 ## Why GitHub Codespaces?
 
-**100% FREE for your thesis:**
-- 60 hours/month free (enough for all benchmarking)
+- 60 hours/month FREE
 - 4-core CPU, 8GB RAM, 32GB storage
-- Consistent Ubuntu environment
+- Consistent environment
 - No credit card required
-- Perfect for multi-platform comparison
 
 ---
 
 ## Quick Setup
 
-### 1. Push to GitHub
+### 1. Push Changes
 ```bash
 git push
 ```
+This triggers GitHub Actions to build Fedora containers and push to GHCR.
 
 ### 2. Launch Codespace
 1. Go to your GitHub repo
@@ -24,97 +23,51 @@ git push
 3. Wait 3-4 minutes for setup (automatic)
 
 ### 3. Run Benchmarks
-
-**Option A: Native mode (faster)**
 ```bash
+# Native mode (uses system Python/Julia/R in Ubuntu)
 ./run_benchmarks.sh --native-only
-```
-
-**Option B: Container mode (recommended)**
-```bash
-./run_benchmarks.sh
 ```
 
 ### 4. Download Results
 ```bash
-# Create archive
 tar -czf results.tar.gz results/
-
-# Or right-click results/ → Download
 ```
 
 ---
 
-## Setup Details
+## How It Works
 
-### Automatic Setup (.devcontainer/setup.sh)
-When Codespace starts, these run automatically:
-1. Install podman (container runtime)
-2. Install hyperfine (benchmarking tool)
-3. Download all benchmark datasets
-4. Make scripts executable
+1. **GitHub Actions** builds Fedora containers on every push
+2. Containers pushed to **GitHub Container Registry (GHCR)**
+3. Codespace pulls containers OR runs natively
 
-### Manual Setup (if needed)
-```bash
-# If data download failed
-./.devcontainer/codespaces_setup.sh
+## Containers on GHCR
 
-# Verify system
-./check_system.sh
-```
+| Tag | Description |
+|-----|-------------|
+| `thesis-python:fedora` | Python on Fedora 43 |
+| `thesis-julia:fedora` | Julia 1.11 on Fedora 43 |
+| `thesis-r:fedora` | R 4.5 on Fedora 43 |
+| `thesis-*:slim` | Optimized smaller versions |
 
 ---
 
-## Directory Structure in Codespaces
-
-```
-thesis-benchmarks/
-├── benchmarks/           # Python, Julia, R scripts
-├── tools/               # Unified scripts
-│   ├── download_data.py  # Downloads all datasets
-│   └── thesis_viz.py     # Visualizations
-├── validation/          # Validation suite
-│   └── thesis_validation.py
-├── containers/           # Dockerfiles
-├── data/                # Downloaded datasets
-├── results/             # Benchmark outputs
-└── run_benchmarks.sh    # Main runner
-```
-
----
-
-## Benchmark Datasets
-
-Automatically downloaded by `tools/download_data.py`:
-
-| Dataset | Size | Description |
-|---------|------|-------------|
-| AVIRIS Cuprite | ~200MB | Hyperspectral imagery |
-| SRTM DEM | ~50MB | Digital elevation model |
-| Natural Earth | ~10MB | Vector boundaries |
-| Synthetic | Generated | Time series, MODIS |
-
----
-
-## Commands Reference
+## Commands
 
 ```bash
-# Check system setup
+# System check
 ./check_system.sh
 
-# Run benchmarks (native)
+# Native benchmarks
 ./run_benchmarks.sh --native-only
-
-# Run benchmarks (containers)
-./run_benchmarks.sh
 
 # Download data only
 python3 tools/download_data.py --all --synthetic
 
-# Generate visualizations
+# Visualizations
 python3 tools/thesis_viz.py --all
 
-# Run validation
+# Validation
 python3 validation/thesis_validation.py --all
 ```
 
@@ -125,77 +78,32 @@ python3 validation/thesis_validation.py --all
 | Mode | Time | Core-hours |
 |------|------|-----------|
 | Native only | ~45 min | ~3 |
-| Container build | ~15 min | ~1 |
-| Full suite (containers) | ~1.5 hrs | ~6 |
-| **Total (recommended)** | **~2 hrs** | **~8** |
+| Container mode | ~1.5 hrs | ~6 |
 
 ---
 
 ## Troubleshooting
 
-### "Podman not working"
+### "Native mode fails"
 ```bash
-# Use docker instead
-sed -i 's/podman/docker/g' run_benchmarks.sh
+# Install dependencies
+sudo apt update
+sudo apt install python3 python3-pip julia r-base
+pip install numpy scipy pandas
 ```
 
 ### "Out of space"
 ```bash
 docker system prune -a
-# or
-podman system prune -a
-```
-
-### "Download failed"
-```bash
-# Re-run download
-python3 tools/download_data.py --all --synthetic
-```
-
-### "Permission denied"
-```bash
-chmod +x *.sh
-chmod +x .devcontainer/*.sh
 ```
 
 ---
 
 ## Multi-Platform Comparison
 
-Compare with your laptop results:
-
 | Node | Platform | CPU | RAM |
 |------|----------|-----|-----|
-| Your Laptop | Edge | i5-8350U (4C) | 16GB |
-| Codespaces | Cloud | 4 vCPUs | 8GB |
+| Your Laptop | Edge (Fedora) | i5-8350U | 16GB |
+| Codespaces | Cloud (Ubuntu) | 4 vCPUs | 8GB |
 
-**Perfect for RQ3: Performance Portability!**
-
----
-
-## Storage Limits
-
-- Codespaces: 32GB total
-- Containers: ~3GB
-- Data: ~300MB
-- Results: ~100MB
-- **Used: ~4GB** (plenty of room)
-
----
-
-## Free Hours
-
-GitHub provides **60 hours/month FREE**
-
-- First run: ~2 hours
-- Remaining: 58 hours
-- **Tip:** Stop Codespace when done to save hours!
-
----
-
-## Defense Talking Point
-
-> "Benchmarks were executed on two distinct platforms: a mobile 
-> edge device (laptop) and a cloud environment (GitHub Codespaces). 
-> This dual-platform approach validates performance portability across 
-> different hardware configurations."
+Perfect for RQ3: Performance Portability!

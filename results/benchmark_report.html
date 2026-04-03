@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Thesis Benchmark Results</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        h1 { color: #333; }
+        h2 { color: #666; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        img { max-width: 100%; margin: 20px 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>Thesis Benchmark Results</h1>
+    <p>Generated: 2026-04-03 08:40:38</p>
+    
+    <div class="grid">
+        <div class="card"><h2>Summary Chart.Png</h2><img src="summary_chart.png" alt="summary_chart.png"></div>
+        <div class="card"><h2>Speedup Chart.Png</h2><img src="speedup_chart.png" alt="speedup_chart.png"></div>
+        <div class="card"><h2>Performance Heatmap.Png</h2><img src="performance_heatmap.png" alt="performance_heatmap.png"></div>
+        <div class="card"><h2>Violin Plots.Png</h2><img src="violin_plots.png" alt="violin_plots.png"></div>
+    </div>
+    
+    <h2>Data Summary</h2>
+    <pre>
+INTERPOLATION
+  PYTHON: 2.6790s
+  JULIA: 4.1204s
+  R: 3.2375s
+
+IO_OPS
+  PYTHON: 0.0012s
+  JULIA: 0.0025s
+  R: 0.0027s
+
+MATRIX_OPS
+  PYTHON: 0.0239s
+  JULIA: 0.0466s
+  R: 0.1405s
+
+RASTER
+
+RASTER_ALGEBRA
+  PYTHON: 0.0004s
+  JULIA: 0.0011s
+  R: 0.0160s
+
+REPROJECTION
+  PYTHON: 0.0017s
+  JULIA: 0.0001s
+  R: 0.0010s
+
+TIMESERIES
+  PYTHON: 0.0085s
+  JULIA: 0.4971s
+  R: 17.9689s
+
+VECTOR
+
+ZONAL_STATS
+  PYTHON: 0.0001s
+  JULIA: 0.0001s
+  R: 0.0050s
+    </pre>
+</body>
+</html>

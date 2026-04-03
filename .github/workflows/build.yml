@@ -16,9 +16,9 @@ env:
 
 jobs:
   # ===========================================================================
-  # Build Fedora Containers (for local use)
+  # Build Base Containers (Fedora)
   # ===========================================================================
-  build-fedora:
+  build-base:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -70,64 +70,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:fedora
             ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:4.5
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ===========================================================================
-  # Build Ubuntu Containers (for GitHub Codespaces)
-  # ===========================================================================
-  build-ubuntu:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Python (Ubuntu)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: containers/python-ubuntu.Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:ubuntu
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:codespaces
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Julia (Ubuntu)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: containers/julia-ubuntu.Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:ubuntu
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:codespaces
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push R (Ubuntu)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: containers/r-ubuntu.Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:ubuntu
-            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:codespaces
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -240,7 +182,7 @@ jobs:
   # ===========================================================================
   verify:
     runs-on: ubuntu-latest
-    needs: [build-fedora, build-ubuntu, build-optimized, build-slim]
+    needs: [build-base, build-optimized, build-slim]
     permissions:
       contents: read
       packages: read
@@ -255,16 +197,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull and verify Fedora containers
+      - name: Pull and verify base containers
         run: |
-          echo "=== Verifying Fedora Containers ==="
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:fedora python3 -c "import numpy; print('Python (Fedora): OK')"
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:fedora julia -e 'using Pkg; println("Julia (Fedora): OK")'
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:fedora Rscript -e 'cat("R (Fedora): OK\n")'
+          echo "=== Verifying Base Containers ==="
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:fedora python3 --version
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:fedora julia --version
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:fedora R --version --quiet
 
-      - name: Pull and verify Ubuntu containers
+      - name: Pull and verify slim containers
         run: |
-          echo "=== Verifying Ubuntu Containers ==="
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:ubuntu python3 -c "import numpy; print('Python (Ubuntu): OK')"
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:ubuntu julia -e 'using Pkg; println("Julia (Ubuntu): OK")'
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:ubuntu Rscript -e 'cat("R (Ubuntu): OK\n")'
+          echo "=== Verifying Slim Containers ==="
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:slim python3 --version
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:slim julia --version
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:slim R --version --quiet

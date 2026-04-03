@@ -55,31 +55,16 @@ detect_os() {
 
 OS_TYPE=$(detect_os)
 
-# Container image tags — select based on OS and environment
-if [[ "$OS_TYPE" == "ubuntu" ]]; then
-    # Check if we're in GitHub Codespaces (use GHCR images)
-    if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-        OWNER=$(echo "${GITHUB_REPOSITORY%/*}" | tr '[:upper:]' '[:lower:]')
-        PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:ubuntu"
-        JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:ubuntu"
-        R_TAG="ghcr.io/${OWNER}/thesis-r:ubuntu"
-    else
-        PYTHON_TAG="thesis-python:ubuntu"
-        JULIA_TAG="thesis-julia:ubuntu"
-        R_TAG="thesis-r:ubuntu"
-    fi
+# Container image tags — use GHCR images from GitHub Actions build
+if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    OWNER=$(echo "${GITHUB_REPOSITORY%/*}" | tr '[:upper:]' '[:lower:]')
+    PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
+    JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
+    R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
 else
-    # Fedora - use local or GHCR images
-    if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-        OWNER=$(echo "${GITHUB_REPOSITORY%/*}" | tr '[:upper:]' '[:lower:]')
-        PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
-        JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
-        R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
-    else
-        PYTHON_TAG="thesis-python:3.13"
-        JULIA_TAG="thesis-julia:1.11"
-        R_TAG="thesis-r:4.5"
-    fi
+    PYTHON_TAG="thesis-python:3.13"
+    JULIA_TAG="thesis-julia:1.11"
+    R_TAG="thesis-r:4.5"
 fi
 
 # Thread configuration for fair native benchmarking
