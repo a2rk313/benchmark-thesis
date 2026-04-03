@@ -29,8 +29,12 @@ RUN dnf install -y \
         --setopt=install_weak_deps=False \
         R-core R-core-devel \
         flexiblas flexiblas-devel \
+        openblas openblas-devel \
         openssl-devel libcurl-devel libxml2-devel \
     && dnf clean all
+
+# ---------- Configure OpenBLAS as default BLAS ----------
+RUN flexiblas set OpenBLAS
 
 # ---------- Layer 4: R packages available from Fedora ----------
 RUN dnf -y install \

@@ -23,6 +23,7 @@ FROM fedora:43 AS builder
 # Install build dependencies
 RUN dnf -y install \
         gcc gcc-c++ make cmake git wget tar bzip2 \
+        openblas openblas-devel \
         gdal-devel proj-devel geos-devel sqlite-devel \
     && dnf clean all \
     && rm -rf /var/cache/dnf
@@ -63,6 +64,7 @@ FROM fedora:43
 
 # Install ONLY runtime libraries
 RUN dnf -y install \
+        openblas \
         gdal-libs proj geos sqlite \
         hyperfine time \
     && dnf clean all \

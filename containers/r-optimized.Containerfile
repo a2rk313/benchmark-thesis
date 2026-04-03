@@ -26,6 +26,7 @@ RUN dnf -y install \
         gdal-devel proj-devel geos-devel sqlite-devel udunits2-devel \
         R-core R-core-devel \
         flexiblas flexiblas-devel \
+        openblas openblas-devel \
         openssl-devel libcurl-devel libxml2-devel \
         --setopt=install_weak_deps=False \
     && dnf clean all \
@@ -74,6 +75,7 @@ FROM fedora:43
 RUN dnf -y install \
         R-core \
         flexiblas \
+        openblas \
         gdal-libs proj geos sqlite udunits2 \
         openssl libcurl libxml2 \
         hyperfine time \

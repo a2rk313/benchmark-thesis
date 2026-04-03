@@ -26,6 +26,7 @@ RUN dnf -y upgrade --refresh && \
     dnf -y install \
         gcc gcc-c++ make cmake git wget tar bzip2 \
         time sysstat hyperfine \
+        openblas openblas-devel \
         gdal gdal-devel \
         proj proj-devel \
         geos geos-devel \
