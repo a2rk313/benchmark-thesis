@@ -24,9 +24,16 @@ chmod +x run_benchmarks.sh check_system.sh
 chmod +x benchmarks/*.py benchmarks/*.jl benchmarks/*.R
 chmod +x tools/*.py
 chmod +x validation/*.py
+chmod +x .devcontainer/codespaces_setup.sh
 
 # Create necessary directories
-mkdir -p data results validation
+mkdir -p data results validation results/figures
+
+echo ""
+echo "=============================================="
+echo "Downloading benchmark datasets..."
+echo "=============================================="
+python3 tools/download_data.py --all --synthetic
 
 echo ""
 echo "✅ Setup complete!"
@@ -41,8 +48,8 @@ echo ""
 echo "Next steps:"
 echo "  1. Review README.md"
 echo "  2. Run system check: ./check_system.sh"
-echo "  3. Run benchmarks: ./run_benchmarks.sh"
+echo "  3. Run benchmarks: ./run_benchmarks.sh --native-only"
 echo ""
-echo "💡 Tip: This Codespace counts toward your 120 free core-hours/month"
-echo "   Expected runtime: ~2 hours (uses ~8 core-hours on 4-core machine)"
+echo "💡 Tip: This Codespace counts toward your 60 free hours/month"
+echo "   Expected runtime: ~2 hours for full suite"
 echo ""
