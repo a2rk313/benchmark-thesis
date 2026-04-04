@@ -212,11 +212,21 @@ def main():
     # Configuration
     n_matrix = 2500  # Matrix size (matching Tedesco et al. k=1)
     n_sort = 1_000_000  # Sorting size
-    n_runs = 10  # Number of runs for averaging
+    n_runs = 50  # Number of runs for statistical power
+    n_warmup = 5  # Warmup runs (excluded from measurement)
+    n_cache_warmup = 3  # Extra cache warmup iterations
 
     results = {}
 
-    # Task 1: Creation/Transpose/Reshape
+    # Warmup phase (Chen & Revels 2016: exclude startup overhead)
+    print(f"\n  Warming up ({n_warmup} runs + {n_cache_warmup} cache iterations)...")
+    for _ in range(n_warmup):
+        benchmark_matrix_creation_transpose_reshape(n_matrix)
+    for _ in range(n_cache_warmup):
+        benchmark_matrix_creation_transpose_reshape(n_matrix)
+    print("  ✓ Warmup complete")
+
+    # Task 1: creation/Transpose/Reshape
     print(f"\n[1/5] Matrix Creation + Transpose + Reshape ({n_matrix}×{n_matrix})...")
     times = [
         benchmark_matrix_creation_transpose_reshape(n_matrix) for _ in range(n_runs)
@@ -234,48 +244,26 @@ def main():
 
     # Task 2: Matrix Power
     print(f"\n[2/5] Matrix Exponentiation ^10 ({n_matrix}×{n_matrix})...")
+    for _ in range(n_warmup):
+        benchmark_matrix_power(n_matrix)
     times = [benchmark_matrix_power(n_matrix) for _ in range(n_runs)]
-    results["matrix_power"] = {
-        "mean": float(np.mean(times)),
-        "std": float(np.std(times)),
-        "min": float(np.min(times)),
-        "max": float(np.max(times)),
-    }
-    print(f"  ✓ Min: {results['matrix_power']['min']:.4f}s (primary)")
-    print(
-        f"  ✓ Mean: {results['matrix_power']['mean']:.4f}s ± {results['matrix_power']['std']:.4f}s"
-    )
 
     # Task 3: Sorting
     print(f"\n[3/5] Sorting {n_sort:,} Random Values...")
+    for _ in range(n_warmup):
+        benchmark_sorting(n_sort)
     times = [benchmark_sorting(n_sort) for _ in range(n_runs)]
-    results["sorting"] = {
-        "mean": float(np.mean(times)),
-        "std": float(np.std(times)),
-        "min": float(np.min(times)),
-        "max": float(np.max(times)),
-    }
-    print(f"  ✓ Min: {results['sorting']['min']:.4f}s (primary)")
-    print(
-        f"  ✓ Mean: {results['sorting']['mean']:.4f}s ± {results['sorting']['std']:.4f}s"
-    )
 
     # Task 4: Cross-product
     print(f"\n[4/5] Cross-Product A'A ({n_matrix}×{n_matrix})...")
+    for _ in range(n_warmup):
+        benchmark_crossproduct(n_matrix)
     times = [benchmark_crossproduct(n_matrix) for _ in range(n_runs)]
-    results["crossproduct"] = {
-        "mean": float(np.mean(times)),
-        "std": float(np.std(times)),
-        "min": float(np.min(times)),
-        "max": float(np.max(times)),
-    }
-    print(f"  ✓ Min: {results['crossproduct']['min']:.4f}s (primary)")
-    print(
-        f"  ✓ Mean: {results['crossproduct']['mean']:.4f}s ± {results['crossproduct']['std']:.4f}s"
-    )
 
     # Task 5: Determinant
     print(f"\n[5/5] Matrix Determinant ({n_matrix}×{n_matrix})...")
+    for _ in range(n_warmup):
+        benchmark_determinant(n_matrix)
     times = [benchmark_determinant(n_matrix) for _ in range(n_runs)]
     results["determinant"] = {
         "mean": float(np.mean(times)),

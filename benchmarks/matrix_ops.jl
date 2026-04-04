@@ -112,9 +112,17 @@ function main()
     # Configuration
     n_matrix = 2500  # Matrix size
     n_sort = 1_000_000  # Sorting size
-    n_runs = 10  # Number of runs
+    n_runs = 50  # Number of runs for statistical power
+    n_warmup = 5  # Warmup runs (excluded from measurement)
     
     results = Dict()
+    
+    # Warmup phase (Chen & Revels 2016: exclude startup/JIT overhead)
+    println("\n  Warming up ($n_warmup runs + JIT compilation)...")
+    for _ in 1:n_warmup
+        benchmark_matrix_creation_transpose_reshape(n_matrix)
+    end
+    println("  ✓ Warmup complete")
     
     # Task 1: Creation/Transpose/Reshape
     println("\n[1/5] Matrix Creation + Transpose + Reshape ($n_matrix×$n_matrix)...")
@@ -130,6 +138,9 @@ function main()
     
     # Task 2: Matrix Power
     println("\n[2/5] Matrix Exponentiation ^10 ($n_matrix×$n_matrix)...")
+    for _ in 1:n_warmup
+        benchmark_matrix_power(n_matrix)
+    end
     times = [benchmark_matrix_power(n_matrix) for _ in 1:n_runs]
     results["matrix_power"] = Dict(
         "mean" => mean(times),
@@ -142,6 +153,9 @@ function main()
     
     # Task 3: Sorting
     println("\n[3/5] Sorting $(format_number(n_sort)) Random Values...")
+    for _ in 1:n_warmup
+        benchmark_sorting(n_sort)
+    end
     times = [benchmark_sorting(n_sort) for _ in 1:n_runs]
     results["sorting"] = Dict(
         "mean" => mean(times),
@@ -154,6 +168,9 @@ function main()
     
     # Task 4: Cross-product
     println("\n[4/5] Cross-Product A'A ($n_matrix×$n_matrix)...")
+    for _ in 1:n_warmup
+        benchmark_crossproduct(n_matrix)
+    end
     times = [benchmark_crossproduct(n_matrix) for _ in 1:n_runs]
     results["crossproduct"] = Dict(
         "mean" => mean(times),
@@ -166,6 +183,9 @@ function main()
     
     # Task 5: Determinant
     println("\n[5/5] Matrix Determinant ($n_matrix×$n_matrix)...")
+    for _ in 1:n_warmup
+        benchmark_determinant(n_matrix)
+    end
     times = [benchmark_determinant(n_matrix) for _ in 1:n_runs]
     results["determinant"] = Dict(
         "mean" => mean(times),

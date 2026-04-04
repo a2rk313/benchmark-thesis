@@ -96,9 +96,17 @@ main <- function() {
   # Configuration
   n_matrix <- 2500  # Matrix size
   n_sort <- 1000000  # Sorting size
-  n_runs <- 10  # Number of runs
+  n_runs <- 50  # Number of runs for statistical power
+  n_warmup <- 5  # Warmup runs (excluded from measurement)
   
   results <- list()
+  
+  # Warmup phase (Chen & Revels 2016: exclude startup overhead)
+  cat(sprintf("\n  Warming up (%d runs)...\n", n_warmup))
+  for (i in 1:n_warmup) {
+    benchmark_matrix_creation_transpose_reshape(n_matrix)
+  }
+  cat("  ✓ Warmup complete\n")
   
   # Task 1: Creation/Transpose/Reshape
   cat(sprintf("\n[1/5] Matrix Creation + Transpose + Reshape (%d×%d)...\n", n_matrix, n_matrix))
@@ -114,42 +122,22 @@ main <- function() {
   
   # Task 2: Matrix Power
   cat(sprintf("\n[2/5] Matrix Exponentiation ^10 (%d×%d)...\n", n_matrix, n_matrix))
+  for (i in 1:n_warmup) benchmark_matrix_power(n_matrix)
   times <- replicate(n_runs, benchmark_matrix_power(n_matrix))
-  results$matrix_power <- list(
-    mean = mean(times),
-    std = sd(times),
-    min = min(times),
-    max = max(times)
-  )
-  cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$matrix_power$min))
-  cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", results$matrix_power$mean, results$matrix_power$std))
   
   # Task 3: Sorting
   cat(sprintf("\n[3/5] Sorting %s Random Values...\n", format(n_sort, big.mark = ",")))
+  for (i in 1:n_warmup) benchmark_sorting(n_sort)
   times <- replicate(n_runs, benchmark_sorting(n_sort))
-  results$sorting <- list(
-    mean = mean(times),
-    std = sd(times),
-    min = min(times),
-    max = max(times)
-  )
-  cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$sorting$min))
-  cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", results$sorting$mean, results$sorting$std))
   
   # Task 4: Cross-product
   cat(sprintf("\n[4/5] Cross-Product A'A (%d×%d)...\n", n_matrix, n_matrix))
+  for (i in 1:n_warmup) benchmark_crossproduct(n_matrix)
   times <- replicate(n_runs, benchmark_crossproduct(n_matrix))
-  results$crossproduct <- list(
-    mean = mean(times),
-    std = sd(times),
-    min = min(times),
-    max = max(times)
-  )
-  cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$crossproduct$min))
-  cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", results$crossproduct$mean, results$crossproduct$std))
   
   # Task 5: Determinant
   cat(sprintf("\n[5/5] Matrix Determinant (%d×%d)...\n", n_matrix, n_matrix))
+  for (i in 1:n_warmup) benchmark_determinant(n_matrix)
   times <- replicate(n_runs, benchmark_determinant(n_matrix))
   results$determinant <- list(
     mean = mean(times),

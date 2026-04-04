@@ -87,7 +87,8 @@ def main():
     # Configuration
     n_csv_rows = 1_000_000
     n_binary_values = 1_000_000
-    n_runs = 10
+    n_runs = 50
+    n_warmup = 5
     
     # Create data directory
     Path('data').mkdir(exist_ok=True)
@@ -96,6 +97,10 @@ def main():
     
     # Task 1: CSV Write
     print(f"\n[1/4] CSV Write ({n_csv_rows:,} rows)...")
+    print(f"  Warming up ({n_warmup} runs)...")
+    for _ in range(n_warmup):
+        benchmark_csv_write(n_csv_rows)
+    print("  ✓ Warmup complete")
     times = []
     file_size = 0
     for _ in range(n_runs):
@@ -115,43 +120,36 @@ def main():
     
     # Task 2: CSV Read
     print(f"\n[2/4] CSV Read ({n_csv_rows:,} rows)...")
+    print(f"  Warming up ({n_warmup} runs)...")
+    for _ in range(n_warmup):
+        benchmark_csv_read()
+    print("  ✓ Warmup complete")
     times = []
     n_rows = 0
     for _ in range(n_runs):
         t, rows = benchmark_csv_read()
         times.append(t)
         n_rows = rows
-    results['csv_read'] = {
-        'mean': float(np.mean(times)),
-        'std': float(np.std(times)),
-        'min': float(np.min(times)),
-        'max': float(np.max(times)),
-        'rows_read': int(n_rows)
-    }
-    print(f"  ✓ Min: {results['csv_read']['min']:.4f}s (primary)")
-    print(f"  ✓ Mean: {results['csv_read']['mean']:.4f}s ± {results['csv_read']['std']:.4f}s")
     
     # Task 3: Binary Write
     print(f"\n[3/4] Binary Write ({n_binary_values:,} float64 values)...")
+    print(f"  Warming up ({n_warmup} runs)...")
+    for _ in range(n_warmup):
+        benchmark_binary_write(n_binary_values)
+    print("  ✓ Warmup complete")
     times = []
     file_size = 0
     for _ in range(n_runs):
         t, size = benchmark_binary_write(n_binary_values)
         times.append(t)
         file_size = size
-    results['binary_write'] = {
-        'mean': float(np.mean(times)),
-        'std': float(np.std(times)),
-        'min': float(np.min(times)),
-        'max': float(np.max(times)),
-        'file_size_mb': float(file_size / (1024**2))
-    }
-    print(f"  ✓ Min: {results['binary_write']['min']:.4f}s (primary)")
-    print(f"  ✓ Mean: {results['binary_write']['mean']:.4f}s ± {results['binary_write']['std']:.4f}s")
-    print(f"  ✓ File size: {results['binary_write']['file_size_mb']:.2f} MB")
     
     # Task 4: Binary Read
     print(f"\n[4/4] Binary Read ({n_binary_values:,} float64 values)...")
+    print(f"  Warming up ({n_warmup} runs)...")
+    for _ in range(n_warmup):
+        benchmark_binary_read()
+    print("  ✓ Warmup complete")
     times = []
     n_values = 0
     for _ in range(n_runs):
