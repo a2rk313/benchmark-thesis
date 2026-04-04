@@ -44,11 +44,13 @@ jobs:
 
       - name: Tag containers for local use
         run: |
-          # Tag with local names so the script finds them
+          # Tag with local names so the script finds them without rebuilding
           docker tag ghcr.io/${{ github.repository_owner }}/thesis-python:fedora thesis-python:3.13
           docker tag ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora thesis-julia:1.11
           docker tag ghcr.io/${{ github.repository_owner }}/thesis-r:fedora thesis-r:4.5
           echo "✓ Containers tagged for local use"
+          echo "Verifying..."
+          podman images | grep thesis
 
       - name: Install dependencies
         run: |
@@ -63,11 +65,11 @@ jobs:
         run: |
           pip install numpy scipy pandas geopandas rasterio shapely scikit-learn matplotlib seaborn json3 tqdm
 
-      - name: Run benchmarks (native only)
+      - name: Run benchmarks (native + container)
         run: |
-          # Use native mode since we're on GitHub runner
-          # Containers are used for validation only
-          ./run_benchmarks.sh --native-only
+          # Run full suite: native + container benchmarks
+          # Containers are pre-built and tagged, so script won't rebuild
+          ./run_benchmarks.sh
 
       - name: Upload results
         if: always()
