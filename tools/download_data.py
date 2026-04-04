@@ -291,8 +291,9 @@ def generate_gps_points(output_path: Path, n_points: int = 1_000_000) -> bool:
     df = pd.DataFrame(points_data[:n_points], columns=["lat", "lon"])
     df["lat"] = df["lat"].clip(-90, 90)
     df["lon"] = df["lon"].clip(-180, 180)
-    df["device_id"] = np.random.randint(1, 10000, n_points)
-    df["accuracy_m"] = np.random.exponential(10, n_points).clip(1, 100)
+    actual_n = len(df)
+    df["device_id"] = np.random.randint(1, 10000, actual_n)
+    df["accuracy_m"] = np.random.exponential(10, actual_n).clip(1, 100)
 
     df.to_csv(output_path, index=False)
     size_mb = output_path.stat().st_size / 1024 / 1024
