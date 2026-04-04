@@ -417,8 +417,8 @@ if [[ "$MODE" != "native" ]]; then
             progress
             echo "    $lang (cold) — $scenario"
             podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
-                hyperfine --warmup 0 --runs "$COLD_START_RUNS" \
-                --export-json "/benchmarks/$out" "$script" 2>&1 | tail -5
+                hyperfine --warmup 0 --runs "$COLD_START_RUNS" --show-output \
+                --export-json "/benchmarks/$out" "$script" 2>&1 | tail -15
         }
 
         [ "$ENABLE_VECTOR" = "true" ] && {
