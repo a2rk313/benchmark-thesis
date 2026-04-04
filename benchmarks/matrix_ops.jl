@@ -10,7 +10,7 @@ Tasks: Creation/Transpose/Reshape, Power, Sorting, Cross-product, Determinant
 
 using LinearAlgebra
 using Statistics
-using JSON
+using JSON3
 using Printf
 
 function benchmark_matrix_creation_transpose_reshape(n=2500)
@@ -193,7 +193,7 @@ function main()
     
     mkpath("results")
     open("results/matrix_ops_julia.json", "w") do f
-        JSON.print(f, output, 2)
+        JSON3.pretty(f, output)
     end
     
     println("✓ Results saved to: results/matrix_ops_julia.json")

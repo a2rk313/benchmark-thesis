@@ -11,7 +11,7 @@ Tasks: CSV Write/Read, Binary Write/Read
 using CSV
 using DataFrames
 using Statistics
-using JSON
+using JSON3
 using Printf
 
 function benchmark_csv_write(n_rows=1_000_000)
@@ -207,7 +207,7 @@ function main()
     
     mkpath("results")
     open("results/io_ops_julia.json", "w") do f
-        JSON.print(f, output, 2)
+        JSON3.pretty(f, output)
     end
     
     println("✓ Results saved to: results/io_ops_julia.json")
