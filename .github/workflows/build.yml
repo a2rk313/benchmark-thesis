@@ -13,7 +13,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_OWNER: ${{ github.repository_owner }}
-  # Force Node.js 24 for GitHub Actions (Node.js 20 deprecated June 2026)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -31,19 +30,16 @@ jobs:
         include:
           - name: python
             file: containers/python.Containerfile
-            tags: |
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:fedora
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:3.13
+            tag_fedora: thesis-python:fedora
+            tag_version: thesis-python:3.13
           - name: julia
             file: containers/julia.Containerfile
-            tags: |
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:fedora
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:1.11
+            tag_fedora: thesis-julia:fedora
+            tag_version: thesis-julia:1.11
           - name: r
             file: containers/r.Containerfile
-            tags: |
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:fedora
-              ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:4.5
+            tag_fedora: thesis-r:fedora
+            tag_version: thesis-r:4.5
 
     steps:
       - uses: actions/checkout@v5
@@ -61,7 +57,7 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -74,7 +70,9 @@ jobs:
           context: .
           file: ${{ matrix.file }}
           push: true
-          tags: ${{ matrix.tags }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.tag_fedora }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.tag_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -99,14 +97,14 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and verify containers
         run: |
           echo "=== Verifying Containers ==="
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-python:fedora python3 --version
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-julia:fedora julia --version
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/thesis-r:fedora R --version --quiet
+          docker run --rm ghcr.io/${{ github.repository_owner }}/thesis-python:fedora python3 --version
+          docker run --rm ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora julia --version
+          docker run --rm ghcr.io/${{ github.repository_owner }}/thesis-r:fedora R --version --quiet
           echo "=== All containers verified ==="
