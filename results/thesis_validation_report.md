@@ -1,6 +1,6 @@
 # Thesis Benchmark Validation Report
 
-**Generated:** 2026-04-03 08:42:15
+**Generated:** 2026-04-04 17:19:52
 
 ## Executive Summary
 
@@ -63,12 +63,12 @@ Validation of key findings from Chen & Revels (2016):
 
 | Scenario | Comparison | Speedup | p-value | Significant |
 |----------|-----------|---------|---------|-------------|
-| matrix_ops | python vs r | 0.65x | 1.0000 | ✗ |
-| matrix_ops | python vs julia | 0.85x | 0.8413 | ✗ |
-| matrix_ops | r vs julia | 1.30x | 0.4206 | ✗ |
-| io_ops | r vs julia | 7.43x | 0.3429 | ✗ |
-| io_ops | r vs python | 1.41x | 0.8857 | ✗ |
-| io_ops | julia vs python | 0.19x | 0.8857 | ✗ |
+| matrix_ops | python vs r | 0.56x | 0.3333 | ✗ |
+| matrix_ops | python vs julia | 1.91x | 0.3810 | ✗ |
+| matrix_ops | r vs julia | 3.44x | 0.0952 | ✗ |
+| io_ops | r vs julia | 5.35x | 0.4857 | ✗ |
+| io_ops | r vs python | 0.61x | 1.0000 | ✗ |
+| io_ops | julia vs python | 0.11x | 0.8000 | ✗ |
 
 
 ---

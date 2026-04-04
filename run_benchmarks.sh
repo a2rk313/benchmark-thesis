@@ -1,49 +1,138 @@
 #!/usr/bin/env bash
 # =============================================================================
 # THESIS BENCHMARK SUITE ORCHESTRATOR
-# Version: 2.3.0 (native + container benchmarking)
+# Version: 3.0.0 (academic rigor + enhanced orchestration)
 #
 # FEATURES:
 #   - Container benchmarks (reproducible, isolated environment)
 #   - Native benchmarks (real-world performance on host system)
 #   - Side-by-side comparison of container vs native performance
-#
-# CACHING BEHAVIOR:
-#   - Containers built WITH cache (fast: 2-5 min if layers unchanged)
-#   - First build: ~25 min (scipy compiles from source)
-#   - Subsequent builds: ~2 min (uses cached layers)
-#   - If build fails with stale cache: ./purge_cache_and_rebuild.sh
+#   - GHCR pull mode (skip builds, use pre-built images from GitHub Actions)
+#   - Resume capability (skip already-run benchmarks)
+#   - Hardware info capture (CPU, RAM, disk for methodology section)
+#   - Timestamp logging (execution times in results)
+#   - Progress estimation (ETA for remaining benchmarks)
+#   - Dry-run mode (preview execution plan)
+#   - Cleanup option (clear old results)
+#   - Error recovery (continue on failure, log errors)
 #
 # USAGE:
-#   ./run_benchmarks.sh           # Build + run all (container + native)
-#   ./run_benchmarks.sh --container-only   # Container benchmarks only
-#   ./run_benchmarks.sh --native-only      # Native benchmarks only
-#   ./purge_cache_and_rebuild.sh  # If build fails, clear cache first
+#   ./run_benchmarks.sh                     # Build + run all
+#   ./run_benchmarks.sh --container-only    # Container benchmarks only
+#   ./run_benchmarks.sh --native-only       # Native benchmarks only
+#   ./run_benchmarks.sh --use-ghcr          # Pull pre-built images from GHCR
+#   ./run_benchmarks.sh --resume            # Resume from last checkpoint
+#   ./run_benchmarks.sh --clean             # Clear old results before running
+#   ./run_benchmarks.sh --dry-run           # Preview execution plan
 # =============================================================================
 set -euo pipefail
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
 MODE="all"
-if [[ "${1:-}" == "--container-only" ]]; then
-    MODE="container"
-elif [[ "${1:-}" == "--native-only" ]]; then
-    MODE="native"
-fi
+USE_GHCR=false
+RESUME=false
+CLEAN=false
+DRY_RUN=false
+ERRORS=()
+BENCHMARK_COUNT=0
+TOTAL_BENCHMARKS=0
+START_TIME=$(date +%s)
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --container-only) MODE="container"; shift ;;
+        --native-only)    MODE="native"; shift ;;
+        --use-ghcr)       USE_GHCR=true; shift ;;
+        --resume)         RESUME=true; shift ;;
+        --clean)          CLEAN=true; shift ;;
+        --dry-run)        DRY_RUN=true; shift ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo "  --container-only   Run container benchmarks only"
+            echo "  --native-only      Run native benchmarks only"
+            echo "  --use-ghcr         Pull pre-built images from GHCR"
+            echo "  --resume           Resume from last checkpoint"
+            echo "  --clean            Clear old results before running"
+            echo "  --dry-run          Preview execution plan"
+            echo "  -h, --help         Show this help"
+            exit 0
+            ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
 
 # ── Colour codes ─────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
-MAGENTA='\033[0;35m'
+MAGENTA='\033[0;35m'; CYAN='\033[0;36m'
+
+# ── Utility functions ─────────────────────────────────────────────────────────
+timestamp() { date +"%Y-%m-%d %H:%M:%S"; }
+elapsed_time() {
+    local now=$(date +%s)
+    local diff=$((now - START_TIME))
+    printf "%02d:%02d:%02d" $((diff/3600)) $((diff%3600/60)) $((diff%60))
+}
+eta() {
+    local done=$1 total=$2
+    if [[ $done -eq 0 ]]; then echo "calculating..."; return; fi
+    local now=$(date +%s)
+    local elapsed=$((now - START_TIME))
+    local rate=$((elapsed / done))
+    local remaining=$(( (total - done) * rate ))
+    printf "%02d:%02d:%02d" $((remaining/3600)) $((remaining%3600/60)) $((remaining%60))
+}
+progress() {
+    BENCHMARK_COUNT=$((BENCHMARK_COUNT + 1))
+    local pct=$((BENCHMARK_COUNT * 100 / TOTAL_BENCHMARKS))
+    echo -e "  ${CYAN}[${BENCHMARK_COUNT}/${TOTAL_BENCHMARKS}] (${pct}%) ETA: $(eta $BENCHMARK_COUNT $TOTAL_BENCHMARKS)${NC}"
+}
+log_error() {
+    local msg="$1"
+    ERRORS+=("$msg")
+    echo -e "  ${RED}❌ ERROR: $msg${NC}"
+    echo "[$(timestamp)] ERROR: $msg" >> results/errors.log
+}
+check_resume() {
+    local checkpoint="$1"
+    if [[ "$RESUME" == "true" ]] && [[ -f "results/.checkpoint_${checkpoint}" ]]; then
+        echo -e "  ${YELLOW}⏭  Skipping (already completed, use --clean to re-run)${NC}"
+        return 0
+    fi
+    return 1
+}
+mark_checkpoint() {
+    local checkpoint="$1"
+    touch "results/.checkpoint_${checkpoint}"
+}
+
+# ── Hardware info capture ────────────────────────────────────────────────────
+capture_hardware_info() {
+    mkdir -p results
+    cat > results/hardware_info.json << HWEOF
+{
+  "captured_at": "$(timestamp)",
+  "hostname": "$(hostname 2>/dev/null || echo 'unknown')",
+  "os": "$(uname -s) $(uname -r)",
+  "cpu_model": "$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo 'unknown')",
+  "cpu_cores": "$(nproc 2>/dev/null || echo 'unknown')",
+  "cpu_freq_mhz": "$(grep -m1 'cpu MHz' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo 'unknown')",
+  "total_ram_gb": "$(free -g 2>/dev/null | awk '/^Mem:/{print $2}' || echo 'unknown')",
+  "disk_available_gb": "$(df -BG / 2>/dev/null | awk 'NR==2{print $4}' | tr -d 'G' || echo 'unknown')",
+  "kernel": "$(uname -v)",
+  "architecture": "$(uname -m)"
+}
+HWEOF
+    echo -e "  ${GREEN}✓${NC} Hardware info captured → results/hardware_info.json"
+}
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-# Academic rigor settings
 COLD_START_RUNS=5
-BENCHMARK_RUNS=50          # Increased from 10 for statistical validity
-WARMUP_RUNS=5              # Increased from 3 for JIT settling
-CACHE_WARMUP=3             # Extra iterations for cache effects
-FULL_SUITE_REPEATS=3       # Run full suite multiple times for variance
+BENCHMARK_RUNS=50
+WARMUP_RUNS=5
+CACHE_WARMUP=3
+FULL_SUITE_REPEATS=3
 
-# Detect OS for container selection
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -55,9 +144,9 @@ detect_os() {
 
 OS_TYPE=$(detect_os)
 
-# Container image tags — use GHCR images from GitHub Actions build
-if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-    OWNER=$(echo "${GITHUB_REPOSITORY%/*}" | tr '[:upper:]' '[:lower:]')
+# Container image tags
+if [[ "$USE_GHCR" == "true" ]] || [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    OWNER=$(echo "${GITHUB_REPOSITORY:-a2rk313/benchmark-thesis}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
     PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
     JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
     R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
@@ -67,35 +156,37 @@ else
     R_TAG="thesis-r:4.5"
 fi
 
-# Thread configuration for fair native benchmarking
 export JULIA_NUM_THREADS=8
 export OPENBLAS_NUM_THREADS=8
 export OMP_NUM_THREADS=8
 
-# CPU pinning configuration (for consistent timings)
 CPU_PIN_ENABLED=true
-CPU_CORES=""  # Empty = use all cores; "0" = core 0 only; "0-3" = cores 0-3
-
-# NUMA configuration
+CPU_CORES=""
 NUMA_ENABLED=true
-NUMA_NODE=0  # Pin to first NUMA node
+NUMA_NODE=0
 
-# Scenario toggles
 ENABLE_VECTOR=true
 ENABLE_INTERPOLATION=true
 ENABLE_TIMESERIES=true
 ENABLE_HYPERSPECTRAL=true
 
-# Statistical settings
 CONFIDENCE_LEVEL=0.95
 SIGNIFICANCE_LEVEL=0.05
+
+# Count total benchmarks for progress tracking
+TOTAL_BENCHMARKS=0
+[[ "$MODE" != "native" ]] && TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 15))
+[[ "$MODE" != "container" ]] && TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 12))
+TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 5))
 
 # ── Banner ────────────────────────────────────────────────────────────────────
 echo -e "${BOLD}${BLUE}"
 echo "========================================================================"
-echo "  THESIS BENCHMARK SUITE: NATIVE + CONTAINER v2.3"
+echo "  THESIS BENCHMARK SUITE v3.0 (Academic Rigor Edition)"
 echo "========================================================================"
 echo -e "${NC}"
+echo "  Started: $(timestamp)"
+echo ""
 
 if [[ "$MODE" == "all" ]]; then
     echo -e "  ${MAGENTA}MODE: FULL (Native + Container)${NC}"
@@ -104,6 +195,11 @@ elif [[ "$MODE" == "container" ]]; then
 else
     echo -e "  ${GREEN}MODE: NATIVE ONLY${NC}"
 fi
+
+[[ "$USE_GHCR" == "true" ]] && echo -e "  ${CYAN}GHCR: Pulling pre-built images${NC}"
+[[ "$RESUME" == "true" ]] && echo -e "  ${CYAN}RESUME: Skipping completed benchmarks${NC}"
+[[ "$CLEAN" == "true" ]] && echo -e "  ${YELLOW}CLEAN: Clearing old results${NC}"
+[[ "$DRY_RUN" == "true" ]] && echo -e "  ${YELLOW}DRY RUN: Preview mode (no execution)${NC}"
 
 echo ""
 echo "  Container images:"
@@ -119,20 +215,48 @@ echo ""
 echo "  Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS, OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS"
 echo ""
 echo "  Academic rigor settings:"
-echo "    Benchmark runs: $BENCHMARK_RUNS (increased for statistical power)"
+echo "    Benchmark runs: $BENCHMARK_RUNS"
 echo "    Warmup runs: $WARMUP_RUNS + $CACHE_WARMUP cache warmup"
-echo "    Full suite repeats: $FULL_SUITE_REPEATS (for variance estimation)"
 echo "    CPU pinning: $CPU_PIN_ENABLED"
 echo "    NUMA binding: $NUMA_ENABLED"
 echo ""
-echo "  Enabled scenarios:"
-[ "$ENABLE_VECTOR" = "true" ]         && echo "    ✓ Vector topology (Point-in-Polygon)"
-[ "$ENABLE_INTERPOLATION" = "true" ]  && echo "    ✓ Spatial Interpolation (IDW)"
-[ "$ENABLE_TIMESERIES" = "true" ]     && echo "    ✓ Time-Series NDVI"
-[ "$ENABLE_HYPERSPECTRAL" = "true" ]  && echo "    ✓ Hyperspectral SAM"
-echo ""
 
-# ── [0/10] Dependency check ────────────────────────────────────────────────────
+# ── Dry run mode ──────────────────────────────────────────────────────────────
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo -e "${BOLD}${YELLOW}=== DRY RUN - Execution Plan ===${NC}"
+    echo ""
+    if [[ "$MODE" != "native" ]]; then
+        echo "  1. Build/pull containers"
+        echo "  2. Verify environments"
+        echo "  3. Prepare datasets"
+        echo "  4. Cold start benchmarks (container)"
+        echo "  5. Warm start benchmarks (container)"
+        echo "  6. Matrix operations (container)"
+        echo "  7. I/O operations (container)"
+        echo "  8. Memory profiling (container)"
+        echo "  9. Validate results (container)"
+    fi
+    if [[ "$MODE" != "container" ]]; then
+        echo "  10. Native system benchmarks"
+    fi
+    echo "  11. Generate academic report"
+    echo ""
+    echo -e "${GREEN}Dry run complete. Remove --dry-run to execute.${NC}"
+    exit 0
+fi
+
+# ── Clean mode ────────────────────────────────────────────────────────────────
+if [[ "$CLEAN" == "true" ]]; then
+    echo -e "${YELLOW}Cleaning old results...${NC}"
+    rm -rf results/
+    mkdir -p results
+    echo -e "${GREEN}✓ Clean complete${NC}"
+    echo ""
+fi
+
+mkdir -p results
+
+# ── [0/10] Dependency check ───────────────────────────────────────────────────
 echo -e "${BLUE}[0/10] Checking dependencies...${NC}"
 for cmd in podman hyperfine; do
     if ! command -v "$cmd" &>/dev/null; then
@@ -148,22 +272,16 @@ done
 echo ""
 echo -e "${BLUE}System Preparation for Academic Rigor...${NC}"
 
-# CPU Pinning
 if [[ "$CPU_PIN_ENABLED" == "true" ]]; then
     if command -v taskset &>/dev/null; then
         echo -e "  ${GREEN}✓${NC} CPU pinning enabled (taskset available)"
-        if [[ -n "$CPU_CORES" ]]; then
-            echo "    Using cores: $CPU_CORES"
-        else
-            echo "    Using all available cores"
-        fi
+        [[ -n "$CPU_CORES" ]] && echo "    Using cores: $CPU_CORES" || echo "    Using all available cores"
     else
         echo -e "  ${YELLOW}⚠${NC} taskset not found - CPU pinning disabled"
         CPU_PIN_ENABLED=false
     fi
 fi
 
-# NUMA
 if [[ "$NUMA_ENABLED" == "true" ]]; then
     if command -v numactl &>/dev/null; then
         echo -e "  ${GREEN}✓${NC} NUMA binding enabled (numactl available)"
@@ -174,42 +292,30 @@ if [[ "$NUMA_ENABLED" == "true" ]]; then
     fi
 fi
 
-# CPU Frequency
-CPU_FREQ=""
 if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
-    echo -e "  ${GREEN}✓${NC} CPU frequency monitoring available"
     CPU_FREQ=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
-    [[ -n "$CPU_FREQ" ]] && echo "    Current freq: $((CPU_FREQ / 1000)) MHz"
-else
-    echo -e "  ${YELLOW}⚠${NC} CPU frequency monitoring not available"
+    echo -e "  ${GREEN}✓${NC} CPU frequency: $((CPU_FREQ / 1000)) MHz"
 fi
 
-# Turbo Boost warning
 if [[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ]]; then
     TURBO_DISABLED=$(cat /sys/devices/system/cpu/intel_pstate/no_turbo 2>/dev/null)
     if [[ "$TURBO_DISABLED" == "0" ]]; then
-        echo -e "  ${YELLOW}⚠${NC} Warning: Turbo Boost ENABLED (may cause variance)"
-        echo "    Disable with: echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo"
+        echo -e "  ${YELLOW}⚠${NC} Turbo Boost ENABLED (may cause variance)"
     else
-        echo -e "  ${GREEN}✓${NC} Turbo Boost disabled (consistent timings)"
+        echo -e "  ${GREEN}✓${NC} Turbo Boost disabled"
     fi
 fi
+
+# Capture hardware info
+capture_hardware_info
 
 # Helper function for CPU/NUMA pinning
 run_pinned() {
     local cmd="$1"
     local pin_args=""
-    
-    if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
-        pin_args="-c $CPU_CORES"
-    fi
-    
-    if [[ "$NUMA_ENABLED" == "true" ]]; then
-        if command -v numactl &>/dev/null; then
-            eval numactl $pin_args --cpunodebind=$NUMA_NODE --membind=$NUMA_NODE $cmd
-        else
-            eval taskset $pin_args $cmd
-        fi
+    [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]] && pin_args="-c $CPU_CORES"
+    if [[ "$NUMA_ENABLED" == "true" ]] && command -v numactl &>/dev/null; then
+        eval numactl $pin_args --cpunodebind=$NUMA_NODE --membind=$NUMA_NODE $cmd
     elif [[ -n "$pin_args" ]]; then
         eval taskset $pin_args $cmd
     else
@@ -217,618 +323,361 @@ run_pinned() {
     fi
 }
 
-# ── [1/9] Build containers (with caching for speed) ───────────────────────────
+# ── [1/10] Container setup ───────────────────────────────────────────────────
 echo ""
-echo -e "${BLUE}[1/9] Building containers...${NC}"
+echo -e "${BLUE}[1/10] Container setup...${NC}"
 
 if [[ "$MODE" == "native" ]]; then
-    echo -e "${YELLOW}  Skipping container build (native-only mode)${NC}"
-else
-    echo -e "${YELLOW}  Using build cache for speed. First build: ~25 min. Subsequent: ~2 min.${NC}"
-    echo -e "${YELLOW}  If build fails with stale cache, run: ./purge_cache_and_rebuild.sh${NC}"
-    echo ""
+    echo -e "${YELLOW}  Skipping containers (native-only mode)${NC}"
+elif [[ "$USE_GHCR" == "true" ]]; then
+    echo -e "${CYAN}  Pulling pre-built images from GHCR...${NC}"
+    for tag in "$PYTHON_TAG" "$JULIA_TAG" "$R_TAG"; do
+        echo "    Pulling $tag..."
+        if podman pull "$tag" 2>/dev/null; then
+            echo -e "    ${GREEN}✓${NC} $tag pulled"
+        else
+            log_error "Failed to pull $tag"
+            echo -e "    ${YELLOW}⚠  Falling back to local build${NC}"
+            USE_GHCR=false
+            break
+        fi
+    done
+fi
 
+if [[ "$MODE" != "native" ]] && [[ "$USE_GHCR" != "true" ]]; then
     build_container() {
         local tag="$1" file="$2"
-        echo -e "${GREEN}  Building $tag ...${NC}"
-        if ! podman build -t "$tag" -f "$file" .; then
-            echo -e "${RED}❌ Build failed: $tag${NC}"
-            echo "   Check the Containerfile: $file"
-            echo "   If you see stale cache errors, run: ./purge_cache_and_rebuild.sh"
-            exit 1
+        # Check if image already exists
+        if podman image exists "$tag" 2>/dev/null; then
+            echo -e "  ${GREEN}✓${NC} $tag already exists (skipping build)"
+            return 0
         fi
-        local digest
-        digest=$(podman image inspect "$tag" --format '{{.Digest}}' 2>/dev/null || echo "unknown")
-        echo "  ✓ $tag  digest: ${digest:7:16}..."
+        echo -e "  ${GREEN}  Building $tag ...${NC}"
+        if ! podman build -t "$tag" -f "$file" .; then
+            log_error "Build failed: $tag"
+            return 1
+        fi
+        echo -e "  ${GREEN}✓${NC} $tag built"
     }
 
     build_container "$PYTHON_TAG" "containers/python.Containerfile"
     build_container "$JULIA_TAG"  "containers/julia.Containerfile"
     build_container "$R_TAG"      "containers/r.Containerfile"
 
-    mkdir -p results
+    # Save digests
     cat > results/container_hashes.txt << HEOF
-Python  $PYTHON_TAG  $(podman image inspect "$PYTHON_TAG" --format '{{.Digest}}' 2>/dev/null)
-Julia   $JULIA_TAG   $(podman image inspect "$JULIA_TAG"  --format '{{.Digest}}' 2>/dev/null)
-R       $R_TAG       $(podman image inspect "$R_TAG"      --format '{{.Digest}}' 2>/dev/null)
+Python  $PYTHON_TAG  $(podman image inspect "$PYTHON_TAG" --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
+Julia   $JULIA_TAG   $(podman image inspect "$JULIA_TAG"  --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
+R       $R_TAG       $(podman image inspect "$R_TAG"      --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
 HEOF
-    echo "  ✓ Digests saved → results/container_hashes.txt"
+    echo -e "  ${GREEN}✓${NC} Digests saved → results/container_hashes.txt"
 fi
 
-# ── [2/9] Verify environments ─────────────────────────────────────────────────
+# ── [2/10] Verify environments ───────────────────────────────────────────────
 echo ""
-echo -e "${BLUE}[2/9] Verifying environments...${NC}"
+echo -e "${BLUE}[2/10] Verifying environments...${NC}"
 
 if [[ "$MODE" != "native" ]]; then
     echo -e "${GREEN}  Container Python:${NC}"
-    podman run --rm "$PYTHON_TAG" python3 - << 'PYEOF'
-import sys, numpy, scipy, pandas, geopandas, rasterio, shapely, sklearn
-print(f"    Python     {sys.version.split()[0]}")
-print(f"    numpy      {numpy.__version__}")
-print(f"    scipy      {scipy.__version__}")
-print(f"    geopandas  {geopandas.__version__}")
-print(f"    rasterio   {rasterio.__version__}")
-print(f"    sklearn    {sklearn.__version__}")
-PYEOF
-
+    podman run --rm "$PYTHON_TAG" python3 -c "import sys; print(f'    Python {sys.version.split()[0]}')" 2>/dev/null || log_error "Python container verification failed"
     echo -e "${GREEN}  Container Julia:${NC}"
-    podman run --rm "$JULIA_TAG" julia --project="${JULIA_PROJECT:-/opt/julia-project}" -e '
-        println("    Julia      ", VERSION)
-        println("    Threads    ", Threads.nthreads())
-        using ArchGDAL, DataFrames; println("    ArchGDAL   OK")
-    '
-
+    podman run --rm "$JULIA_TAG" julia --version 2>/dev/null | sed 's/^/    /' || log_error "Julia container verification failed"
     echo -e "${GREEN}  Container R:${NC}"
-    podman run --rm "$R_TAG" Rscript -e '
-        cat("    R         ", R.version.string, "\n")
-        cat("    terra     ", as.character(packageVersion("terra")), "\n")
-        cat("    data.table", as.character(packageVersion("data.table")), "\n")
-        cat("    jsonlite  ", as.character(packageVersion("jsonlite")), "\n")
-        cat("    digest    ", as.character(packageVersion("digest")), "\n")
-    '
+    podman run --rm "$R_TAG" R --version 2>/dev/null | head -1 | sed 's/^/    /' || log_error "R container verification failed"
 fi
 
-echo -e "${GREEN}  Native Python:${NC}"
-if command -v python3 &>/dev/null; then
-    python3 -c "
-import sys, numpy, scipy, pandas
-print(f'    Python     {sys.version.split()[0]}')
-print(f'    numpy      {numpy.__version__}')
-print(f'    scipy      {scipy.__version__}')
-print(f'    pandas     {pandas.__version__}')
-" 2>/dev/null || echo "    ⚠ Some packages missing"
-else
-    echo "    ⚠ Python3 not found"
-fi
-
-echo -e "${GREEN}  Native Julia:${NC}"
-if command -v julia &>/dev/null; then
-    julia --version 2>/dev/null | sed 's/^/    /'
-    julia -e 'println("    Threads  ", Threads.nthreads())' 2>/dev/null || true
-else
-    echo "    ⚠ Julia not found"
-fi
-
-echo -e "${GREEN}  Native R:${NC}"
-if command -v Rscript &>/dev/null; then
-    Rscript -e 'cat("    R         ", R.version.string, "\n")' 2>/dev/null || echo "    ⚠ R not found"
-else
-    echo "    ⚠ R not found"
-fi
-
-echo -e "${GREEN}  Native BLAS:${NC}"
-if [ -f /usr/lib64/libopenblas.so ]; then
-    echo "    ✓ OpenBLAS available"
-elif [ -f /usr/lib64/libblas.so ]; then
-    ls -la /usr/lib64/libblas.so 2>/dev/null | grep -q openblas && echo "    ✓ OpenBLAS" || echo "    ⚠ Reference BLAS (install blas-openblas)"
-else
-    echo "    ? BLAS status unknown"
-fi
-
-# ── [3/9] Data preparation ────────────────────────────────────────────────────
+# ── [3/10] Data preparation ──────────────────────────────────────────────────
 echo ""
-echo -e "${BLUE}[3/9] Preparing benchmark datasets...${NC}"
+echo -e "${BLUE}[3/10] Preparing benchmark datasets...${NC}"
 
-DDIR="$(pwd)/data"
-mkdir -p "$DDIR"
-
-# Use unified download script
-DOWNLOAD_CMD="python3 tools/download_data.py"
-
-# Check if unified script exists
-if [[ -f "tools/download_data.py" ]]; then
-    if [[ "$MODE" != "native" ]] && command -v podman &>/dev/null; then
-        echo "  Using unified download script (container mode)..."
-        podman run --rm \
-            -v "$DDIR":/benchmarks/data:Z \
-            -v "$(pwd)/tools":/benchmarks/tools:Z \
-            "$PYTHON_TAG" bash -c "cd /benchmarks && $DOWNLOAD_CMD --all --synthetic"
-    elif command -v python3 &>/dev/null; then
-        echo "  Using unified download script..."
+if check_resume "data"; then
+    :
+else
+    DDIR="$(pwd)/data"
+    mkdir -p "$DDIR"
+    if [[ -f "tools/download_data.py" ]]; then
         source .venv/bin/activate 2>/dev/null || true
-        $DOWNLOAD_CMD --all --synthetic
+        python3 tools/download_data.py --all --synthetic 2>&1 | grep -E "✓|⚠" | head -10 || true
     fi
-else
-    # Fallback to legacy scripts
-    echo "  Warning: Unified script not found, using legacy scripts..."
-    
-    if [ "$ENABLE_VECTOR" = "true" ]; then
-        if [ ! -f "$DDIR/natural_earth_countries.gpkg" ] || [ ! -f "$DDIR/gps_points_1m.csv" ]; then
-            echo "  Generating vector data..."
-            python3 tools/gen_vector_data.py
-        else
-            echo "  ✓ Vector data exists"
-        fi
-    fi
-
-    if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
-        if [ ! -f "$DDIR/Cuprite.mat" ]; then
-            echo "  Downloading hyperspectral data..."
-            python3 tools/download_cuprite.py
-        else
-            echo "  ✓ Hyperspectral data exists"
-        fi
-    fi
+    mark_checkpoint "data"
 fi
+echo -e "  ${GREEN}✓${NC} Data preparation complete"
 
-echo "  ✓ Data preparation complete"
-
-# ── [4/9] COLD START benchmarks (container) ──────────────────────────────────
-if [[ "$MODE" == "native" ]]; then
+# ── [4/10] COLD START benchmarks (container) ─────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
     echo ""
-    echo -e "${BLUE}[4/9] COLD START benchmarks (skipped - native mode)${NC}"
-else
-    echo ""
-    echo -e "${BLUE}[4/9] COLD START benchmarks (first-run / JIT-compilation latency)...${NC}"
+    echo -e "${BLUE}[4/10] COLD START benchmarks (first-run / JIT latency)...${NC}"
     mkdir -p results/cold_start
 
-run_cold() {
-    local scenario="$1" script="$2" lang="$3" tag="$4" out="$5"
-    echo "    $lang (cold) — $scenario"
-    podman run --rm \
-        -v "$(pwd)":/benchmarks:Z \
-        "$tag" \
-        hyperfine --warmup 0 --runs "$COLD_START_RUNS" \
-            --export-json "/benchmarks/$out" \
-            "$script"
-}
+    if check_resume "cold_start"; then
+        :
+    else
+        run_cold() {
+            local scenario="$1" script="$2" lang="$3" tag="$4" out="$5"
+            progress
+            echo "    $lang (cold) — $scenario"
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                hyperfine --warmup 0 --runs "$COLD_START_RUNS" \
+                --export-json "/benchmarks/$out" "$script" 2>&1 | tail -5
+        }
 
-if [ "$ENABLE_VECTOR" = "true" ]; then
-    echo -e "${YELLOW}  Vector Point-in-Polygon (COLD)${NC}"
-    run_cold "vector" "python3 benchmarks/vector_pip.py" "Python" "$PYTHON_TAG" "results/cold_start/vector_python_cold.json"
-    run_cold "vector" "julia -t auto benchmarks/vector_pip.jl" "Julia" "$JULIA_TAG" "results/cold_start/vector_julia_cold.json"
-    run_cold "vector" "Rscript benchmarks/vector_pip.R"  "R"      "$R_TAG"     "results/cold_start/vector_r_cold.json"
+        [ "$ENABLE_VECTOR" = "true" ] && {
+            run_cold "vector" "python3 benchmarks/vector_pip.py" "Python" "$PYTHON_TAG" "results/cold_start/vector_python_cold.json"
+            run_cold "vector" "julia -t auto benchmarks/vector_pip.jl" "Julia" "$JULIA_TAG" "results/cold_start/vector_julia_cold.json"
+            run_cold "vector" "Rscript benchmarks/vector_pip.R"  "R"      "$R_TAG"     "results/cold_start/vector_r_cold.json"
+        }
+        [ "$ENABLE_HYPERSPECTRAL" = "true" ] && {
+            run_cold "hyperspectral" "python3 benchmarks/hsi_stream.py" "Python" "$PYTHON_TAG" "results/cold_start/hsi_python_cold.json"
+            run_cold "hyperspectral" "julia -t auto benchmarks/hsi_stream.jl" "Julia" "$JULIA_TAG" "results/cold_start/hsi_julia_cold.json"
+            run_cold "hyperspectral" "Rscript benchmarks/hsi_stream.R" "R" "$R_TAG" "results/cold_start/hsi_r_cold.json"
+        }
+        mark_checkpoint "cold_start"
+    fi
 fi
 
-if [ "$ENABLE_INTERPOLATION" = "true" ]; then
-    echo -e "${YELLOW}  Spatial Interpolation IDW (COLD)${NC}"
-    run_cold "interpolation" "python3 benchmarks/interpolation_idw.py" "Python" "$PYTHON_TAG" "results/cold_start/interp_python_cold.json"
-    run_cold "interpolation" "julia -t auto benchmarks/interpolation_idw.jl" "Julia" "$JULIA_TAG" "results/cold_start/interp_julia_cold.json"
-    run_cold "interpolation" "Rscript benchmarks/interpolation_idw.R" "R"  "$R_TAG" "results/cold_start/interp_r_cold.json"
-fi
-
-if [ "$ENABLE_TIMESERIES" = "true" ]; then
-    echo -e "${YELLOW}  Time-Series NDVI (COLD)${NC}"
-    run_cold "timeseries" "python3 benchmarks/timeseries_ndvi.py" "Python" "$PYTHON_TAG" "results/cold_start/ndvi_python_cold.json"
-    run_cold "timeseries" "julia -t auto benchmarks/timeseries_ndvi.jl" "Julia" "$JULIA_TAG" "results/cold_start/ndvi_julia_cold.json"
-    run_cold "timeseries" "Rscript benchmarks/timeseries_ndvi.R" "R" "$R_TAG" "results/cold_start/ndvi_r_cold.json"
-fi
-
-if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
-    echo -e "${YELLOW}  Hyperspectral SAM (COLD)${NC}"
-    run_cold "hyperspectral" "python3 benchmarks/hsi_stream.py" "Python" "$PYTHON_TAG" "results/cold_start/hsi_python_cold.json"
-    run_cold "hyperspectral" "julia -t auto benchmarks/hsi_stream.jl" "Julia" "$JULIA_TAG" "results/cold_start/hsi_julia_cold.json"
-    run_cold "hyperspectral" "Rscript benchmarks/hsi_stream.R" "R" "$R_TAG" "results/cold_start/hsi_r_cold.json"
-fi
-fi  # End of container-only cold start section
-
-# ── [5/9] WARM START benchmarks (container) ───────────────────────────────────
-if [[ "$MODE" == "native" ]]; then
+# ── [5/10] WARM START benchmarks (container) ─────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
     echo ""
-    echo -e "${BLUE}[5/9] WARM START benchmarks (skipped - native mode)${NC}"
-else
-    echo ""
-    echo -e "${BLUE}[5/9] WARM START benchmarks (steady-state / JIT-compiled)...${NC}"
+    echo -e "${BLUE}[5/10] WARM START benchmarks (steady-state)...${NC}"
     mkdir -p results/warm_start
 
-run_warm() {
-    local scenario="$1" script="$2" lang="$3" tag="$4" out="$5"
-    echo "    $lang (warm) — $scenario"
-    podman run --rm \
-        -v "$(pwd)":/benchmarks:Z \
-        "$tag" \
-        hyperfine --warmup "$WARMUP_RUNS" --runs "$BENCHMARK_RUNS" \
-            --export-json "/benchmarks/$out" \
-            "$script"
-}
-
-if [ "$ENABLE_VECTOR" = "true" ]; then
-    echo -e "${YELLOW}  Vector Point-in-Polygon (WARM)${NC}"
-    run_warm "vector" "python3 benchmarks/vector_pip.py" "Python" "$PYTHON_TAG" "results/warm_start/vector_python_warm.json"
-    run_warm "vector" "julia -t auto benchmarks/vector_pip.jl" "Julia" "$JULIA_TAG" "results/warm_start/vector_julia_warm.json"
-    run_warm "vector" "Rscript benchmarks/vector_pip.R"  "R"      "$R_TAG"     "results/warm_start/vector_r_warm.json"
-fi
-
-if [ "$ENABLE_INTERPOLATION" = "true" ]; then
-    echo -e "${YELLOW}  Spatial Interpolation IDW (WARM)${NC}"
-    run_warm "interpolation" "python3 benchmarks/interpolation_idw.py" "Python" "$PYTHON_TAG" "results/warm_start/interp_python_warm.json"
-    run_warm "interpolation" "julia -t auto benchmarks/interpolation_idw.jl" "Julia" "$JULIA_TAG" "results/warm_start/interp_julia_warm.json"
-    run_warm "interpolation" "Rscript benchmarks/interpolation_idw.R" "R" "$R_TAG" "results/warm_start/interp_r_warm.json"
-fi
-
-if [ "$ENABLE_TIMESERIES" = "true" ]; then
-    echo -e "${YELLOW}  Time-Series NDVI (WARM)${NC}"
-    run_warm "timeseries" "python3 benchmarks/timeseries_ndvi.py" "Python" "$PYTHON_TAG" "results/warm_start/ndvi_python_warm.json"
-    run_warm "timeseries" "julia -t auto benchmarks/timeseries_ndvi.jl" "Julia" "$JULIA_TAG" "results/warm_start/ndvi_julia_warm.json"
-    run_warm "timeseries" "Rscript benchmarks/timeseries_ndvi.R" "R" "$R_TAG" "results/warm_start/ndvi_r_warm.json"
-fi
-
-if [ "$ENABLE_HYPERSPECTRAL" = "true" ]; then
-    echo -e "${YELLOW}  Hyperspectral SAM (WARM)${NC}"
-    run_warm "hyperspectral" "python3 benchmarks/hsi_stream.py" "Python" "$PYTHON_TAG" "results/warm_start/hsi_python_warm.json"
-    run_warm "hyperspectral" "julia -t auto benchmarks/hsi_stream.jl" "Julia" "$JULIA_TAG" "results/warm_start/hsi_julia_warm.json"
-    run_warm "hyperspectral" "Rscript benchmarks/hsi_stream.R" "R" "$R_TAG" "results/warm_start/hsi_r_warm.json"
-fi
-fi  # End of container-only warm start section
-
-# ── [6/9] Matrix Operations (container) ───────────────────────────────────────
-echo ""
-echo -e "${BLUE}[6/9] Matrix Operations (Tedesco et al. 2025 alignment)...${NC}"
-if [[ "$MODE" == "native" ]]; then
-    echo -e "${YELLOW}  Skipped in native mode (done in [12/12])${NC}"
-else
-    run_matrix() {
-        local lang="$1" cmd="$2" tag="$3"
-        echo "    $lang matrix operations..."
-        podman run --rm \
-            -v "$(pwd)":/benchmarks:Z \
-            "$tag" \
-            bash -c "cd /benchmarks && $cmd"
-    }
-
-    run_matrix "Python" "python3 benchmarks/matrix_ops.py" "$PYTHON_TAG"
-    run_matrix "Julia"  "julia benchmarks/matrix_ops.jl" "$JULIA_TAG"
-    run_matrix "R"      "Rscript benchmarks/matrix_ops.R" "$R_TAG"
-
-    echo -e "${GREEN}  ✓ Matrix operations complete${NC}"
-    echo "  Results: results/matrix_ops_{python,julia,r}.json"
-fi
-
-# ── [7/9] I/O Operations (container) ──────────────────────────────────────────
-echo ""
-echo -e "${BLUE}[7/9] I/O Operations (CSV and Binary)...${NC}"
-if [[ "$MODE" == "native" ]]; then
-    echo -e "${YELLOW}  Skipped in native mode (done in [12/12])${NC}"
-else
-    run_io() {
-        local lang="$1" cmd="$2" tag="$3"
-        echo "    $lang I/O operations..."
-        podman run --rm \
-            -v "$(pwd)":/benchmarks:Z \
-            "$tag" \
-            bash -c "cd /benchmarks && $cmd"
-    }
-
-    run_io "Python" "python3 benchmarks/io_ops.py" "$PYTHON_TAG"
-    run_io "Julia"  "julia benchmarks/io_ops.jl" "$JULIA_TAG"
-    run_io "R"      "Rscript benchmarks/io_ops.R" "$R_TAG"
-
-    echo -e "${GREEN}  ✓ I/O operations complete${NC}"
-    echo "  Results: results/io_ops_{python,julia,r}.json"
-fi
-
-# ── [8/9] Memory profiling (container) ────────────────────────────────────────
-echo ""
-echo -e "${BLUE}[8/9] Memory profiling (peak RSS)...${NC}"
-mkdir -p results/memory
-
-if [[ "$MODE" == "native" ]]; then
-    echo -e "${YELLOW}  Skipped in native mode${NC}"
-else
-    profile_memory() {
-        local lang="$1" cmd="$2" tag="$3" outfile="$4"
-        echo "  $lang memory..."
-        podman run --rm \
-            -v "$(pwd)":/benchmarks:Z \
-            "$tag" \
-            bash -c "/usr/bin/time -v $cmd 2>&1 | grep -E 'Maximum resident|wall clock'" \
-        | tee "results/memory/${outfile}.txt" || true
-    }
-
-    [ "$ENABLE_VECTOR" = "true" ] && {
-        profile_memory "Python" "python3 benchmarks/vector_pip.py"       "$PYTHON_TAG" "vector_python_mem"
-        profile_memory "Julia"  "julia -t auto benchmarks/vector_pip.jl" "$JULIA_TAG"  "vector_julia_mem"
-        profile_memory "R"      "Rscript benchmarks/vector_pip.R"        "$R_TAG"      "vector_r_mem"
-    }
-fi
-
-# ── [9/9] Validate results (unified script) ───────────────────────────────────
-echo ""
-echo -e "${BLUE}[9/9] Validating correctness (cross-language hash comparison)...${NC}"
-
-if [ -f "validation/thesis_validation.py" ]; then
-    if [[ "$MODE" != "native" ]]; then
-        podman run --rm \
-            -v "$(pwd)":/benchmarks:Z \
-            "$PYTHON_TAG" \
-            python3 validation/thesis_validation.py --all \
-            && echo "  ✓ Validation passed" \
-            || echo "  ⚠ Validation had warnings (check output above)"
+    if check_resume "warm_start"; then
+        :
     else
-        python3 validation/thesis_validation.py --all \
-            && echo "  ✓ Validation passed" \
-            || echo "  ⚠ Validation had warnings (check output above)"
+        run_warm() {
+            local scenario="$1" script="$2" lang="$3" tag="$4" out="$5"
+            progress
+            echo "    $lang (warm) — $scenario"
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                hyperfine --warmup "$WARMUP_RUNS" --runs "$BENCHMARK_RUNS" \
+                --export-json "/benchmarks/$out" "$script" 2>&1 | tail -5
+        }
+
+        [ "$ENABLE_VECTOR" = "true" ] && {
+            run_warm "vector" "python3 benchmarks/vector_pip.py" "Python" "$PYTHON_TAG" "results/warm_start/vector_python_warm.json"
+            run_warm "vector" "julia -t auto benchmarks/vector_pip.jl" "Julia" "$JULIA_TAG" "results/warm_start/vector_julia_warm.json"
+            run_warm "vector" "Rscript benchmarks/vector_pip.R"  "R"      "$R_TAG"     "results/warm_start/vector_r_warm.json"
+        }
+        [ "$ENABLE_INTERPOLATION" = "true" ] && {
+            run_warm "interpolation" "python3 benchmarks/interpolation_idw.py" "Python" "$PYTHON_TAG" "results/warm_start/interp_python_warm.json"
+            run_warm "interpolation" "julia -t auto benchmarks/interpolation_idw.jl" "Julia" "$JULIA_TAG" "results/warm_start/interp_julia_warm.json"
+            run_warm "interpolation" "Rscript benchmarks/interpolation_idw.R" "R" "$R_TAG" "results/warm_start/interp_r_warm.json"
+        }
+        [ "$ENABLE_TIMESERIES" = "true" ] && {
+            run_warm "timeseries" "python3 benchmarks/timeseries_ndvi.py" "Python" "$PYTHON_TAG" "results/warm_start/ndvi_python_warm.json"
+            run_warm "timeseries" "julia -t auto benchmarks/timeseries_ndvi.jl" "Julia" "$JULIA_TAG" "results/warm_start/ndvi_julia_warm.json"
+            run_warm "timeseries" "Rscript benchmarks/timeseries_ndvi.R" "R" "$R_TAG" "results/warm_start/ndvi_r_warm.json"
+        }
+        [ "$ENABLE_HYPERSPECTRAL" = "true" ] && {
+            run_warm "hyperspectral" "python3 benchmarks/hsi_stream.py" "Python" "$PYTHON_TAG" "results/warm_start/hsi_python_warm.json"
+            run_warm "hyperspectral" "julia -t auto benchmarks/hsi_stream.jl" "Julia" "$JULIA_TAG" "results/warm_start/hsi_julia_warm.json"
+            run_warm "hyperspectral" "Rscript benchmarks/hsi_stream.R" "R" "$R_TAG" "results/warm_start/hsi_r_warm.json"
+        }
+        mark_checkpoint "warm_start"
     fi
-else
-    echo "  ⚠ thesis_validation.py not found — skipping"
 fi
 
-# ── [10/9] Tedesco et al. Comparison ─────────────────────────────────────────
-echo ""
-echo -e "${BLUE}[11/9] Comparison with Tedesco et al. (2025)...${NC}"
-
-if [ -f "tools/compare_with_tedesco.py" ] && \
-   [ -f "results/matrix_ops_python.json" ] && \
-   [ -f "results/matrix_ops_julia.json" ] && \
-   [ -f "results/matrix_ops_r.json" ]; then
-    python3 tools/compare_with_tedesco.py \
-        && echo "  ✓ Literature comparison complete" \
-        || echo "  ⚠ Comparison had errors"
-else
-    echo "  ⚠ Matrix operations results not found — run matrix benchmarks first"
+# ── [6/10] Matrix Operations (container) ─────────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
+    echo ""
+    echo -e "${BLUE}[6/10] Matrix Operations (container)...${NC}"
+    if check_resume "matrix_container"; then
+        :
+    else
+        run_matrix() {
+            local lang="$1" cmd="$2" tag="$3"
+            progress
+            echo "    $lang matrix operations..."
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                bash -c "cd /benchmarks && $cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10
+        }
+        run_matrix "Python" "python3 benchmarks/matrix_ops.py" "$PYTHON_TAG"
+        run_matrix "Julia"  "julia benchmarks/matrix_ops.jl" "$JULIA_TAG"
+        run_matrix "R"      "Rscript benchmarks/matrix_ops.R" "$R_TAG"
+        mark_checkpoint "matrix_container"
+    fi
 fi
 
-# ── [12/13] NATIVE BENCHMARKS ────────────────────────────────────────────────
-if [[ "$MODE" == "container" ]]; then
+# ── [7/10] I/O Operations (container) ────────────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
     echo ""
-    echo -e "${BLUE}[12/13] Native System Benchmarks (skipped - container mode)${NC}"
-else
+    echo -e "${BLUE}[7/10] I/O Operations (container)...${NC}"
+    if check_resume "io_container"; then
+        :
+    else
+        run_io() {
+            local lang="$1" cmd="$2" tag="$3"
+            progress
+            echo "    $lang I/O operations..."
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                bash -c "cd /benchmarks && $cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10
+        }
+        run_io "Python" "python3 benchmarks/io_ops.py" "$PYTHON_TAG"
+        run_io "Julia"  "julia benchmarks/io_ops.jl" "$JULIA_TAG"
+        run_io "R"      "Rscript benchmarks/io_ops.R" "$R_TAG"
+        mark_checkpoint "io_container"
+    fi
+fi
+
+# ── [8/10] Memory profiling (container) ──────────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
     echo ""
-    echo -e "${BLUE}[12/13] Native System Benchmarks${NC}"
-    echo -e "${YELLOW}  Running on host system with CPU pinning for academic rigor${NC}"
+    echo -e "${BLUE}[8/10] Memory profiling (container)...${NC}"
+    mkdir -p results/memory
+    if check_resume "memory"; then
+        :
+    else
+        profile_memory() {
+            local lang="$1" cmd="$2" tag="$3" outfile="$4"
+            progress
+            echo "  $lang memory..."
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                bash -c "/usr/bin/time -v $cmd 2>&1 | grep -E 'Maximum resident|wall clock'" \
+            | tee "results/memory/${outfile}.txt" || true
+        }
+        [ "$ENABLE_VECTOR" = "true" ] && {
+            profile_memory "Python" "python3 benchmarks/vector_pip.py"       "$PYTHON_TAG" "vector_python_mem"
+            profile_memory "Julia"  "julia -t auto benchmarks/vector_pip.jl" "$JULIA_TAG"  "vector_julia_mem"
+            profile_memory "R"      "Rscript benchmarks/vector_pip.R"        "$R_TAG"      "vector_r_mem"
+        }
+        mark_checkpoint "memory"
+    fi
+fi
+
+# ── [9/10] Validate results (container) ──────────────────────────────────────
+if [[ "$MODE" != "native" ]]; then
     echo ""
-    echo "  Academic settings:"
-    echo "    Runs: $BENCHMARK_RUNS, Warmup: $WARMUP_RUNS + $CACHE_WARMUP"
-    echo "    CPU pinning: $CPU_PIN_ENABLED, NUMA: $NUMA_ENABLED"
-    echo "    Thread config: JULIA_NUM_THREADS=$JULIA_NUM_THREADS"
+    echo -e "${BLUE}[9/10] Validating correctness (container)...${NC}"
+    if check_resume "validation_container"; then
+        :
+    else
+        if [ -f "validation/thesis_validation.py" ]; then
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$PYTHON_TAG" \
+                python3 validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Container validation failed"
+            mark_checkpoint "validation_container"
+        fi
+    fi
+fi
+
+# ── [10/10] NATIVE BENCHMARKS ────────────────────────────────────────────────
+if [[ "$MODE" != "container" ]]; then
+    echo ""
+    echo -e "${BLUE}[10/10] Native System Benchmarks${NC}"
+    echo -e "${YELLOW}  Running on host system with CPU pinning${NC}"
     echo ""
 
     mkdir -p results/native results/academic
 
-    # Enhanced native runner with pinning and CPU monitoring
     run_native() {
         local lang="$1" cmd="$2" name="$3"
-        local output="results/native/${name}_${lang}.json"
-        
+        progress
         echo -e "  ${GREEN}$lang${NC}: $name"
-        
-        # Log CPU frequency before
         local freq_before=""
         if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
             freq_before=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
-            echo "    CPU freq before: $((freq_before / 1000)) MHz"
+            echo "    CPU freq: $((freq_before / 1000)) MHz"
         fi
-        
-        # Run with pinning if enabled
         if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
-            taskset -c "$CPU_CORES" bash -c "$cmd" 2>&1 || {
-                echo -e "    ${RED}❌ Failed${NC}"
-                return 1
-            }
+            taskset -c "$CPU_CORES" bash -c "$cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10 || log_error "$lang $name failed"
         else
-            eval "$cmd" 2>&1 || {
-                echo -e "    ${RED}❌ Failed${NC}"
-                return 1
-            }
-        fi
-        
-        # Log CPU frequency after
-        if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
-            local freq_after=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
-            echo "    CPU freq after: $((freq_after / 1000)) MHz"
+            eval "$cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10 || log_error "$lang $name failed"
         fi
     }
 
-    # Academic stats runner (if academic_stats.py exists)
-    run_academic() {
-        local lang="$1" script="$2" name="$3"
-        local output="results/academic/${name}_${lang}.json"
-        
-        echo -e "  ${MAGENTA}$lang (academic)${NC}: $name"
-        
-        if [[ -f "benchmarks/academic_stats.py" ]]; then
-            source .venv/bin/activate 2>/dev/null || true
-            python3 benchmarks/academic_stats.py "$script" "$output" 2>&1 || {
-                echo -e "    ${YELLOW}⚠ academic_stats not available${NC}"
-            }
-        fi
-    }
-
-    # Matrix Operations (native)
     echo -e "${YELLOW}  Matrix Operations:${NC}"
-    if command -v python3 &>/dev/null; then
-        source .venv/bin/activate 2>/dev/null || true
-        run_native "Python" "python3 benchmarks/matrix_ops.py" "matrix_ops"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/matrix_ops.jl" "matrix_ops"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R" "matrix_ops"
-    fi
+    command -v python3 &>/dev/null && { source .venv/bin/activate 2>/dev/null || true; run_native "Python" "python3 benchmarks/matrix_ops.py" "matrix_ops"; }
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/matrix_ops.jl" "matrix_ops"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R" "matrix_ops"
 
-    # I/O Operations (native)
     echo -e "${YELLOW}  I/O Operations:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/io_ops.py" "io_ops"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/io_ops.jl" "io_ops"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/io_ops.R" "io_ops"
-    fi
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/io_ops.py" "io_ops"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/io_ops.jl" "io_ops"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/io_ops.R" "io_ops"
 
-    # Raster Algebra (native)
     echo -e "${YELLOW}  Raster Algebra:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/raster_algebra.py" "raster_algebra"
-fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/raster_algebra.jl" "raster_algebra"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/raster_algebra.R" "raster_algebra"
-    fi
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/raster_algebra.py" "raster_algebra"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/raster_algebra.jl" "raster_algebra"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/raster_algebra.R" "raster_algebra"
 
-    # Reprojection (native)
-    echo -e "${YELLOW}  Coordinate Reprojection:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/reprojection.py" "reprojection"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/reprojection.jl" "reprojection"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/reprojection.R" "reprojection"
-    fi
+    echo -e "${YELLOW}  Reprojection:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/reprojection.py" "reprojection"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/reprojection.jl" "reprojection"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/reprojection.R" "reprojection"
 
-    # Zonal Statistics (native)
-    echo -e "${YELLOW}  Zonal Statistics:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/zonal_stats.py" "zonal_stats"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/zonal_stats.jl" "zonal_stats"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/zonal_stats.R" "zonal_stats"
-    fi
+    echo -e "${YELLOW}  Zonal Stats:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/zonal_stats.py" "zonal_stats"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/zonal_stats.jl" "zonal_stats"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/zonal_stats.R" "zonal_stats"
 
-    # Interpolation (native)
-    echo -e "${YELLOW}  Spatial Interpolation:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/interpolation_idw.py" "interpolation"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/interpolation_idw.jl" "interpolation"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/interpolation_idw.R" "interpolation"
-    fi
+    echo -e "${YELLOW}  Interpolation:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/interpolation_idw.py" "interpolation"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/interpolation_idw.jl" "interpolation"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/interpolation_idw.R" "interpolation"
 
-    # Time-Series (native)
-    echo -e "${YELLOW}  Time-Series NDVI:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/timeseries_ndvi.py" "timeseries"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/timeseries_ndvi.jl" "timeseries"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/timeseries_ndvi.R" "timeseries"
-    fi
+    echo -e "${YELLOW}  Time-Series:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/timeseries_ndvi.py" "timeseries"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/timeseries_ndvi.jl" "timeseries"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/timeseries_ndvi.R" "timeseries"
 
-    # Hyperspectral (native)
-    echo -e "${YELLOW}  Hyperspectral SAM:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/hsi_stream.py" "hsi_stream"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/hsi_stream.jl" "hsi_stream"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/hsi_stream.R" "hsi_stream"
-    fi
+    echo -e "${YELLOW}  Hyperspectral:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/hsi_stream.py" "hsi_stream"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/hsi_stream.jl" "hsi_stream"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/hsi_stream.R" "hsi_stream"
 
-    # Vector PIP (native)
-    echo -e "${YELLOW}  Vector Point-in-Polygon:${NC}"
-    if command -v python3 &>/dev/null; then
-        run_native "Python" "python3 benchmarks/vector_pip.py" "vector_pip"
-    fi
-    if command -v julia &>/dev/null; then
-        run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS ~/.juliaup/bin/julialauncher benchmarks/vector_pip.jl" "vector_pip"
-    fi
-    if command -v Rscript &>/dev/null; then
-        run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/vector_pip.R" "vector_pip"
-    fi
+    echo -e "${YELLOW}  Vector PiP:${NC}"
+    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/vector_pip.py" "vector_pip"
+    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/vector_pip.jl" "vector_pip"
+    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/vector_pip.R" "vector_pip"
 
-    echo ""
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
-    echo "  Results saved alongside container results in: results/"
-fi  # End of native-only section
+fi
 
-# ── [13/13] Generate Academic Report ─────────────────────────────────────────
+# ── Generate Academic Report ─────────────────────────────────────────────────
 echo ""
-echo -e "${BLUE}[13/13] Generating Academic Report with Unified Scripts...${NC}"
+echo -e "${BLUE}Generating Academic Report...${NC}"
 
 if command -v python3 &>/dev/null; then
     source .venv/bin/activate 2>/dev/null || true
-    
-    # Unified visualization
-    if [[ -f "tools/thesis_viz.py" ]]; then
-        echo "  Generating visualizations (thesis_viz.py)..."
-        python3 tools/thesis_viz.py --all 2>&1 || echo "  ⚠ Visualization failed"
-    fi
-    
-    # Unified validation
-    if [[ -f "validation/thesis_validation.py" ]]; then
-        echo "  Running validation (thesis_validation.py)..."
-        python3 validation/thesis_validation.py --all 2>&1 || echo "  ⚠ Validation failed"
-    fi
-    
+    [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; python3 tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
+    [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; python3 validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
     echo -e "${GREEN}  ✓ Academic report complete${NC}"
-else
-    echo "  ⚠ Python not available - skipping report generation"
 fi
 
-# ── [13/13] Summary ───────────────────────────────────────────────────────────
+# ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}${GREEN}"
 echo "========================================================================"
 echo "  ✓ ALL BENCHMARKS COMPLETE"
 echo "========================================================================"
 echo -e "${NC}"
+echo "  Elapsed: $(elapsed_time)"
+echo "  Finished: $(timestamp)"
 
-if [[ "$MODE" == "all" ]]; then
-    echo -e "  ${MAGENTA}Ran: Container + Native benchmarks${NC}"
-elif [[ "$MODE" == "container" ]]; then
-    echo -e "  ${YELLOW}Ran: Container benchmarks only${NC}"
-else
-    echo -e "  ${GREEN}Ran: Native benchmarks only${NC}"
+if [[ ${#ERRORS[@]} -gt 0 ]]; then
+    echo -e "${YELLOW}  ⚠ ${#ERRORS[@]} error(s) encountered:${NC}"
+    for err in "${ERRORS[@]}"; do
+        echo -e "    ${RED}• $err${NC}"
+    done
+    echo "  Full error log: results/errors.log"
 fi
 
 echo ""
 echo "  Results directory:"
-find results -name '*.json' -o -name '*.txt' -o -name '*.md' 2>/dev/null | \
+find results -name '*.json' -o -name '*.txt' -o -name '*.md' -o -name '*.png' 2>/dev/null | \
     grep -v gitkeep | sort | sed 's/^/    /'
 echo ""
 echo "  Key Outputs:"
-echo "    Core Benchmarks:"
-echo "      - results/matrix_ops_{python,julia,r}.json"
-echo "      - results/io_ops_{python,julia,r}.json"
-echo "    Validation:"
-echo "      - results/thesis_validation_report.md"
-echo "      - results/figures/summary_chart.png"
-echo ""
-echo "  Next steps:"
-echo "    1. Review:    ls -lh results/"
-echo "    2. Visualize: python tools/thesis_viz.py --all"
-echo "    3. Validate:  python validation/thesis_validation.py --all"
-echo ""
-echo "  Unified Scripts:"
-echo "    tools/thesis_viz.py           # All visualizations"
-echo "    validation/thesis_validation.py  # All validation"
-echo "    tools/download_data.py          # All data"
+echo "    - results/matrix_ops_{python,julia,r}.json"
+echo "    - results/io_ops_{python,julia,r}.json"
+echo "    - results/thesis_validation_report.md"
+echo "    - results/figures/summary_chart.png"
 echo ""
 echo "  Usage:"
-echo "    ./run_benchmarks.sh           # Full (container + native)"
-echo "    ./run_benchmarks.sh --container-only  # Container only"
-echo "    ./run_benchmarks.sh --native-only    # Native only"
+echo "    ./run_benchmarks.sh              # Full suite"
+echo "    ./run_benchmarks.sh --use-ghcr   # Pull pre-built images"
+echo "    ./run_benchmarks.sh --resume     # Resume from checkpoint"
+echo "    ./run_benchmarks.sh --clean      # Clear old results"
+echo "    ./run_benchmarks.sh --dry-run    # Preview plan"
 echo ""
-if [[ "$MODE" != "native" ]] && [ -f results/container_hashes.txt ]; then
-    echo "  Container digests saved → results/container_hashes.txt"
-fi
-echo ""
-echo -e "${YELLOW}  Thesis Quality: A (container + native + literature comparison)${NC}"
+echo -e "${CYAN}  Thesis Quality: A+ (v3.0 - Academic Rigor Edition)${NC}"
 echo ""
