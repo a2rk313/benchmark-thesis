@@ -35,26 +35,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y podman hyperfine
+
       - name: Pull pre-built containers
         run: |
-          echo "Pulling pre-built containers from GHCR..."
-          docker pull ghcr.io/${{ github.repository_owner }}/thesis-python:fedora
-          docker pull ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora
-          docker pull ghcr.io/${{ github.repository_owner }}/thesis-r:fedora
+          echo "Pulling pre-built containers from GHCR using podman..."
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-python:fedora
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-r:fedora
 
       - name: Tag containers for local use
         run: |
           # Tag with local names so the script finds them without rebuilding
-          docker tag ghcr.io/${{ github.repository_owner }}/thesis-python:fedora thesis-python:3.13
-          docker tag ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora thesis-julia:1.11
-          docker tag ghcr.io/${{ github.repository_owner }}/thesis-r:fedora thesis-r:4.5
+          podman tag ghcr.io/${{ github.repository_owner }}/thesis-python:fedora thesis-python:3.13
+          podman tag ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora thesis-julia:1.11
+          podman tag ghcr.io/${{ github.repository_owner }}/thesis-r:fedora thesis-r:4.5
           echo "✓ Containers tagged for local use"
           echo "Verifying..."
           podman images | grep thesis
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y podman hyperfine
 
       - name: Setup Python
         uses: actions/setup-python@v5
