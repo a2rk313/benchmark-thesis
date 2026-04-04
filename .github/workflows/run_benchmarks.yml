@@ -63,7 +63,14 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install numpy scipy pandas geopandas rasterio shapely scikit-learn matplotlib seaborn json3 tqdm
+          pip install numpy scipy pandas geopandas rasterio shapely scikit-learn matplotlib seaborn json3 tqdm h5py
+
+      - name: Prepare benchmark datasets
+        run: |
+          # Download/generate all benchmark datasets
+          python3 tools/download_data.py --all --synthetic
+          echo "=== Data files ==="
+          ls -lh data/ 2>/dev/null | head -15
 
       - name: Run benchmarks (native + container)
         run: |
