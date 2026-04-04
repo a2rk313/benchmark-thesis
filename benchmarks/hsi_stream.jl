@@ -82,8 +82,17 @@ function main()
     data = read(mat_file, data_key)
     close(mat_file)
     
-    # Data is stored as (rows, cols, bands) - permute to get (bands, rows, cols)
-    data = permutedims(data, (3, 1, 2))
+    # Data shape handling
+    # Python saves as (bands, rows, cols) = (224, 512, 614)
+    # But MATLAB reads it as-is, so check if permutation is needed
+    dims = size(data)
+    if length(dims) == 3
+        if dims[3] == 224
+            # (rows, cols, bands) format - permute
+            data = permutedims(data, (3, 1, 2))
+        end
+        # else: already (bands, rows, cols) - no permute needed
+    end
     n_bands = size(data, 1)
     n_rows = size(data, 2)
     n_cols = size(data, 3)
