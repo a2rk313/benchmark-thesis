@@ -57,7 +57,7 @@ R_LIBS_SITE = ""
 R_PROFILE_USER = "/dev/null"
 
 # Benchmark configuration
-BENCHMARK_RUNS = "50"
+BENCHMARK_RUNS = "30"
 BENCHMARK_THREADS = "8"
 
 # Thread configuration for fair benchmarking

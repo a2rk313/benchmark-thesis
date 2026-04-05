@@ -212,7 +212,7 @@ def main():
     # Configuration
     n_matrix = 2500  # Matrix size (matching Tedesco et al. k=1)
     n_sort = 1_000_000  # Sorting size
-    n_runs = 50  # Number of runs for statistical power
+    n_runs = 30  # CLT threshold for stable bootstrap CIs  # Number of runs for statistical power
     n_warmup = 5  # Warmup runs (excluded from measurement)
     n_cache_warmup = 3  # Extra cache warmup iterations
 

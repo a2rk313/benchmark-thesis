@@ -87,7 +87,7 @@ def main():
     # Configuration
     n_csv_rows = 1_000_000
     n_binary_values = 1_000_000
-    n_runs = 50
+    n_runs = 30  # CLT threshold for stable bootstrap CIs
     n_warmup = 5
     
     # Create data directory

@@ -128,7 +128,7 @@ HWEOF
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 COLD_START_RUNS=5
-BENCHMARK_RUNS=50
+BENCHMARK_RUNS=30          # CLT threshold for stable bootstrap CIs (saves 40% time)
 WARMUP_RUNS=5
 CACHE_WARMUP=3
 FULL_SUITE_REPEATS=3
