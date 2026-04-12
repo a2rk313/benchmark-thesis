@@ -1,6 +1,6 @@
 # =============================================================================
 # ULTRA-OPTIMIZED THESIS R CONTAINER
-# Size: ~1GB (with packages)
+# Size: ~1.2GB (with packages)
 # Build time: ~10-15 min
 # =============================================================================
 
@@ -30,13 +30,17 @@ RUN printf '%s\n' \
     'options(Ncpus = 4L)' \
     > /root/.Rprofile
 
-# Install R packages for benchmarks (all required packages)
+# Install all required R packages for benchmarks
+# terra: raster/vector operations
+# R.matlab: read .mat files (Cuprite dataset)
+# FNN: fast k-d tree for IDW interpolation
+# data.table, jsonlite, digest: core utilities
 RUN Rscript -e ' \
-    install.packages(c("data.table", "jsonlite", "digest", "FNN", "terra", "sf", "stars"), \
+    install.packages(c("terra", "R.matlab", "FNN", "data.table", "jsonlite", "digest"), \
                     repos = "https://cloud.r-project.org/"); \
     cat("Packages installed\n")'
 
-ENV OMP_NUM_THREADS=8 \
+ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=8 \
     R_MAX_VSIZE=16G \
     R_LIBS_USER=/usr/local/lib/R/site-library
