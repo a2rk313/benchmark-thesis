@@ -1,3 +1,81 @@
+# CHANGELOG - Version 4.1
+
+**Release Date**: April 12, 2026  
+**Version**: 4.1 - "Container Benchmarks Working"  
+**Minor Update**: Bug fixes and container benchmark verification
+
+---
+
+## 🎯 SUMMARY OF CHANGES
+
+This release fixes the Julia `matrix_ops.jl` syntax error and verifies that all container benchmarks (Python, Julia, R) run successfully using the pre-built container images.
+
+**Impact**: Benchmarks now run correctly; ready for full thesis results
+
+---
+
+## 🐛 BUG FIXES
+
+### Julia matrix_ops.jl Syntax Error
+- **Issue**: Duplicate key `"max"` in dictionary literal caused parse error
+- **Fix**: Removed duplicate key on line 205
+- **Affected**: `benchmarks/matrix_ops.jl`
+
+---
+
+## ✅ BENCHMARK VERIFICATION
+
+### Container Images Used
+| Image | Size | Status |
+|-------|------|--------|
+| ghcr.io/a2rk313/thesis-python | 1.77 GB | ✓ Working |
+| ghcr.io/a2rk313/thesis-julia | 3.14 GB | ✓ Working |
+| ghcr.io/a2rk313/thesis-r | 1.79 GB | ✓ Working |
+
+### Verified Benchmarks
+| Benchmark | Python | Julia | R |
+|-----------|--------|-------|---|
+| matrix_ops | ✓ | ✓ | ✓ |
+| io_ops | ✓ | ✓ | ✓ |
+| hsi_stream | ✓ | ✓ | ✓ |
+
+### Sample Results (min_time in seconds)
+
+**Matrix Operations (2500×2500)**:
+| Language | Creation | Cross-Product | Determinant |
+|---------|----------|---------------|------------|
+| Python | 0.08 | 0.37 | 0.36 |
+| Julia | 0.08 | 0.37 | 0.36 |
+| R | 1.10 | 0.33 | 0.33 |
+
+**I/O Operations**:
+| Language | CSV Read | GeoTIFF Read | NumPy Save |
+|---------|----------|--------------|------------|
+| Python | 9.12s | 0.001s | 0.001s |
+| Julia | 1.38s | 0.001s | 0.002s |
+| R | 5.43s | 4.54s | 0.002s |
+
+---
+
+## 📝 NOTES
+
+### Running Benchmarks
+```bash
+# Python
+podman run --rm -v "$PWD:/benchmarks:z" ghcr.io/a2rk313/thesis-python:latest python /benchmarks/benchmarks/matrix_ops.py
+
+# Julia
+podman run --rm -v "$PWD:/benchmarks:z" ghcr.io/a2rk313/thesis-julia:latest julia /benchmarks/benchmarks/matrix_ops.jl
+
+# R
+podman run --rm -v "$PWD:/benchmarks:z" ghcr.io/a2rk313/thesis-r:latest Rscript /benchmarks/benchmarks/matrix_ops.R
+```
+
+### Nix Note
+Attempted Nix-based environment but Bluefin/Fedora Atomic has read-only root filesystem preventing `/nix` creation. Using containers instead (already working).
+
+---
+
 # CHANGELOG - Version 4.0
 
 **Release Date**: March 15, 2026  

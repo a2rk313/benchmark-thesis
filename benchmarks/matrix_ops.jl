@@ -202,7 +202,6 @@ function main()
         "max" => maximum(times),
         "median" => median(times),
         "times" => times
-        "max" => maximum(times)
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["determinant"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["determinant"]["mean"], results["determinant"]["std"])
