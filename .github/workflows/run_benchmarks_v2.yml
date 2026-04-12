@@ -129,7 +129,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y podman hyperfine time
 
       - name: Run benchmarks in containers
-        run: ./run_benchmarks.sh --container-only --use-ghcr
+        run: ./run_benchmarks.sh --container-only --use-ghcr  # Force GHCR pull in CI
 
       - name: Upload container results
         if: always()

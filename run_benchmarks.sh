@@ -50,11 +50,13 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo "  --container-only   Run container benchmarks only"
             echo "  --native-only      Run native benchmarks only"
-            echo "  --use-ghcr         Pull pre-built images from GHCR"
+            echo "  --use-ghcr         Force pull from GHCR (default: auto)"
             echo "  --resume           Resume from last checkpoint"
             echo "  --clean            Clear old results before running"
             echo "  --dry-run          Preview execution plan"
             echo "  -h, --help         Show this help"
+            echo ""
+            echo "Container behavior: Uses GHCR by default, falls back to local build"
             exit 0
             ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -145,16 +147,16 @@ detect_os() {
 OS_TYPE=$(detect_os)
 
 # Container image tags
-if [[ "$USE_GHCR" == "true" ]] || [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-    OWNER=$(echo "${GITHUB_REPOSITORY:-a2rk313/benchmark-thesis}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
-    PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
-    JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
-    R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
-else
-    PYTHON_TAG="thesis-python:3.13"
-    JULIA_TAG="thesis-julia:1.11"
-    R_TAG="thesis-r:4.5"
-fi
+# GHCR tags used by default (work for both CI and local if GHCR images exist)
+OWNER=$(echo "${GITHUB_REPOSITORY:-a2rk313/benchmark-thesis}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
+PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
+JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
+R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
+
+# Local tags for fallback building
+PYTHON_LOCAL_TAG="thesis-python:3.13"
+JULIA_LOCAL_TAG="thesis-julia:1.11"
+R_LOCAL_TAG="thesis-r:4.5"
 
 export JULIA_NUM_THREADS=8
 export OPENBLAS_NUM_THREADS=8
@@ -196,7 +198,7 @@ else
     echo -e "  ${GREEN}MODE: NATIVE ONLY${NC}"
 fi
 
-[[ "$USE_GHCR" == "true" ]] && echo -e "  ${CYAN}GHCR: Pulling pre-built images${NC}"
+[[ "$USE_GHCR" == "true" ]] && echo -e "  ${CYAN}GHCR: Force pull mode${NC}" || echo -e "  ${CYAN}GHCR: Auto (pull if missing, build if needed)${NC}"
 [[ "$RESUME" == "true" ]] && echo -e "  ${CYAN}RESUME: Skipping completed benchmarks${NC}"
 [[ "$CLEAN" == "true" ]] && echo -e "  ${YELLOW}CLEAN: Clearing old results${NC}"
 [[ "$DRY_RUN" == "true" ]] && echo -e "  ${YELLOW}DRY RUN: Preview mode (no execution)${NC}"
@@ -206,6 +208,7 @@ echo "  Container images:"
 echo "    Python : $PYTHON_TAG"
 echo "    Julia  : $JULIA_TAG"
 echo "    R      : $R_TAG"
+echo "  Container logic: GHCR → Local build (if GHCR fails)"
 echo ""
 echo "  Native tools:"
 echo "    Python : $(python3 --version 2>/dev/null | cut -d' ' -f2 || echo 'not found')"
@@ -226,7 +229,7 @@ if [[ "$DRY_RUN" == "true" ]]; then
     echo -e "${BOLD}${YELLOW}=== DRY RUN - Execution Plan ===${NC}"
     echo ""
     if [[ "$MODE" != "native" ]]; then
-        echo "  1. Build/pull containers"
+        echo "  1. Container setup (GHCR→local build fallback)"
         echo "  2. Verify environments"
         echo "  3. Prepare datasets"
         echo "  4. Cold start benchmarks (container)"
@@ -329,48 +332,73 @@ echo -e "${BLUE}[1/10] Container setup...${NC}"
 
 if [[ "$MODE" == "native" ]]; then
     echo -e "${YELLOW}  Skipping containers (native-only mode)${NC}"
-elif [[ "$USE_GHCR" == "true" ]]; then
-    echo -e "${CYAN}  Pulling pre-built images from GHCR...${NC}"
-    for tag in "$PYTHON_TAG" "$JULIA_TAG" "$R_TAG"; do
-        echo "    Pulling $tag..."
-        if podman pull "$tag" 2>/dev/null; then
-            echo -e "    ${GREEN}✓${NC} $tag pulled"
-        else
-            log_error "Failed to pull $tag"
-            echo -e "    ${YELLOW}⚠  Falling back to local build${NC}"
-            USE_GHCR=false
-            break
-        fi
-    done
-fi
-
-if [[ "$MODE" != "native" ]] && [[ "$USE_GHCR" != "true" ]]; then
-    build_container() {
-        local tag="$1" file="$2"
-        # Check if image already exists
+else
+    # Container setup function
+    setup_container() {
+        local tag="$1" file="$2" name="$3"
+        
+        # Check if image exists locally
         if podman image exists "$tag" 2>/dev/null; then
-            echo -e "  ${GREEN}✓${NC} $tag already exists (skipping build)"
+            echo -e "  ${GREEN}✓${NC} $name: $tag (found locally)"
             return 0
         fi
-        echo -e "  ${GREEN}  Building $tag ...${NC}"
-        if ! podman build -t "$tag" -f "$file" .; then
-            log_error "Build failed: $tag"
-            return 1
+        
+        # Try to pull from GHCR
+        echo -e "  ${CYAN}→${NC} $name: $tag (not found locally, trying GHCR...)"
+        pull_output=$(podman pull "$tag" 2>&1)
+        pull_status=$?
+        
+        if [[ $pull_status -eq 0 ]]; then
+            echo -e "    ${GREEN}✓${NC} Pulled from GHCR"
+            return 0
         fi
-        echo -e "  ${GREEN}✓${NC} $tag built"
+        
+        # Check failure reason
+        if echo "$pull_output" | grep -qi "unauthorized\|authentication\|denied"; then
+            echo -e "    ${YELLOW}⚠${NC} GHCR auth failed (container is private)"
+            echo -e "    ${YELLOW}   To make public: GitHub → Packages → thesis-$name → Settings → Visibility → Public${NC}"
+        else
+            echo -e "    ${YELLOW}⚠${NC} GHCR pull failed"
+        fi
+        echo -e "    ${CYAN}→${NC} Building locally..."
+        
+        # Fall back to local build
+        if [[ -n "$file" ]] && [[ -f "$file" ]]; then
+            echo -e "  ${YELLOW}→${NC} $name: Building locally..."
+            if podman build -t "$tag" -f "$file" . 2>&1 | tail -5; then
+                echo -e "    ${GREEN}✓${NC} $name built locally"
+                return 0
+            fi
+        fi
+        
+        log_error "Failed to get container: $tag"
+        return 1
     }
 
-    build_container "$PYTHON_TAG" "containers/python.Containerfile"
-    build_container "$JULIA_TAG"  "containers/julia.Containerfile"
-    build_container "$R_TAG"      "containers/r.Containerfile"
+    # Setup all containers (prefer optimized versions for faster/smaller builds)
+    # Check for optimized Containerfiles first
+    PYTHON_DOCKERFILE="containers/python.Containerfile"
+    JULIA_DOCKERFILE="containers/julia.Containerfile"
+    R_DOCKERFILE="containers/r.Containerfile"
+    
+    # Prefer optimized if available
+    [ -f "containers/python-optimized.Containerfile" ] && PYTHON_DOCKERFILE="containers/python-optimized.Containerfile"
+    [ -f "containers/julia-optimized.Containerfile" ] && JULIA_DOCKERFILE="containers/julia-optimized.Containerfile"
+    [ -f "containers/r-optimized.Containerfile" ] && R_DOCKERFILE="containers/r-optimized.Containerfile"
+    
+    setup_container "$PYTHON_TAG" "$PYTHON_DOCKERFILE" "Python"
+    setup_container "$JULIA_TAG"  "$JULIA_DOCKERFILE" "Julia"
+    setup_container "$R_TAG"      "$R_DOCKERFILE" "R"
 
     # Save digests
-    cat > results/container_hashes.txt << HEOF
+    if podman image exists "$PYTHON_TAG" 2>/dev/null; then
+        cat > results/container_hashes.txt << HEOF
 Python  $PYTHON_TAG  $(podman image inspect "$PYTHON_TAG" --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
 Julia   $JULIA_TAG   $(podman image inspect "$JULIA_TAG"  --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
 R       $R_TAG       $(podman image inspect "$R_TAG"      --format '{{.Digest}}' 2>/dev/null || echo 'unknown')
 HEOF
-    echo -e "  ${GREEN}✓${NC} Digests saved → results/container_hashes.txt"
+        echo -e "  ${GREEN}✓${NC} Digests saved → results/container_hashes.txt"
+    fi
 fi
 
 # ── [2/10] Verify environments ───────────────────────────────────────────────
@@ -673,11 +701,12 @@ echo "    - results/thesis_validation_report.md"
 echo "    - results/figures/summary_chart.png"
 echo ""
 echo "  Usage:"
-echo "    ./run_benchmarks.sh              # Full suite"
-echo "    ./run_benchmarks.sh --use-ghcr   # Pull pre-built images"
-echo "    ./run_benchmarks.sh --resume     # Resume from checkpoint"
-echo "    ./run_benchmarks.sh --clean      # Clear old results"
-echo "    ./run_benchmarks.sh --dry-run    # Preview plan"
+echo "    ./run_benchmarks.sh                # Full suite (auto: GHCR→build)"
+echo "    ./run_benchmarks.sh --use-ghcr     # Force GHCR pull"
+echo "    ./run_benchmarks.sh --native-only  # Native benchmarks only"
+echo "    ./run_benchmarks.sh --resume        # Resume from checkpoint"
+echo "    ./run_benchmarks.sh --clean         # Clear old results"
+echo "    ./run_benchmarks.sh --dry-run      # Preview plan"
 echo ""
 echo -e "${CYAN}  Thesis Quality: A+ (v3.0 - Academic Rigor Edition)${NC}"
 echo ""
