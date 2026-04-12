@@ -96,7 +96,7 @@ main <- function() {
   # Configuration
   n_matrix <- 2500  # Matrix size
   n_sort <- 1000000  # Sorting size
-  n_runs <- 50  # Number of runs for statistical power
+  n_runs <- 30  # CLT threshold for stable bootstrap CIs  # Number of runs for statistical power
   n_warmup <- 5  # Warmup runs (excluded from measurement)
   
   results <- list()
@@ -115,7 +115,9 @@ main <- function() {
     mean = mean(times),
     std = sd(times),
     min = min(times),
-    max = max(times)
+    max = max(times),
+    median = median(times),
+    times = as.list(times)
   )
   cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$matrix_creation$min))
   cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", results$matrix_creation$mean, results$matrix_creation$std))
@@ -124,16 +126,41 @@ main <- function() {
   cat(sprintf("\n[2/5] Matrix Exponentiation ^10 (%d×%d)...\n", n_matrix, n_matrix))
   for (i in 1:n_warmup) benchmark_matrix_power(n_matrix)
   times <- replicate(n_runs, benchmark_matrix_power(n_matrix))
+  results$matrix_power <- list(
+    mean = mean(times),
+    std = sd(times),
+    min = min(times),
+    max = max(times),
+    median = median(times),
+    times = as.list(times)
+  )
+  cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$matrix_power$min))
   
   # Task 3: Sorting
   cat(sprintf("\n[3/5] Sorting %s Random Values...\n", format(n_sort, big.mark = ",")))
   for (i in 1:n_warmup) benchmark_sorting(n_sort)
   times <- replicate(n_runs, benchmark_sorting(n_sort))
+  results$sorting <- list(
+    mean = mean(times),
+    std = sd(times),
+    min = min(times),
+    max = max(times),
+    median = median(times),
+    times = as.list(times)
+  )
   
   # Task 4: Cross-product
   cat(sprintf("\n[4/5] Cross-Product A'A (%d×%d)...\n", n_matrix, n_matrix))
   for (i in 1:n_warmup) benchmark_crossproduct(n_matrix)
   times <- replicate(n_runs, benchmark_crossproduct(n_matrix))
+  results$crossproduct <- list(
+    mean = mean(times),
+    std = sd(times),
+    min = min(times),
+    max = max(times),
+    median = median(times),
+    times = as.list(times)
+  )
   
   # Task 5: Determinant
   cat(sprintf("\n[5/5] Matrix Determinant (%d×%d)...\n", n_matrix, n_matrix))
@@ -143,7 +170,9 @@ main <- function() {
     mean = mean(times),
     std = sd(times),
     min = min(times),
-    max = max(times)
+    max = max(times),
+    median = median(times),
+    times = as.list(times)
   )
   cat(sprintf("  ✓ Min: %.4fs (primary)\n", results$determinant$min))
   cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", results$determinant$mean, results$determinant$std))
@@ -167,14 +196,38 @@ main <- function() {
     matrix_size = n_matrix,
     sorting_size = n_sort,
     n_runs = n_runs,
+    n_warmup = n_warmup,
     methodology = "Minimum time as primary estimator (Chen & Revels 2016)",
+    enhanced_stats = TRUE,
     results = results
   )
   
   dir.create("results", showWarnings = FALSE, recursive = TRUE)
+  dir.create("validation", showWarnings = FALSE, recursive = TRUE)
   write_json(output, "results/matrix_ops_r.json", auto_unbox = TRUE, pretty = TRUE)
   
+  # Save times for Python statistical analysis
+  times_output <- list(
+    benchmark = "matrix_ops",
+    language = "r",
+    r_version = paste(R.version$major, R.version$minor, sep = "."),
+    runs = lapply(names(results), function(name) {
+      r <- results[[name]]
+      list(
+        name = name,
+        times = r$times,
+        min_time = r$min,
+        mean_time = r$mean,
+        std_time = r$std,
+        cv = r$std / r$mean,
+        median = r$median
+      )
+    })
+  )
+  write_json(times_output, "validation/matrix_ops_r_times.json", auto_unbox = TRUE, pretty = TRUE)
+  
   cat("✓ Results saved to: results/matrix_ops_r.json\n")
+  cat("✓ Times saved to: validation/matrix_ops_r_times.json\n")
   cat("\nNote: Minimum times are primary metrics (Chen & Revels 2016)\n")
   cat("      Mean/median provided for context only\n")
   cat("\nBLAS Library:", blas_info, "\n")

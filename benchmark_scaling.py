@@ -17,11 +17,19 @@ import time
 from pathlib import Path
 
 # Scaling configurations (following Tedesco et al. 2025)
+# Quick mode uses 10x smaller scales for faster testing
 MATRIX_SCALES = {
     'k1': 2500,   # Small (Tedesco k=1)
     'k2': 3500,   # Medium (Tedesco k=2)
     'k3': 5000,   # Large (Tedesco k=3)
     'k4': 7000    # Extra large (Tedesco k=4)
+}
+
+MATRIX_SCALES_QUICK = {
+    'k1': 500,    # Quick mode
+    'k2': 750,
+    'k3': 1000,
+    'k4': 1500,
 }
 
 VECTOR_SCALES = {
@@ -31,11 +39,25 @@ VECTOR_SCALES = {
     'xlarge': 5_000_000
 }
 
+VECTOR_SCALES_QUICK = {
+    'small': 10_000,
+    'medium': 25_000,
+    'large': 50_000,
+    'xlarge': 100_000,
+}
+
 IO_SCALES = {
     'small': 100_000,
     'medium': 500_000,
     'large': 1_000_000,
     'xlarge': 5_000_000
+}
+
+IO_SCALES_QUICK = {
+    'small': 10_000,
+    'medium': 25_000,
+    'large': 50_000,
+    'xlarge': 100_000,
 }
 
 class ScalingBenchmark:
@@ -134,8 +156,9 @@ class ScalingBenchmark:
 class MatrixCrossProductScaling(ScalingBenchmark):
     """Matrix cross-product at multiple scales."""
     
-    def __init__(self):
-        super().__init__('matrix_crossproduct', MATRIX_SCALES)
+    def __init__(self, quick=False):
+        scales = MATRIX_SCALES_QUICK if quick else MATRIX_SCALES
+        super().__init__('matrix_crossproduct', scales)
     
     def run_at_scale(self, scale_name, n):
         # Pre-generate matrix (not timed)
@@ -152,8 +175,9 @@ class MatrixCrossProductScaling(ScalingBenchmark):
 class MatrixDeterminantScaling(ScalingBenchmark):
     """Matrix determinant at multiple scales."""
     
-    def __init__(self):
-        super().__init__('matrix_determinant', MATRIX_SCALES)
+    def __init__(self, quick=False):
+        scales = MATRIX_SCALES_QUICK if quick else MATRIX_SCALES
+        super().__init__('matrix_determinant', scales)
     
     def run_at_scale(self, scale_name, n):
         # Pre-generate matrix
@@ -170,8 +194,9 @@ class MatrixDeterminantScaling(ScalingBenchmark):
 class SortingScaling(ScalingBenchmark):
     """Sorting at multiple scales."""
     
-    def __init__(self):
-        super().__init__('sorting', VECTOR_SCALES)
+    def __init__(self, quick=False):
+        scales = VECTOR_SCALES_QUICK if quick else VECTOR_SCALES
+        super().__init__('sorting', scales)
     
     def run_at_scale(self, scale_name, n):
         # Pre-generate data
@@ -188,45 +213,70 @@ class SortingScaling(ScalingBenchmark):
 class CSVWriteScaling(ScalingBenchmark):
     """CSV write at multiple scales."""
     
-    def __init__(self):
-        super().__init__('csv_write', IO_SCALES)
+    def __init__(self, quick=False):
+        scales = IO_SCALES_QUICK if quick else IO_SCALES
+        super().__init__('csv_write', scales)
     
     def run_at_scale(self, scale_name, n_rows):
-        import pandas as pd
-        
-        # Pre-generate data
-        df = pd.DataFrame({
-            'id': range(n_rows),
-            'value': np.random.randn(n_rows),
-            'category': np.random.choice(['A', 'B', 'C', 'D'], n_rows)
-        })
-        
-        # Timed operation
-        start = time.perf_counter()
-        df.to_csv('data/benchmark_scaling.csv', index=False)
-        elapsed = time.perf_counter() - start
-        
-        # Cleanup
-        Path('data/benchmark_scaling.csv').unlink(missing_ok=True)
+        try:
+            import pandas as pd
+            # Pre-generate data
+            df = pd.DataFrame({
+                'id': range(n_rows),
+                'value': np.random.randn(n_rows),
+                'category': np.random.choice(['A', 'B', 'C', 'D'], n_rows)
+            })
+            
+            # Timed operation
+            start = time.perf_counter()
+            df.to_csv('data/benchmark_scaling.csv', index=False)
+            elapsed = time.perf_counter() - start
+            
+            # Cleanup
+            Path('data/benchmark_scaling.csv').unlink(missing_ok=True)
+        except ImportError:
+            # Fallback without pandas
+            import csv
+            data = [(i, np.random.randn(), np.random.choice(['A', 'B', 'C', 'D']))
+                    for i in range(n_rows)]
+            start = time.perf_counter()
+            with open('data/benchmark_scaling.csv', 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['id', 'value', 'category'])
+                writer.writerows(data)
+            elapsed = time.perf_counter() - start
+            Path('data/benchmark_scaling.csv').unlink(missing_ok=True)
         
         return elapsed
 
 
 def main():
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Data Scaling Benchmark Suite')
+    parser.add_argument('--quick', action='store_true',
+                        help='Use smaller scales for faster testing')
+    parser.add_argument('--runs', type=int, default=10,
+                        help='Number of runs per scale (default: 10)')
+    args = parser.parse_args()
+    
     print("="*70)
     print("DATA SCALING BENCHMARK SUITE")
     print("Following Tedesco et al. (2025) methodology")
+    if args.quick:
+        print("(Quick mode - smaller scales)")
     print("="*70)
     
     # Run all scaling benchmarks
     benchmarks = [
-        MatrixCrossProductScaling(),
-        MatrixDeterminantScaling(),
-        SortingScaling(),
-        CSVWriteScaling()
+        MatrixCrossProductScaling(quick=args.quick),
+        MatrixDeterminantScaling(quick=args.quick),
+        SortingScaling(quick=args.quick),
+        CSVWriteScaling(quick=args.quick)
     ]
     
     for benchmark in benchmarks:
+        benchmark.n_runs = args.runs
         benchmark.run_all_scales()
         benchmark.analyze_complexity()
         benchmark.save_results()

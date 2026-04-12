@@ -1,19 +1,35 @@
 #!/usr/bin/env python3
 """
-===============================================================================
+================================================================================
 Scaling Analysis & Visualization Tool
-===============================================================================
+================================================================================
 Analyzes scaling benchmark results and generates publication-quality plots
-===============================================================================
+================================================================================
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 import json
 import glob
+import sys
 from pathlib import Path
-from scipy.optimize import curve_fit
-from scipy.stats import linregress
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Non-interactive backend
+    import matplotlib.pyplot as plt
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+    print("Warning: matplotlib not installed. Visualization skipped.")
+    print("Install with: pip install matplotlib seaborn")
+
+try:
+    from scipy.optimize import curve_fit
+    from scipy.stats import linregress
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
+    print("Warning: scipy not installed. Complexity fitting skipped.")
 
 # Complexity functions for fitting
 def linear(x, a, b):
@@ -57,7 +73,11 @@ class ScalingAnalyzer:
         """Plot scaling behavior for a benchmark."""
         if benchmark_name not in self.results:
             print(f"❌ Benchmark '{benchmark_name}' not found")
-            return
+            return None, None
+        
+        if not HAS_MATPLOTLIB:
+            print("  Skipping plot (matplotlib not installed)")
+            return self._estimate_complexity(benchmark_name)
         
         data = self.results[benchmark_name]
         results = data['results']
@@ -79,23 +99,24 @@ class ScalingAnalyzer:
                  linewidth=2, markersize=8)
         
         # Try to fit complexity curves
-        try:
-            # Try O(n log n) fit
-            popt_nlogn, _ = curve_fit(nlogn, scale_values, min_times)
-            fit_nlogn = nlogn(scale_values, *popt_nlogn)
-            ax1.plot(scale_values, fit_nlogn, '--', alpha=0.5, 
-                     label='O(n log n) fit', linewidth=1.5)
-        except:
-            pass
-        
-        try:
-            # Try O(n²) fit
-            popt_quad, _ = curve_fit(quadratic, scale_values, min_times)
-            fit_quad = quadratic(scale_values, *popt_quad)
-            ax1.plot(scale_values, fit_quad, '--', alpha=0.5, 
-                     label='O(n²) fit', linewidth=1.5)
-        except:
-            pass
+        if HAS_SCIPY:
+            try:
+                # Try O(n log n) fit
+                popt_nlogn, _ = curve_fit(nlogn, scale_values, min_times)
+                fit_nlogn = nlogn(scale_values, *popt_nlogn)
+                ax1.plot(scale_values, fit_nlogn, '--', alpha=0.5, 
+                         label='O(n log n) fit', linewidth=1.5)
+            except:
+                pass
+            
+            try:
+                # Try O(n²) fit
+                popt_quad, _ = curve_fit(quadratic, scale_values, min_times)
+                fit_quad = quadratic(scale_values, *popt_quad)
+                ax1.plot(scale_values, fit_quad, '--', alpha=0.5, 
+                         label='O(n²) fit', linewidth=1.5)
+            except:
+                pass
         
         ax1.set_xlabel('Data Size (n)', fontsize=12)
         ax1.set_ylabel('Time (seconds)', fontsize=12)
@@ -108,14 +129,18 @@ class ScalingAnalyzer:
                    label='Minimum time')
         
         # Linear fit in log-log space to estimate exponent
-        log_scale = np.log(scale_values)
-        log_time = np.log(min_times)
-        slope, intercept, r_value, p_value, std_err = linregress(log_scale, log_time)
+        slope, r_squared = self._estimate_complexity(benchmark_name)
         
-        # Plot fitted line
-        fit_log = np.exp(intercept) * scale_values**slope
-        ax2.loglog(scale_values, fit_log, '--', alpha=0.7,
-                   label=f'Fit: O(n^{slope:.2f}), R²={r_value**2:.3f}')
+        if HAS_SCIPY and slope is not None:
+            log_scale = np.log(scale_values)
+            log_time = np.log(min_times)
+            slope, intercept, r_value, p_value, std_err = linregress(log_scale, log_time)
+            r_squared = r_value**2
+            
+            # Plot fitted line
+            fit_log = np.exp(intercept) * scale_values**slope
+            ax2.loglog(scale_values, fit_log, '--', alpha=0.7,
+                       label=f'Fit: O(n^{slope:.2f}), R²={r_squared:.3f}')
         
         # Add reference lines
         ref_linear = min_times[0] * (scale_values / scale_values[0])
@@ -141,7 +166,34 @@ class ScalingAnalyzer:
         
         plt.close()
         
-        return slope, r_value**2
+        return slope, r_squared
+    
+    def _estimate_complexity(self, benchmark_name):
+        """Estimate complexity without plotting."""
+        if benchmark_name not in self.results:
+            return None, None
+        
+        results = self.results[benchmark_name]['results']
+        scale_names = list(results.keys())
+        scale_values = np.array([results[s]['scale_value'] for s in scale_names])
+        min_times = np.array([results[s]['min'] for s in scale_names])
+        
+        if len(scale_values) < 2:
+            return None, None
+        
+        if not HAS_SCIPY:
+            return None, None
+        
+        # Simple ratio-based estimation
+        log_scale = np.log(scale_values)
+        log_time = np.log(min_times)
+        
+        try:
+            from scipy.stats import linregress
+            slope, intercept, r_value, _, _ = linregress(log_scale, log_time)
+            return slope, r_value**2
+        except:
+            return None, None
     
     def generate_comparison_table(self):
         """Generate comparison table across all benchmarks."""
@@ -173,6 +225,10 @@ class ScalingAnalyzer:
     
     def generate_multi_benchmark_plot(self):
         """Plot multiple benchmarks on same axes for comparison."""
+        if not HAS_MATPLOTLIB:
+            print("\nSkipping multi-benchmark plot (matplotlib not installed)")
+            return
+        
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
         
         colors = plt.cm.tab10(np.linspace(0, 1, len(self.results)))

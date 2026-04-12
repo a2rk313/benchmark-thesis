@@ -131,7 +131,9 @@ function main()
         "mean" => mean(times),
         "std" => std(times),
         "min" => minimum(times),
-        "max" => maximum(times)
+        "max" => maximum(times),
+        "median" => median(times),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["matrix_creation"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["matrix_creation"]["mean"], results["matrix_creation"]["std"])
@@ -146,7 +148,9 @@ function main()
         "mean" => mean(times),
         "std" => std(times),
         "min" => minimum(times),
-        "max" => maximum(times)
+        "max" => maximum(times),
+        "median" => median(times),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["matrix_power"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["matrix_power"]["mean"], results["matrix_power"]["std"])
@@ -161,7 +165,9 @@ function main()
         "mean" => mean(times),
         "std" => std(times),
         "min" => minimum(times),
-        "max" => maximum(times)
+        "max" => maximum(times),
+        "median" => median(times),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["sorting"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["sorting"]["mean"], results["sorting"]["std"])
@@ -176,7 +182,9 @@ function main()
         "mean" => mean(times),
         "std" => std(times),
         "min" => minimum(times),
-        "max" => maximum(times)
+        "max" => maximum(times),
+        "median" => median(times),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["crossproduct"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["crossproduct"]["mean"], results["crossproduct"]["std"])
@@ -191,12 +199,15 @@ function main()
         "mean" => mean(times),
         "std" => std(times),
         "min" => minimum(times),
+        "max" => maximum(times),
+        "median" => median(times),
+        "times" => times
         "max" => maximum(times)
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["determinant"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["determinant"]["mean"], results["determinant"]["std"])
     
-    # Save results
+    # Save results with enhanced statistics
     println("\n" * "=" ^ 70)
     println("SAVING RESULTS...")
     println("=" ^ 70)
@@ -204,19 +215,82 @@ function main()
     output = Dict(
         "language" => "Julia",
         "julia_version" => string(VERSION),
+        "julia_num_threads" => string(Threads.nthreads()),
         "matrix_size" => n_matrix,
         "sorting_size" => n_sort,
         "n_runs" => n_runs,
+        "n_warmup" => n_warmup,
         "methodology" => "Minimum time as primary estimator (Chen & Revels 2016)",
+        "enhanced_stats" => true,
         "results" => results
     )
     
     mkpath("results")
+    mkpath("validation")
     open("results/matrix_ops_julia.json", "w") do f
         JSON3.pretty(f, output)
     end
     
+    # Save individual times for Python statistical analysis
+    times_output = Dict(
+        "benchmark" => "matrix_ops",
+        "language" => "julia",
+        "julia_version" => string(VERSION),
+        "runs" => [
+            Dict(
+                "name" => "matrix_creation",
+                "times" => results["matrix_creation"]["times"],
+                "min_time" => results["matrix_creation"]["min"],
+                "mean_time" => results["matrix_creation"]["mean"],
+                "std_time" => results["matrix_creation"]["std"],
+                "cv" => results["matrix_creation"]["std"] / results["matrix_creation"]["mean"],
+                "median" => median(results["matrix_creation"]["times"])
+            ),
+            Dict(
+                "name" => "matrix_power",
+                "times" => results["matrix_power"]["times"],
+                "min_time" => results["matrix_power"]["min"],
+                "mean_time" => results["matrix_power"]["mean"],
+                "std_time" => results["matrix_power"]["std"],
+                "cv" => results["matrix_power"]["std"] / results["matrix_power"]["mean"],
+                "median" => median(results["matrix_power"]["times"])
+            ),
+            Dict(
+                "name" => "sorting",
+                "times" => results["sorting"]["times"],
+                "min_time" => results["sorting"]["min"],
+                "mean_time" => results["sorting"]["mean"],
+                "std_time" => results["sorting"]["std"],
+                "cv" => results["sorting"]["std"] / results["sorting"]["mean"],
+                "median" => median(results["sorting"]["times"])
+            ),
+            Dict(
+                "name" => "crossproduct",
+                "times" => results["crossproduct"]["times"],
+                "min_time" => results["crossproduct"]["min"],
+                "mean_time" => results["crossproduct"]["mean"],
+                "std_time" => results["crossproduct"]["std"],
+                "cv" => results["crossproduct"]["std"] / results["crossproduct"]["mean"],
+                "median" => median(results["crossproduct"]["times"])
+            ),
+            Dict(
+                "name" => "determinant",
+                "times" => results["determinant"]["times"],
+                "min_time" => results["determinant"]["min"],
+                "mean_time" => results["determinant"]["mean"],
+                "std_time" => results["determinant"]["std"],
+                "cv" => results["determinant"]["std"] / results["determinant"]["mean"],
+                "median" => median(results["determinant"]["times"])
+            )
+        ]
+    )
+    
+    open("validation/matrix_ops_julia_times.json", "w") do f
+        JSON3.pretty(f, times_output)
+    end
+    
     println("✓ Results saved to: results/matrix_ops_julia.json")
+    println("✓ Times saved to: validation/matrix_ops_julia_times.json")
     println("\nNote: Minimum times are primary metrics (Chen & Revels 2016)")
     println("      Mean/median provided for context only")
 end

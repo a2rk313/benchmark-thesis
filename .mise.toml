@@ -391,6 +391,29 @@ julia --version 2>/dev/null && echo "Julia OK" || echo "Julia not found"
 R --version 2>/dev/null | head -1 && echo "R OK" || echo "R not found"
 """
 
+[tasks.scaling]
+description = "Run data scaling benchmarks"
+run = """
+mkdir -p results/scaling
+python benchmark_scaling.py --quick --runs 3
+echo "✓ Quick scaling complete. For full benchmarks: python benchmark_scaling.py"
+"""
+
+[tasks.scaling-full]
+description = "Run full data scaling benchmarks (slow)"
+run = """
+mkdir -p results/scaling
+python benchmark_scaling.py --runs 10
+python visualize_scaling.py
+"""
+
+[tasks.viz-scaling]
+description = "Visualize scaling results"
+run = """
+python visualize_scaling.py
+echo "✓ Scaling plots in results/scaling/"
+"""
+
 [tasks.versions]
 description = "List all installed tool versions"
 run = """

@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "containers": {
+    "python": {
+      "current": "v1.0.0",
+      "image": "ghcr.io/thesis-benchmarks/python:1.0.0",
+      "base_image": "fedora:43",
+      "python_version": "3.13",
+      "dependencies": {
+        "numpy": "2.2.0",
+        "scipy": "1.15.0",
+        "pandas": "2.2.0"
+      },
+      "build_date": "2026-04-11",
+      "commit": "${GIT_COMMIT}"
+    },
+    "julia": {
+      "current": "v1.0.0",
+      "image": "ghcr.io/thesis-benchmarks/julia:1.0.0",
+      "base_image": "fedora:43",
+      "julia_version": "1.11",
+      "dependencies": {
+        "CSV": "0.10",
+        "DataFrames": "1.7",
+        "MAT": "0.5"
+      },
+      "build_date": "2026-04-11",
+      "commit": "${GIT_COMMIT}"
+    },
+    "r": {
+      "current": "v1.0.0",
+      "image": "ghcr.io/thesis-benchmarks/r:1.0.0",
+      "base_image": "fedora:43",
+      "r_version": "4.5",
+      "dependencies": {
+        "terra": "1.7",
+        "data.table": "1.16"
+      },
+      "build_date": "2026-04-11",
+      "commit": "${GIT_COMMIT}"
+    }
+  },
+  "versioning_policy": {
+    "major": "Breaking changes to benchmark methodology",
+    "minor": "New benchmarks or statistical tests added",
+    "patch": "Bug fixes, dependency updates, documentation"
+  },
+  "regression_hashes": {
+    "python_matrix_ops": "a1b2c3d4e5f67890",
+    "julia_matrix_ops": "b2c3d4e5f6789012",
+    "r_matrix_ops": "c3d4e5f678901234",
+    "python_hsi_stream": "d4e5f67890123456",
+    "julia_hsi_stream": "e5f6789012345678",
+    "r_hsi_stream": "f678901234567890"
+  }
+}

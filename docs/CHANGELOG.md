@@ -459,4 +459,81 @@ Potential v4.1 features:
 
 ---
 
+## v2.0 - Statistical Enhancements (April 2026)
+
+### Summary
+
+This update adds **publication-quality statistical analysis** with robust estimators, multiple comparison corrections, and comprehensive quality assurance tools.
+
+### New Statistical Functions
+
+| Function | Description |
+|----------|-------------|
+| `median_of_means()` | Robust estimator combining efficiency with outlier resistance |
+| `dagostino_pearson_test()` | Normality test for n ≥ 50 |
+| `jarque_bera_test()` | Normality test for n ≥ 2000 |
+| `cohen_d()` | Cohen's d effect size |
+| `glass_delta()` | Glass's Δ effect size |
+| `bonferroni_correction()` | Multiple comparison correction |
+| `benjamini_hochberg_correction()` | FDR-controlling correction |
+| `power_analysis_required_runs()` | Sample size planning |
+| `detect_outliers_iqr()` | IQR-based outlier detection |
+| `bootstrap_ci()` | Non-parametric confidence intervals |
+
+### New Benchmarks
+
+| File | Description |
+|------|-------------|
+| `real_modis_timeseries.py` | Real NASA MODIS NDVI satellite data benchmark |
+| `parallel_mapreduce.py` | Embarrassingly parallel tile processing |
+| `cross_language_converter.py` | Converts Julia/R output to Python format |
+
+### Quality Assurance Tools
+
+| File | Purpose |
+|------|---------|
+| `regression_tests.py` | Hash-based correctness validation |
+| `detect_flaky.py` | CV-based variance/flakiness detection |
+| `benchmark_diff.py` | Baseline comparison tool |
+| `trend_analysis.py` | Performance tracking over time |
+| `jit_tracking.py` | Julia JIT compilation overhead tracking |
+
+### Documentation Added
+
+| Document | Description |
+|----------|-------------|
+| `ENHANCEMENTS_INDEX.md` | Quick navigation guide to all v2.0 features |
+| `regression_testing.md` | Regression testing methodology |
+| `detect_flaky.md` | Flaky test detection guide |
+| `benchmark_diffing.md` | Baseline comparison guide |
+| `trend_analysis.md` | Performance trend tracking |
+| `OUTLIER_HANDLING.md` | Outlier detection methodology |
+
+### Test Suite
+
+**38 tests** in `test_enhancements.py` covering:
+- Statistical function correctness
+- Multiple comparison corrections
+- Outlier detection
+- Bootstrap confidence intervals
+- Effect size calculations
+- Hash validation
+- Flaky detection
+- Benchmark diffing
+
+### Julia/R Updates
+
+- `matrix_ops.jl` - Now saves individual times arrays for statistical analysis
+- `matrix_ops.R` - Now saves individual times arrays for statistical analysis
+- Both output `median` field for cross-language comparison
+
+### Impact
+
+- **Statistical rigor**: Publication-quality analysis ready for thesis
+- **Quality assurance**: Automated regression and flakiness detection
+- **Cross-language**: Unified analysis across Python, Julia, and R
+- **Reproducibility**: Comprehensive documentation for all methods
+
+---
+
 **Upgrade now**: `mise install && mise run setup` 🚀

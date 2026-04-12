@@ -54,45 +54,54 @@ BENCHMARK_CONFIG = {
 class BenchmarkResult:
     """Comprehensive benchmark result with statistical analysis."""
 
-    # Basic timing
-    min_time: float
-    mean_time: float
-    std_time: float
-    median_time: float
-    min_time: float
-    max_time: float
+    name: str = ""
+    language: str = ""
 
-    # Statistical measures
-    runs: int
-    cv: float  # Coefficient of variation
-    iqr: float  # Interquartile range
+    min_time: float = 0.0
+    mean_time: float = 0.0
+    std_time: float = 0.0
+    median_time: float = 0.0
+    max_time: float = 0.0
 
-    # Confidence intervals
-    ci_95_lower: float
-    ci_95_upper: float
-    ci_99_lower: float
-    ci_99_upper: float
+    runs: int = 0
+    cv: float = 0.0
+    iqr: float = 0.0
 
-    # Normality tests
-    normality_test: str
-    normality_p_value: float
-    is_normal: bool
+    ci_95_lower: float = 0.0
+    ci_95_upper: float = 0.0
+    ci_99_lower: float = 0.0
+    ci_99_upper: float = 0.0
 
-    # Significance testing (if compared)
+    normality_test: str = "shapiro-wilk"
+    normality_p_value: float = 1.0
+    is_normal: bool = True
+
     compared_to: Optional[str] = None
     speedup: Optional[float] = None
     p_value: Optional[float] = None
     is_significant: Optional[bool] = None
     significance_level: Optional[float] = None
 
-    # System state
     cpu_freq_mhz: Optional[float] = None
     cpu_freq_min: Optional[float] = None
     cpu_freq_max: Optional[float] = None
     memory_mb: Optional[float] = None
 
-    # Validation
     output_hash: Optional[str] = None
+
+    median_of_means: Optional[float] = None
+    mom_blocks: Optional[int] = None
+
+    normality_dagostino_p: Optional[float] = None
+    normality_jarque_p: Optional[float] = None
+
+    allocations_peak: Optional[int] = None
+    memory_rss_mb: Optional[float] = None
+    memory_vms_mb: Optional[float] = None
+
+    scaling_factor: Optional[float] = None
+    sizes_tested: Optional[List[int]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

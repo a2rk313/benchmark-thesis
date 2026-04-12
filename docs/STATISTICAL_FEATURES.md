@@ -405,3 +405,169 @@ After running complete benchmark suite, verify:
 - [ ] Cross-language validation hashes match (or explained)
 
 **Your thesis now has publication-quality statistical analysis! 🎓📊**
+
+---
+
+## Advanced Statistical Features (v2.0)
+
+### New in Version 2.0
+
+#### 1. Enhanced Statistical Methods (`benchmarks/benchmark_stats.py`)
+
+**New Estimators:**
+- **Median-of-Means**: Robust alternative to mean, combines efficiency with outlier resistance
+  ```python
+  from benchmark_stats import median_of_means
+  mom, blocks = median_of_means(times)  # Returns (value, n_blocks)
+  ```
+
+- **Multiple Normality Tests**: 
+  ```python
+  from benchmark_stats import shapiro_wilk_test, dagostino_pearson_test, jarque_bera_test
+  p_sw, is_normal = shapiro_wilk_test(times)      # Best for n < 50
+  p_dp, _ = dagostino_pearson_test(times)         # Best for n >= 50
+  p_jb, _ = jarque_bera_test(times)              # Best for n >= 2000
+  ```
+
+**Effect Sizes:**
+```python
+from benchmark_stats import cohen_d, glass_delta
+
+# Cohen's d: standardized mean difference
+d = cohen_d(sample1, sample2)
+# |d| < 0.2: negligible, 0.2-0.5: small, 0.5-0.8: medium, >= 0.8: large
+
+# Glass's Δ: uses control group SD (better for unequal variances)
+delta = glass_delta(control_sample, treatment_sample)
+```
+
+**Multiple Comparison Corrections:**
+```python
+from benchmark_stats import bonferroni_correction, benjamini_hochberg_correction
+
+p_values = [0.01, 0.02, 0.03, 0.04, 0.05]
+
+# Bonferroni: conservative (α/n)
+bonf_sig = bonferroni_correction(p_values, alpha=0.05)
+
+# Benjamini-Hochberg: controls FDR, less conservative
+rejected, adjusted_p = benjamini_hochberg_correction(p_values, alpha=0.05)
+```
+
+#### 2. Power Analysis (`benchmarks/benchmark_stats.py`)
+
+Calculate required sample size for desired statistical power:
+```python
+from benchmark_stats import power_analysis_required_runs, estimate_ci_width_required_runs
+
+# Required runs for 80% power with d=0.5 effect size
+n = power_analysis_required_runs(effect_size=0.5, alpha=0.05, power=0.8)
+
+# Required runs for 5% CI width
+n = estimate_ci_width_required_runs(times, target_width_pct=0.05)
+```
+
+#### 3. Thread Scaling Analysis
+
+Analyze performance scaling across thread counts:
+```python
+from benchmark_stats import run_thread_scaling_analysis
+
+results = run_thread_scaling_analysis(
+    func=my_benchmark,
+    name="matrix_ops",
+    language="python",
+    thread_counts=[1, 2, 4, 8, 16],
+    runs=10
+)
+# Returns: max_speedup, optimal_threads, efficiency per thread count
+```
+
+#### 4. Memory Profiling
+
+Enhanced memory tracking with system-level metrics:
+```python
+# BenchmarkResult now includes:
+result.memory_rss_mb       # Resident Set Size
+result.memory_vms_mb       # Virtual Memory Size  
+result.allocations_peak    # Peak Python allocations
+```
+
+#### 5. Outlier Detection
+
+IQR-based outlier detection with documentation:
+```python
+from benchmark_stats import detect_outliers_iqr
+
+filtered_times, outlier_indices = detect_outliers_iqr(times, factor=1.5)
+# factor=1.5: standard outliers
+# factor=3.0: extreme outliers
+```
+
+See `docs/OUTLIER_HANDLING.md` for complete methodology.
+
+#### 6. LaTeX Table Generation
+
+Publication-ready tables with booktabs:
+```python
+from benchmark_stats import generate_latex_table
+
+latex = generate_latex_table(comparison_dict, output_path="table.tex")
+# Output includes: \toprule, \midrule, \bottomrule
+```
+
+### New Benchmark Scenarios
+
+#### Real MODIS Time Series (`benchmarks/real_modis_timeseries.py`)
+Downloads real NASA MODIS NDVI data for authentic benchmarking:
+```bash
+python3 benchmarks/real_modis_timeseries.py
+```
+
+#### Parallel Map-Reduce (`benchmarks/parallel_mapreduce.py`)
+Tests embarrassingly parallel workloads (tile processing):
+```bash
+python3 benchmarks/parallel_mapreduce.py
+```
+
+### Quality Assurance Tools
+
+#### Regression Testing (`benchmarks/regression_tests.py`)
+Detect performance regressions against baseline:
+```bash
+python3 benchmarks/regression_tests.py results/ --export  # Update baseline
+python3 benchmarks/regression_tests.py results/            # Check against baseline
+```
+
+#### Flaky Test Detection (`benchmarks/detect_flaky.py`)
+Identify unstable benchmarks with high variance:
+```bash
+python3 benchmarks/detect_flaky.py results/ --cv-threshold=0.10
+```
+
+#### Benchmark Diffing (`benchmarks/benchmark_diff.py`)
+Compare against baseline commits:
+```bash
+python3 benchmarks/benchmark_diff.py baseline/ current/ --output=diff.md
+```
+
+#### Trend Analysis (`benchmarks/trend_analysis.py`)
+Track performance over time:
+```bash
+python3 benchmarks/trend_analysis.py results/ --output=trends.json
+```
+
+### Julia JIT Tracking (`benchmarks/jit_tracking.py`)
+
+Track Julia's compilation overhead separately:
+```bash
+python3 benchmarks/jit_tracking.py
+# Creates benchmarks/julia_precompile.jl for faster startup
+```
+
+### CI/CD Enhancements (`.github/workflows/run_benchmarks_v2.yml`)
+
+- **Data caching**: Downloads cached between runs
+- **Full matrix**: Tests Python/Julia/R × Native/Container
+- **Baseline comparison**: Optional diff against specified commit
+- **Flaky detection**: Automatic variance analysis
