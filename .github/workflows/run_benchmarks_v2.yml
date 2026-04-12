@@ -128,6 +128,14 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y podman hyperfine time
 
+      - name: Prepare data directory
+        run: mkdir -p data results
+
+      - name: Prepare benchmark datasets
+        if: steps.cache-data.outputs.cache-hit != 'true'
+        run: |
+          python3 tools/download_data.py --all --synthetic || true
+
       - name: Run benchmarks in containers
         run: ./run_benchmarks.sh --container-only --use-ghcr  # Force GHCR pull in CI
 
