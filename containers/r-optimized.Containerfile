@@ -30,9 +30,9 @@ RUN printf '%s\n' \
     'options(Ncpus = 4L)' \
     > /root/.Rprofile
 
-# Install R packages for benchmarks
+# Install R packages for benchmarks (all required packages)
 RUN Rscript -e ' \
-    install.packages(c("data.table", "jsonlite", "FNN", "terra", "sf", "stars"), \
+    install.packages(c("data.table", "jsonlite", "digest", "FNN", "terra", "sf", "stars"), \
                     repos = "https://cloud.r-project.org/"); \
     cat("Packages installed\n")'
 
