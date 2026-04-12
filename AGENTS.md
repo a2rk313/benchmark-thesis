@@ -489,12 +489,12 @@ julia = "1.11.4"      # Must match container
 r = "4.5.3"           # Must match container
 ```
 
-### Container Versions (Fedora 43)
+### Container Versions
 | Language | Version | Container Tag |
 |----------|---------|---------------|
-| Python | 3.13.12 | `thesis-python:fedora` |
-| Julia | 1.11.4 | `thesis-julia:fedora` |
-| R | 4.5.3 | `thesis-r:fedora` |
+| Python | 3.13.12 | `thesis-python:latest` |
+| Julia | 1.11.9 | `thesis-julia:latest` |
+| R | 4.5.3 | `thesis-r:latest` |
 
 ---
 

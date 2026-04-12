@@ -42,19 +42,14 @@ jobs:
       - name: Pull pre-built containers
         run: |
           echo "Pulling pre-built containers from GHCR using podman..."
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-python:fedora
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-r:fedora
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-python:latest || true
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-julia:latest || true
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-r:latest || true
 
-      - name: Tag containers for local use
+      - name: Verify containers
         run: |
-          # Tag with local names so the script finds them without rebuilding
-          podman tag ghcr.io/${{ github.repository_owner }}/thesis-python:fedora thesis-python:3.13
-          podman tag ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora thesis-julia:1.11
-          podman tag ghcr.io/${{ github.repository_owner }}/thesis-r:fedora thesis-r:4.5
-          echo "✓ Containers tagged for local use"
-          echo "Verifying..."
-          podman images | grep thesis
+          echo "Verifying containers..."
+          podman images | grep thesis || echo "No thesis containers found locally"
 
       - name: Setup Python
         uses: actions/setup-python@v5

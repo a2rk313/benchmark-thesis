@@ -45,10 +45,10 @@ tar -czf results.tar.gz results/
 
 | Tag | Description |
 |-----|-------------|
-| `thesis-python:fedora` | Python on Fedora 43 |
-| `thesis-julia:fedora` | Julia 1.11 on Fedora 43 |
-| `thesis-r:fedora` | R 4.5 on Fedora 43 |
-| `thesis-*:slim` | Optimized smaller versions |
+| `thesis-python:latest` | Python 3.13 on Debian Bookworm |
+| `thesis-julia:latest` | Julia 1.11.9 on Debian Bookworm |
+| `thesis-r:latest` | R 4.5.3 on Debian |
+| Base image | python:3.13-slim-bookworm, julia:1.11-bookworm, r-base:4.5.3 |
 
 ---
 
