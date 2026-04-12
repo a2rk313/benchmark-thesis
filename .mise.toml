@@ -5,7 +5,7 @@
 # For container-based execution, use run_benchmarks.sh instead.
 #
 # IMPORTANT VERSION NOTES:
-# - Container images use Fedora 43 with Python 3.13, R 4.5.x, Julia 1.11
+# - Container images use Debian Bookworm with Python 3.13, R 4.5.3, Julia 1.11.9
 # - Python 3.13 introduced experimental features - must match for fairness
 # - All languages are managed by mise with explicit backend declarations
 # - For thesis reproducibility, prefer container execution
@@ -21,8 +21,8 @@ min_version = "2024.1.0"
 # Python 3.13.12 - managed by mise (uses uv backend)
 python = "3.13.12"
 
-# Julia 1.11.4 - managed by mise (asdf backend)
-julia = "1.11.4"
+# Julia 1.11.9 - managed by mise (asdf backend)
+julia = "1.11.9"
 
 # R 4.5.3 - managed by mise (asdf backend)
 # Note: R plugin from mise-plugins/mise-r
@@ -96,7 +96,7 @@ echo "=============================================="
 echo "Installing Python packages..."
 echo "=============================================="
 source .venv/bin/activate
-uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray
+uv pip install numpy scipy pandas matplotlib rasterio geopandas scikit-learn psutil tqdm seaborn shapely pyproj fiona h5py rioxarray xarray json3
 
 echo ""
 echo "=============================================="
@@ -123,7 +123,7 @@ echo "Installing Python 3.13..."
 echo "=============================================="
 echo ""
 echo "IMPORTANT: Python 3.13 is REQUIRED because:"
-echo "  - Container uses Python 3.13 from Fedora 43"
+echo "  - Container uses Python 3.13 from Debian Bookworm"
 echo "  - Python 3.13 has different optimizations than 3.12"
 echo "  - Using 3.12 would invalidate benchmark comparisons"
 echo ""
@@ -367,9 +367,9 @@ echo "  Julia: $(julia --version 2>/dev/null | head -1 || echo 'not found')"
 echo "  R: $(R --version 2>/dev/null | head -1 || echo 'not found')"
 echo ""
 echo "Container Versions (for reference):"
-echo "  Python: 3.13.12 (Fedora 43)"
-echo "  Julia:  1.11.4 (Fedora 43)"
-echo "  R:      4.5.3 (Fedora 43)"
+echo "  Python: 3.13.12 (Debian Bookworm)"
+echo "  Julia:  1.11.9 (Debian Bookworm)"
+echo "  R:      4.5.3 (Debian)"
 echo ""
 echo "Managed by mise with explicit backends:"
 echo "  - python: mise (uv backend)"
