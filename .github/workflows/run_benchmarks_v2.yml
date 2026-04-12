@@ -121,9 +121,9 @@ jobs:
 
       - name: Pull containers
         run: |
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-python:fedora || true
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-julia:fedora || true
-          podman pull ghcr.io/${{ github.repository_owner }}/thesis-r:fedora || true
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-python:latest || true
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-julia:latest || true
+          podman pull ghcr.io/${{ github.repository_owner }}/thesis-r:latest || true
 
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y podman hyperfine time

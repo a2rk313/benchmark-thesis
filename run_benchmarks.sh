@@ -149,9 +149,9 @@ OS_TYPE=$(detect_os)
 # Container image tags
 # GHCR tags used by default (work for both CI and local if GHCR images exist)
 OWNER=$(echo "${GITHUB_REPOSITORY:-a2rk313/benchmark-thesis}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
-PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:fedora"
-JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:fedora"
-R_TAG="ghcr.io/${OWNER}/thesis-r:fedora"
+PYTHON_TAG="ghcr.io/${OWNER}/thesis-python:latest"
+JULIA_TAG="ghcr.io/${OWNER}/thesis-julia:latest"
+R_TAG="ghcr.io/${OWNER}/thesis-r:latest"
 
 # Local tags for fallback building
 PYTHON_LOCAL_TAG="thesis-python:3.13"

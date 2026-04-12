@@ -32,15 +32,15 @@ jobs:
         include:
           - name: python
             file: containers/python-optimized.Containerfile
-            tag: thesis-python:fedora
+            tag: thesis-python:latest
             verify: "python3 --version"
           - name: julia
             file: containers/julia-optimized.Containerfile
-            tag: thesis-julia:fedora
+            tag: thesis-julia:latest
             verify: "julia --version"
           - name: r
             file: containers/r-optimized.Containerfile
-            tag: thesis-r:fedora
+            tag: thesis-r:latest
             verify: "R --version --quiet"
 
     steps:
