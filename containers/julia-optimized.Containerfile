@@ -1,7 +1,7 @@
 # =============================================================================
 # ULTRA-OPTIMIZED THESIS JULIA CONTAINER
-# Size: ~1.2GB (with packages)
-# Build time: ~15-20 min
+# Size: ~2GB (with packages)
+# Build time: ~20-30 min
 # =============================================================================
 
 FROM julia:1.11-bookworm
@@ -10,8 +10,7 @@ ENV JULIA_VERSION=1.11.9
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
-    python3-pip \
-    python3-numpy \
+    python3-gdal \
     libopenblas-dev \
     libgdal-dev \
     libproj-dev \
@@ -26,16 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# GDAL Python bindings via system package
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-gdal \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Install Julia packages for benchmarks
+# Install all Julia packages for benchmarks
 RUN julia -e 'using Pkg; \
     Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "JSON3", \
-             "MAT", "NearestNeighbors", "LibGEOS", "ArchGDAL", "GeoDataFrames"]); \
+             "MAT", "NearestNeighbors", "LibGEOS", "Shapefile", \
+             "ArchGDAL", "GeoDataFrames"]); \
     Pkg.precompile()'
 
 # Clean Julia depot

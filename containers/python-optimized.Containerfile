@@ -1,7 +1,7 @@
 # =============================================================================
 # ULTRA-OPTIMIZED THESIS PYTHON CONTAINER
-# Size: ~1.5GB (with packages)
-# Build time: ~5-10 min
+# Size: ~1.8GB (with packages)
+# Build time: ~10-15 min
 # =============================================================================
 
 FROM python:3.13-slim-bookworm
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Install Python packages for benchmarks
+# Install all Python packages for benchmarks
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
     numpy \
@@ -39,7 +39,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     tqdm \
     matplotlib \
     seaborn \
-    h5py
+    h5py \
+    json3
 
 ENV OPENBLAS_NUM_THREADS=8 \
     OMP_NUM_THREADS=8 \
