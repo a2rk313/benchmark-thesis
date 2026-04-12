@@ -1,7 +1,7 @@
 # =============================================================================
 # ULTRA-OPTIMIZED THESIS R CONTAINER
-# Size: ~600MB (with packages)
-# Build time: ~5-10 min
+# Size: ~1GB (with packages)
+# Build time: ~10-15 min
 # =============================================================================
 
 FROM r-base:4.5.3
@@ -22,6 +22,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
+
+# Configure R
+RUN printf '%s\n' \
+    'options(repos = c(CRAN = "https://cloud.r-project.org/"))' \
+    'options(download.file.method = "wget")' \
+    'options(Ncpus = 4L)' \
+    > /root/.Rprofile
+
+# Install R packages for benchmarks
+RUN Rscript -e ' \
+    install.packages(c("data.table", "jsonlite", "FNN", "terra", "sf", "stars"), \
+                    repos = "https://cloud.r-project.org/"); \
+    cat("Packages installed\n")'
 
 ENV OMP_NUM_THREADS=8 \
     OPENBLAS_NUM_THREADS=8 \
