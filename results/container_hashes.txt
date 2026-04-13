@@ -1,3 +1,3 @@
-Python  thesis-python:3.13  sha256:fc46e3b71e43f72520b1dd13ae70a3397bbc1b1138d70988fc0c03adbd168d2e
-Julia   thesis-julia:1.11   sha256:24f4892df93307903af9b899b0ea229ae2c96fd919285150bd35abe1d7a7d855
-R       thesis-r:4.5       sha256:1872f424dff5bd5daa242ad4c9609f7c3ad7cd570f697d3f255e7e9ca28735bd
+Python  ghcr.io/a2rk313/thesis-python:latest  sha256:57fa5e15fdb12d708f8a86a250d72d2eff9d462dc65bbd5e75e58fe5d1a28168
+Julia   ghcr.io/a2rk313/thesis-julia:latest   sha256:d8a3e782c84e529558ae30753f834849ac6a4c3225a9d5ef0d4ad569c024b386
+R       ghcr.io/a2rk313/thesis-r:latest       sha256:65608f3728d1c909ad473a82285bdfd4f6fb814acbd3e2aa5c760f6de7f245b5
