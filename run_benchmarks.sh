@@ -703,6 +703,19 @@ if [[ "$MODE" != "container" ]]; then
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
 fi
 
+# ── [11/11] Julia JIT Overhead Analysis ─────────────────────────────────────
+if [[ "$MODE" != "container" ]]; then
+    echo ""
+    echo -e "${BLUE}[11/11] Julia JIT Overhead Analysis (Cold Start)...${NC}"
+    progress
+    if command -v $PY_BIN &>/dev/null; then
+        [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
+        $PY_BIN benchmarks/jit_tracking.py || log_error "JIT tracking failed"
+    else
+        log_error "Python not found, skipping JIT analysis"
+    fi
+fi
+
 # ── Generate Academic Report ─────────────────────────────────────────────────
 echo ""
 echo -e "${BLUE}Generating Academic Report...${NC}"

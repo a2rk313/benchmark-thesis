@@ -273,20 +273,29 @@ println("Warmup complete!")
 
 
 if __name__ == "__main__":
-    tracker = JuliaJITTracker()
+    # Use system julia if in bootc
+    julia_exe = "/usr/bin/julia" if os.path.exists("/etc/benchmark-bootc-release") else "julia"
+    tracker = JuliaJITTracker(julia_cmd=julia_exe)
     
-    test_code = """
-    A = rand(1000, 1000)
-    B = rand(1000, 1000)
-    C = A * B
-    mean(C)
-    """
+    # Scenarios representing typical GIS/RS workloads
+    scenarios = {
+        "Matrix Operations (Linear Algebra)": "A = rand(Float32, 2000, 2000); B = rand(Float32, 2000, 2000); C = A * B",
+        "Vector Processing (Point-in-Polygon logic)": "using LinearAlgebra; x = rand(Float32, 10^6); y = rand(Float32, 10^6); [sqrt(x[i]^2 + y[i]^2) for i in 1:length(x)]",
+        "Spatial Statistics (Aggregations)": "using Statistics; data = rand(Float32, 10^7); mean(data); std(data)",
+        "Hyperspectral Math (SAM Logic)": "using LinearAlgebra; p = rand(Float32, 224); r = rand(Float32, 224); dot(p, r) / (norm(p) * norm(r))"
+    }
     
-    print("Running JIT tracking test...")
-    result = tracker.run_julia_benchmark(test_code, "matrix_test", n_warmup=3)
+    print("\n" + "=" * 70)
+    print("QUANTIFYING JULIA JIT OVERHEAD (Cold Start Analysis)")
+    print("=" * 70)
+    
+    for name, code in scenarios.items():
+        print(f"\n→ Testing: {name}")
+        # Run with 0 warmup to capture pure first-run JIT
+        tracker.run_julia_benchmark(code, name, n_warmup=0)
     
     tracker.print_jit_report()
-    tracker.export_results()
+    tracker.export_results("results/jit_compilation.json")
     
-    print("\nCreating precompilation script...")
+    # Also create the precompile script for future use
     create_julia_precompile_script()
