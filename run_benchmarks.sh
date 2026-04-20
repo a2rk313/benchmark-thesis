@@ -644,50 +644,61 @@ if [[ "$MODE" != "container" ]]; then
         RS_BIN="/usr/bin/Rscript"
     fi
 
-    echo -e "${YELLOW}  Matrix Operations:${NC}"
+    # Optimized Threading Strategy
+    # Matrix Ops: 1 Language Thread + 8 BLAS Threads (Let BLAS handle the heavy lifting)
+    # GIS/RS Ops: 8 Language Threads + 1 BLAS Thread (Prevent oversubscription in loops)
+    
+    echo -e "${YELLOW}  Matrix Operations (BLAS-heavy):${NC}"
+    export OPENBLAS_NUM_THREADS=8
+    export JULIA_NUM_THREADS=1
     command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/matrix_ops.R" "matrix_ops"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/matrix_ops.R" "matrix_ops"
+
+    sleep 5 # Thermal cool-down
+
+    echo -e "${YELLOW}  Spatial Workflows (Language-Parallel):${NC}"
+    export OPENBLAS_NUM_THREADS=1
+    export JULIA_NUM_THREADS=8
+    
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py" "raster_algebra"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/raster_algebra.jl" "raster_algebra"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/raster_algebra.R" "raster_algebra"
 
     echo -e "${YELLOW}  I/O Operations:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/io_ops.py" "io_ops"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/io_ops.jl" "io_ops"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/io_ops.R" "io_ops"
-
-    echo -e "${YELLOW}  Raster Algebra:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py" "raster_algebra"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/raster_algebra.jl" "raster_algebra"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/raster_algebra.R" "raster_algebra"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/io_ops.jl" "io_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/io_ops.R" "io_ops"
 
     echo -e "${YELLOW}  Reprojection:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/reprojection.py" "reprojection"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/reprojection.jl" "reprojection"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/reprojection.R" "reprojection"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/reprojection.jl" "reprojection"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/reprojection.R" "reprojection"
 
     echo -e "${YELLOW}  Zonal Stats:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/zonal_stats.py" "zonal_stats"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/zonal_stats.jl" "zonal_stats"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/zonal_stats.R" "zonal_stats"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/zonal_stats.jl" "zonal_stats"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/zonal_stats.R" "zonal_stats"
 
     echo -e "${YELLOW}  Interpolation:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/interpolation_idw.py" "interpolation"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/interpolation_idw.jl" "interpolation"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/interpolation_idw.R" "interpolation"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/interpolation_idw.jl" "interpolation"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/interpolation_idw.R" "interpolation"
 
     echo -e "${YELLOW}  Time-Series:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/timeseries_ndvi.py" "timeseries"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/timeseries_ndvi.jl" "timeseries"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/timeseries_ndvi.R" "timeseries"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/timeseries_ndvi.jl" "timeseries"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/timeseries_ndvi.R" "timeseries"
 
     echo -e "${YELLOW}  Hyperspectral:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/hsi_stream.py" "hsi_stream"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/hsi_stream.jl" "hsi_stream"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/hsi_stream.R" "hsi_stream"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/hsi_stream.jl" "hsi_stream"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/hsi_stream.R" "hsi_stream"
 
     echo -e "${YELLOW}  Vector PiP:${NC}"
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/vector_pip.py" "vector_pip"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/vector_pip.jl" "vector_pip"
-    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/vector_pip.R" "vector_pip"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/vector_pip.jl" "vector_pip"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/vector_pip.R" "vector_pip"
 
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
 fi

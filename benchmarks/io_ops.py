@@ -16,10 +16,12 @@ import time
 import os
 from pathlib import Path
 
+import gc
+
 def benchmark_csv_write(n_rows=1_000_000):
     """
     Task 1: Write CSV File
-    Create 1M-row CSV with lat, lon, device_id columns
+    Using PyArrow engine for fair comparison with Julia/R
     """
     # Pre-generate data (not timed)
     df = pd.DataFrame({
@@ -32,7 +34,8 @@ def benchmark_csv_write(n_rows=1_000_000):
     
     # Timed operation
     start = time.perf_counter()
-    df.to_csv(output_path, index=False)
+    # Using engine='pyarrow' for high-performance I/O
+    df.to_csv(output_path, index=False, engine='pyarrow')
     elapsed = time.perf_counter() - start
     
     return elapsed, os.path.getsize(output_path)
@@ -40,12 +43,14 @@ def benchmark_csv_write(n_rows=1_000_000):
 def benchmark_csv_read():
     """
     Task 2: Read CSV File
+    Using PyArrow engine for fair comparison with Julia/R
     """
     input_path = 'data/io_test_python.csv'
     
     # Timed operation
     start = time.perf_counter()
-    df = pd.read_csv(input_path)
+    # Using engine='pyarrow' for high-performance I/O
+    df = pd.read_csv(input_path, engine='pyarrow')
     elapsed = time.perf_counter() - start
     
     return elapsed, len(df)
@@ -104,6 +109,7 @@ def main():
     times = []
     file_size = 0
     for _ in range(n_runs):
+        gc.collect()
         t, size = benchmark_csv_write(n_csv_rows)
         times.append(t)
         file_size = size
@@ -127,6 +133,7 @@ def main():
     times = []
     n_rows = 0
     for _ in range(n_runs):
+        gc.collect()
         t, rows = benchmark_csv_read()
         times.append(t)
         n_rows = rows
@@ -140,6 +147,7 @@ def main():
     times = []
     file_size = 0
     for _ in range(n_runs):
+        gc.collect()
         t, size = benchmark_binary_write(n_binary_values)
         times.append(t)
         file_size = size
@@ -153,6 +161,7 @@ def main():
     times = []
     n_values = 0
     for _ in range(n_runs):
+        gc.collect()
         t, values = benchmark_binary_read()
         times.append(t)
         n_values = values
