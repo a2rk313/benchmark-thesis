@@ -18,7 +18,7 @@ A fundamental requirement for language comparison is the use of comparable high-
 | Language | Engine | Geospatial Libraries | Linear Algebra |
 | :--- | :--- | :--- | :--- |
 | **Julia** | v1.12.6 (LLVM) | ArchGDAL.jl, GeoDataFrames.jl | OpenBLAS |
-| **Python** | v3.13 (CPython) | GeoPandas, Rasterio, NumPy | OpenBLAS |
+| **Python** | v3.14 (CPython) | GeoPandas, Rasterio, NumPy | OpenBLAS |
 | **R** | v4.5.x | sf, terra, data.table | OpenBLAS |
 
 ### 3.3.1 Linear Algebra Standardization

@@ -18,8 +18,8 @@ min_version = "2024.1.0"
 # TOOL VERSIONS - Must match container for fair benchmarks
 # =============================================================================
 [tools]
-# Python 3.13.12 - managed by mise (uses uv backend)
-python = "3.13.12"
+# Python 3.14 - managed by mise (uses uv backend)
+python = "3.14"
 
 # Julia 1.12.6 - managed by mise (asdf backend)
 julia = "1.12.6"

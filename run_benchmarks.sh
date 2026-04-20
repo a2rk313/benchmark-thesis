@@ -197,7 +197,7 @@ echo -e "${NC}"
 
 if [[ "$IS_BOOTC" == "true" ]]; then
     echo -e "  ${BOLD}${GREEN}🚀 BOOTC ENVIRONMENT DETECTED (Bare-Metal Precision)${NC}"
-    echo -e "  Using system-wide runtimes: Python 3.13, Julia 1.12.6, R 4.5.x"
+    echo -e "  Using system-wide runtimes: Python 3.14, Julia 1.12.6, R 4.5.x"
     echo ""
 fi
 
