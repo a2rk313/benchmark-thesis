@@ -29,6 +29,13 @@ set -euo pipefail
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
 MODE="all"
+# Detect bootc environment
+IS_BOOTC=false
+if [ -f /etc/benchmark-bootc-release ]; then
+    IS_BOOTC=true
+    MODE="native" # Default to native-only on bootc for zero overhead
+fi
+
 USE_GHCR=false
 RESUME=false
 CLEAN=false
@@ -187,6 +194,13 @@ echo "========================================================================"
 echo "  THESIS BENCHMARK SUITE v3.0 (Academic Rigor Edition)"
 echo "========================================================================"
 echo -e "${NC}"
+
+if [[ "$IS_BOOTC" == "true" ]]; then
+    echo -e "  ${BOLD}${GREEN}🚀 BOOTC ENVIRONMENT DETECTED (Bare-Metal Precision)${NC}"
+    echo -e "  Using system-wide runtimes: Python 3.13, Julia 1.12.6, R 4.5.x"
+    echo ""
+fi
+
 echo "  Started: $(timestamp)"
 echo ""
 
@@ -425,7 +439,7 @@ else
     mkdir -p "$DDIR"
     if [[ -f "tools/download_data.py" ]]; then
         source .venv/bin/activate 2>/dev/null || true
-        python3 tools/download_data.py --all --synthetic 2>&1 | grep -E "✓|⚠" | head -10 || true
+        python3 tools/download_data.py --all 2>&1 | grep -E "✓|⚠" | head -10 || true
     fi
     mark_checkpoint "data"
 fi
@@ -600,6 +614,13 @@ if [[ "$MODE" != "container" ]]; then
         local lang="$1" cmd="$2" name="$3"
         progress
         echo -e "  ${GREEN}$lang${NC}: $name"
+        
+        # Setup environment for bootc or native
+        if [[ "$IS_BOOTC" == "true" ]]; then
+            export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
+            export JULIA_DEPOT_PATH="/usr/share/julia/depot"
+        fi
+
         local freq_before=""
         if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
             freq_before=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
@@ -612,50 +633,61 @@ if [[ "$MODE" != "container" ]]; then
         fi
     }
 
+    # Set binary paths based on environment
+    PY_BIN="python3"
+    JL_BIN="$HOME/.local/julia/bin/julia"
+    RS_BIN="Rscript"
+
+    if [[ "$IS_BOOTC" == "true" ]]; then
+        PY_BIN="/usr/bin/python3"
+        JL_BIN="/usr/bin/julia"
+        RS_BIN="/usr/bin/Rscript"
+    fi
+
     echo -e "${YELLOW}  Matrix Operations:${NC}"
-    command -v python3 &>/dev/null && { source .venv/bin/activate 2>/dev/null || true; run_native "Python" "python3 benchmarks/matrix_ops.py" "matrix_ops"; }
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/matrix_ops.jl" "matrix_ops"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/matrix_ops.R" "matrix_ops"
+    command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/matrix_ops.R" "matrix_ops"
 
     echo -e "${YELLOW}  I/O Operations:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/io_ops.py" "io_ops"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/io_ops.jl" "io_ops"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/io_ops.R" "io_ops"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/io_ops.py" "io_ops"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/io_ops.jl" "io_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/io_ops.R" "io_ops"
 
     echo -e "${YELLOW}  Raster Algebra:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/raster_algebra.py" "raster_algebra"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/raster_algebra.jl" "raster_algebra"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/raster_algebra.R" "raster_algebra"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py" "raster_algebra"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/raster_algebra.jl" "raster_algebra"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/raster_algebra.R" "raster_algebra"
 
     echo -e "${YELLOW}  Reprojection:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/reprojection.py" "reprojection"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/reprojection.jl" "reprojection"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/reprojection.R" "reprojection"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/reprojection.py" "reprojection"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/reprojection.jl" "reprojection"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/reprojection.R" "reprojection"
 
     echo -e "${YELLOW}  Zonal Stats:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/zonal_stats.py" "zonal_stats"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/zonal_stats.jl" "zonal_stats"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/zonal_stats.R" "zonal_stats"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/zonal_stats.py" "zonal_stats"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/zonal_stats.jl" "zonal_stats"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/zonal_stats.R" "zonal_stats"
 
     echo -e "${YELLOW}  Interpolation:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/interpolation_idw.py" "interpolation"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/interpolation_idw.jl" "interpolation"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/interpolation_idw.R" "interpolation"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/interpolation_idw.py" "interpolation"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/interpolation_idw.jl" "interpolation"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/interpolation_idw.R" "interpolation"
 
     echo -e "${YELLOW}  Time-Series:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/timeseries_ndvi.py" "timeseries"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/timeseries_ndvi.jl" "timeseries"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/timeseries_ndvi.R" "timeseries"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/timeseries_ndvi.py" "timeseries"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/timeseries_ndvi.jl" "timeseries"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/timeseries_ndvi.R" "timeseries"
 
     echo -e "${YELLOW}  Hyperspectral:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/hsi_stream.py" "hsi_stream"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/hsi_stream.jl" "hsi_stream"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/hsi_stream.R" "hsi_stream"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/hsi_stream.py" "hsi_stream"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/hsi_stream.jl" "hsi_stream"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/hsi_stream.R" "hsi_stream"
 
     echo -e "${YELLOW}  Vector PiP:${NC}"
-    command -v python3 &>/dev/null && run_native "Python" "python3 benchmarks/vector_pip.py" "vector_pip"
-    command -v julia &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $HOME/.local/julia/bin/julia benchmarks/vector_pip.jl" "vector_pip"
-    command -v Rscript &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS Rscript benchmarks/vector_pip.R" "vector_pip"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/vector_pip.py" "vector_pip"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "JULIA_NUM_THREADS=$JULIA_NUM_THREADS $JL_BIN benchmarks/vector_pip.jl" "vector_pip"
+    command -v $RS_BIN &>/dev/null && run_native "R" "OPENBLAS_NUM_THREADS=$OPENBLAS_NUM_THREADS $RS_BIN benchmarks/vector_pip.R" "vector_pip"
 
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
 fi
@@ -664,10 +696,10 @@ fi
 echo ""
 echo -e "${BLUE}Generating Academic Report...${NC}"
 
-if command -v python3 &>/dev/null; then
-    source .venv/bin/activate 2>/dev/null || true
-    [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; python3 tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
-    [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; python3 validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
+if command -v $PY_BIN &>/dev/null; then
+    [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
+    [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; $PY_BIN tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
+    [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; $PY_BIN validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
     echo -e "${GREEN}  ✓ Academic report complete${NC}"
 fi
 

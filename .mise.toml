@@ -21,8 +21,8 @@ min_version = "2024.1.0"
 # Python 3.13.12 - managed by mise (uses uv backend)
 python = "3.13.12"
 
-# Julia 1.11.9 - managed by mise (asdf backend)
-julia = "1.11.9"
+# Julia 1.12.6 - managed by mise (asdf backend)
+julia = "1.12.6"
 
 # R 4.5.3 - managed by mise (asdf backend)
 # Note: R plugin from mise-plugins/mise-r

@@ -92,16 +92,27 @@ SCENARIOS = {
 }
 
 
-def run_command(cmd, cwd=None, description=None):
+def is_bootc():
+    """Check if we are running in the benchmark-bootc environment."""
+    return os.path.exists("/etc/benchmark-bootc-release")
+
+
+def run_command(cmd, cwd=None, description=None, env=None):
     """Run a shell command and handle errors."""
     if description:
         print(f"\n{'=' * 60}")
         print(f"{description}")
         print("=" * 60)
 
+    # Merge current environment with provided env
+    current_env = os.environ.copy()
+    if env:
+        current_env.update(env)
+
     try:
         result = subprocess.run(
-            cmd, shell=True, cwd=cwd or BENCHMARK_DIR, capture_output=False, text=True
+            cmd, shell=True, cwd=cwd or BENCHMARK_DIR, capture_output=False, text=True,
+            env=current_env
         )
         return result.returncode == 0
     except Exception as e:
@@ -111,28 +122,43 @@ def run_command(cmd, cwd=None, description=None):
 
 def run_python_benchmark(script):
     """Run a Python benchmark."""
-    # Check if venv exists
-    venv_python = PROJECT_DIR / ".venv" / "bin" / "python"
-    if venv_python.exists():
-        cmd = f"source {PROJECT_DIR}/.venv/bin/activate && python {script}"
-    else:
+    env = {}
+    if is_bootc():
+        # Use system Python and pre-baked packages
+        env["PYTHONPATH"] = f"/usr/local/lib/python-deps:{os.environ.get('PYTHONPATH', '')}"
         cmd = f"python3 {script}"
-    return run_command(cmd, description=f"Python: {script}")
+    else:
+        # Check if venv exists
+        venv_python = PROJECT_DIR / ".venv" / "bin" / "python"
+        if venv_python.exists():
+            cmd = f"source {PROJECT_DIR}/.venv/bin/activate && python {script}"
+        else:
+            cmd = f"python3 {script}"
+    
+    return run_command(cmd, description=f"Python: {script}", env=env)
 
 
 def run_julia_benchmark(script):
     """Run a Julia benchmark."""
-    # Use julialauncher for proper Julia environment
-    julia_cmd = os.path.expanduser("~/.juliaup/bin/julialauncher")
-    if not os.path.exists(julia_cmd):
-        julia_cmd = "julia"  # Fallback
+    env = {}
+    if is_bootc():
+        # Use system Julia and pre-baked depot
+        env["JULIA_DEPOT_PATH"] = "/usr/share/julia/depot"
+        julia_cmd = "/usr/bin/julia"
+    else:
+        # Use julialauncher for proper Julia environment in mise/local
+        julia_cmd = os.path.expanduser("~/.juliaup/bin/julialauncher")
+        if not os.path.exists(julia_cmd):
+            julia_cmd = "julia"  # Fallback
+    
     cmd = f"{julia_cmd} {script}"
-    return run_command(cmd, description=f"Julia: {script}")
+    return run_command(cmd, description=f"Julia: {script}", env=env)
 
 
 def run_r_benchmark(script):
     """Run an R benchmark."""
-    cmd = f"Rscript {script}"
+    cmd = "Rscript" if is_bootc() else "Rscript"
+    cmd = f"{cmd} {script}"
     return run_command(cmd, description=f"R: {script}")
 
 

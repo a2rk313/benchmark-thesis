@@ -23,6 +23,7 @@ import math
 from typing import List, Tuple, Dict, Callable, Optional, Any, Union
 from dataclasses import dataclass, field
 import json
+import gc
 import hashlib
 
 try:

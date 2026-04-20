@@ -29,14 +29,15 @@ Returns:
 function spectral_angle_mapper(pixel_spectra::Matrix{Float32}, reference_spectrum::Vector{Float32})
     epsilon = Float32(1e-8)
     
-    # Dot product: pixel · reference
+    # Dot product: pixel · reference (Matrix-Vector multiplication)
     dot_products = pixel_spectra * reference_spectrum
     
-    # Norms
-    pixel_norms = [norm(pixel_spectra[i, :]) for i in 1:size(pixel_spectra, 1)]
+    # Efficient norms: sqrt(sum(X.^2, dims=2))
+    # We use sqrt.(sum(abs2, pixel_spectra, dims=2)) which is the Julia way for axis=1 norm
+    pixel_norms = vec(sqrt.(sum(abs2, pixel_spectra, dims=2)))
     ref_norm = norm(reference_spectrum)
     
-    # Cosine of angle
+    # Cosine of angle (Vectorized element-wise ops)
     cos_angles = dot_products ./ (pixel_norms .* ref_norm .+ epsilon)
     
     # Clip to valid range [-1, 1]
@@ -128,11 +129,11 @@ function main()
             col_end = min(col_start + chunk_size - 1, n_cols)
             
             # Extract chunk
-            chunk = data[:, row_start:row_end, col_start:col_end]
+            @views chunk = data[:, row_start:row_end, col_start:col_end]
             
             # Reshape to (n_pixels, n_bands) and convert to Float32
             n_pixels_chunk = (row_end - row_start + 1) * (col_end - col_start + 1)
-            pixel_spectra = Float32.(reshape(chunk, n_pixels_chunk, n_bands))
+            pixel_spectra = Float32.(reshape(collect(chunk), n_pixels_chunk, n_bands))
             
             # Calculate SAM
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)

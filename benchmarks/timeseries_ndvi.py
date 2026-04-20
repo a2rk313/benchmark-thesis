@@ -1,265 +1,113 @@
 #!/usr/bin/env python3
 """
-==================================================================================
-SCENARIO D: Time-Series NDVI Analysis - Python Implementation
-==================================================================================
-Task: Calculate NDVI statistics across time series
-Dataset: Real MODIS NDVI time series (if available) or synthetic
-         based on real MODIS patterns (46 timesteps × 100×100 spatial)
-Metrics: Temporal aggregation, statistical computation, memory efficiency
-==================================================================================
+SCENARIO E: NDVI Time-Series - Python Implementation
+Tests: Temporal aggregation, trend analysis (OLS), and multi-band processing
 """
 
 import numpy as np
+import time
 import json
 import hashlib
 from pathlib import Path
-import time
+import os
 
 
-def load_modis_ndvi():
-    """Load real MODIS NDVI time series if available."""
-    modis_paths = [
-        "data/modis/modis_ndvi_timeseries.bin",
-        "data/modis/modis_ndvi_timeseries.npy",
-    ]
-
-    for path in modis_paths:
-        if Path(path).exists():
-            try:
-                if path.endswith(".bin"):
-                    # Try to load with header info
-                    hdr_path = path.replace(".bin", ".hdr")
-                    if Path(hdr_path).exists():
-                        with open(hdr_path) as f:
-                            content = f.read()
-                            for line in content.split("\n"):
-                                if line.startswith("samples"):
-                                    n_lon = int(line.split("=")[1].strip())
-                                elif line.startswith("lines"):
-                                    n_lat = int(line.split("=")[1].strip())
-                                elif line.startswith("bands"):
-                                    n_bands = int(line.split("=")[1].strip())
-
-                        data = np.fromfile(path, dtype=np.float32)
-                        # MODIS is BIL format: (bands, lines, samples)
-                        data = data.reshape(n_bands, n_lat, n_lon)
-                        print(f"  ✓ Loaded MODIS NDVI: {path} ({data.shape})")
-                        return data
-                elif path.endswith(".npy"):
-                    data = np.load(path)
-                    print(f"  ✓ Loaded MODIS NDVI: {path} ({data.shape})")
-                    return data
-            except Exception as e:
-                print(f"  ⚠ Could not load {path}: {e}")
-
-    print("  ⚠ MODIS NDVI not available")
-    return None
-
-
-def generate_modis_like_landsat(width=100, height=100, n_dates=46, seed=42):
-    """
-    Generate realistic MODIS-like time series based on real patterns.
-
-    This captures essential characteristics of real MODIS NDVI:
-    - Seasonal vegetation cycles
-    - Spatial autocorrelation
-    - Realistic noise characteristics
-
-    Returns:
-        ndvi_data: (n_dates, height, width) - NDVI values
-    """
-    np.random.seed(seed)
-
-    # Create spatial structure (landscape features)
+def generate_synthetic_ndvi_stack(n_dates=46, height=100, width=100):
+    """Generate synthetic NDVI data stack (standardized for all languages)"""
+    np.random.seed(42)
+    
+    # Base vegetation pattern
     x = np.linspace(-1, 1, width)
     y = np.linspace(-1, 1, height)
     xx, yy = np.meshgrid(x, y)
-
-    # Base vegetation pattern
-    vegetation_base = np.exp(-(xx**2 + yy**2) / 0.5)
-
-    # Seasonal cycle
-    t = np.linspace(0, 4 * np.pi, n_dates)
-    seasonal = (np.sin(t) + 1) / 2  # 0 to 1
-
-    # Build time series
-    ndvi_data = np.zeros((n_dates, height, width), dtype=np.float32)
-
-    for i in range(n_dates):
-        # Base vegetation scaled by seasonality
-        vegetation = vegetation_base * (0.3 + 0.5 * seasonal[i])
-
-        # Add inter-annual variation
-        noise = np.random.randn(height, width) * 0.05
-
-        # Clamp to valid NDVI range
-        ndvi = np.clip(vegetation + noise, -0.1, 1.0)
-        ndvi_data[i] = ndvi
-
-    return ndvi_data
+    base_vegetation = 0.5 * (1 - (xx**2 + yy**2))
+    
+    ndvi_stack = np.zeros((n_dates, height, width), dtype=np.float32)
+    
+    for t in range(n_dates):
+        # Seasonal cycle (Sine wave)
+        seasonality = 0.3 * np.sin(2 * np.pi * t / n_dates)
+        noise = np.random.normal(0, 0.05, (height, width))
+        ndvi = base_vegetation + seasonality + noise
+        ndvi_stack[t] = np.clip(ndvi, -0.1, 1.0).astype(np.float32)
+        
+    return ndvi_stack
 
 
-def get_ndvi_data():
-    """Get NDVI data from real MODIS or generate realistic fallback."""
-    real_data = load_modis_ndvi()
-    if real_data is not None:
-        return real_data
-    print("  → Generating realistic MODIS-like time series...")
-    return generate_modis_like_landsat()
-
-
-def calculate_ndvi(red, nir):
-    """
-    Calculate NDVI = (NIR - Red) / (NIR + Red)
-    """
-    epsilon = 1e-8
-    ndvi = (nir - red) / (nir + red + epsilon)
-    return np.clip(ndvi, -1, 1)
+def calculate_ndvi_statistics(ndvi_stack):
+    """Perform temporal aggregation and trend analysis"""
+    n_dates, height, width = ndvi_stack.shape
+    
+    # 1. Temporal Aggregation (Mean, Max, Min)
+    mean_ndvi = np.mean(ndvi_stack, axis=0)
+    max_ndvi = np.max(ndvi_stack, axis=0)
+    min_ndvi = np.min(ndvi_stack, axis=0)
+    
+    # 2. Linear Trend Analysis (OLS slope)
+    time_index = np.arange(n_dates).astype(np.float32)
+    mean_time = np.mean(time_index)
+    
+    # Pre-calculate denominator (constant for all pixels)
+    denominator = np.sum((time_index - mean_time)**2)
+    
+    # Vectorized OLS: (sum((x-mx)*(y-my))) / sum((x-mx)^2)
+    numerator = np.sum((time_index[:, None, None] - mean_time) * (ndvi_stack - mean_ndvi), axis=0)
+    ndvi_trend = numerator / denominator
+    
+    # 3. Phenology: Growing Season Length (NDVI > 0.3)
+    growing_season = np.sum(ndvi_stack > 0.3, axis=0)
+    
+    # 4. Phenology: Amplitude
+    amplitude = max_ndvi - min_ndvi
+    
+    return mean_ndvi, ndvi_trend, amplitude
 
 
 def main():
     print("=" * 70)
-    print("PYTHON - Scenario D: Time-Series NDVI Analysis")
+    print("PYTHON - Scenario E: NDVI Time-Series")
     print("=" * 70)
-
-    # =========================================================================
-    # 1. Load MODIS NDVI time series (or generate realistic fallback)
-    # =========================================================================
-    print("\n[1/5] Loading MODIS NDVI time series...")
-
-    start_time = time.time()
-    ndvi_data = get_ndvi_data()
-    gen_time = time.time() - start_time
-
-    n_dates, height, width = ndvi_data.shape
-    data_size_mb = ndvi_data.nbytes / (1024**2)
-
-    print(f"  ✓ Time series: {n_dates} dates × {width}×{height} spatial")
-    print(f"  ✓ Data size: {data_size_mb:.1f} MB")
-    print(f"  ✓ Load time: {gen_time:.2f} seconds")
-
-    # =========================================================================
-    # 2. Calculate NDVI statistics (data is already NDVI)
-    # =========================================================================
-    print("\n[2/5] Computing NDVI statistics...")
-
-    start_time = time.time()
-    ndvi_stack = ndvi_data  # Already NDVI from MODIS
-
-    calc_time = time.time() - start_time
-
-    print(f"  ✓ NDVI data loaded: {n_dates} dates")
-    print(f"  ✓ Load time: {calc_time:.2f} seconds")
-    print(f"  ✓ NDVI range: [{ndvi_stack.min():.3f}, {ndvi_stack.max():.3f}]")
-
-    # =========================================================================
-    # 3. Temporal statistics
-    # =========================================================================
-    print("\n[3/5] Computing temporal statistics...")
-
-    start_time = time.time()
-
-    # Pixel-wise temporal statistics
-    mean_ndvi = np.mean(ndvi_stack, axis=0)
-    std_ndvi = np.std(ndvi_stack, axis=0)
-    max_ndvi = np.max(ndvi_stack, axis=0)
-    min_ndvi = np.min(ndvi_stack, axis=0)
-
-    # Trend detection (simple linear regression slope)
-    time_index = np.arange(n_dates).reshape(-1, 1, 1)
-
-    # Vectorized linear regression
-    mean_time = time_index.mean()
-    mean_ndvi_time = ndvi_stack.mean(axis=0)
-
-    numerator = ((time_index - mean_time) * (ndvi_stack - mean_ndvi_time)).sum(axis=0)
-    denominator = ((time_index - mean_time) ** 2).sum()
-
-    ndvi_trend = numerator / denominator
-
-    stats_time = time.time() - start_time
-
-    print(f"  ✓ Temporal statistics computed")
-    print(f"  ✓ Computation time: {stats_time:.2f} seconds")
-    print(f"  ✓ Mean NDVI (spatial avg): {mean_ndvi.mean():.3f}")
-    print(f"  ✓ Average trend: {ndvi_trend.mean():.6f} NDVI/16-days")
-
-    # =========================================================================
-    # 4. Phenology metrics
-    # =========================================================================
-    print("\n[4/5] Extracting phenology metrics...")
-
-    start_time = time.time()
-
-    # Find peak vegetation month for each pixel
-    peak_month = np.argmax(ndvi_stack, axis=0)
-
-    # Calculate growing season length (periods above threshold)
-    threshold = 0.3
-    growing_season = (ndvi_stack > threshold).sum(axis=0)
-
-    # Calculate seasonal amplitude
-    amplitude = max_ndvi - min_ndvi
-
-    pheno_time = time.time() - start_time
-
-    print(f"  ✓ Phenology metrics extracted")
-    print(f"  ✓ Computation time: {pheno_time:.2f} seconds")
-    print(f"  ✓ Average peak period: {peak_month.mean():.1f}")
-    print(f"  ✓ Average growing season: {growing_season.mean():.1f} 16-day periods")
-    print(f"  ✓ Average amplitude: {amplitude.mean():.3f}")
-
-    # =========================================================================
-    # 5. Results and validation
-    # =========================================================================
-    print("\n[5/5] Computing final metrics...")
-
-    total_time = calc_time + stats_time + pheno_time
-    pixels_processed = width * height * n_dates
-    throughput = pixels_processed / total_time
-
-    print(f"  ✓ Total processing time: {total_time:.2f} seconds")
-    print(f"  ✓ Throughput: {throughput:,.0f} pixel-dates/second")
-
-    # Generate validation hash
-    result_str = (
-        f"{mean_ndvi.mean():.6f}_{ndvi_trend.mean():.6f}_{amplitude.mean():.6f}"
-    )
-    result_hash = hashlib.sha256(result_str.encode()).hexdigest()[:16]
-
+    
+    # 1. Generate/Load Data
+    print("\n[1/4] Generating synthetic NDVI stack...")
+    n_dates, height, width = 46, 250, 250
+    ndvi_stack = generate_synthetic_ndvi_stack(n_dates, height, width)
+    print(f"  ✓ Stack shape: {n_dates} dates × {height} × {width} pixels")
+    
+    # 2. Run Benchmark
+    print("\n[2/4] Running NDVI time-series analysis...")
+    
+    # Warmup
+    calculate_ndvi_statistics(ndvi_stack[:5])
+    
+    t_start = time.time()
+    mean_ndvi, ndvi_trend, amplitude = calculate_ndvi_statistics(ndvi_stack)
+    t_end = time.time()
+    
+    duration = t_end - t_start
+    print(f"  ✓ Completed in {duration:.4f} seconds")
+    
+    # 3. Hash and Export
+    # Combine results for hashing
+    result_hash = hashlib.sha256(
+        np.array([mean_ndvi.mean(), ndvi_trend.mean(), amplitude.mean()], dtype=np.float32).tobytes()
+    ).hexdigest()[:16]
+    
     print(f"  ✓ Validation hash: {result_hash}")
-
-    # Export results
-    results = {
+    
+    output = {
         "language": "python",
         "scenario": "timeseries_ndvi",
-        "image_size": f"{width}x{height}",
+        "min_time_s": duration,
         "n_dates": n_dates,
-        "total_pixels_processed": pixels_processed,
-        "execution_time_s": total_time,
-        "throughput_pixels_per_sec": throughput,
-        "mean_ndvi": float(mean_ndvi.mean()),
-        "mean_trend": float(ndvi_trend.mean()),
-        "mean_amplitude": float(amplitude.mean()),
-        "avg_growing_season": float(growing_season.mean()),
-        "validation_hash": result_hash,
+        "hash": result_hash
     }
-
-    # Save results
-    output_dir = Path("validation")
-    output_dir.mkdir(exist_ok=True)
-
-    with open(output_dir / "timeseries_python_results.json", "w") as f:
-        json.dump(results, f, indent=2)
-
-    print(f"\n  ✓ Results saved to validation/timeseries_python_results.json")
-    print("=" * 70)
-
-    return 0
+    
+    Path("results").mkdir(exist_ok=True)
+    with open("results/timeseries_ndvi_python.json", "w") as f:
+        json.dump(output, f, indent=2)
+    print("✓ Results saved to results/timeseries_ndvi_python.json")
 
 
 if __name__ == "__main__":
-    import sys
-
-    sys.exit(main())
+    main()
