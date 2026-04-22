@@ -74,6 +74,7 @@ function main()
     # =========================================================================
     println("\n[2/5] Opening hyperspectral dataset...")
     
+if !isfile(hsi_path); println("ERROR: hsi_path not found: $hsi_path"); return 1; end
     hsi_path = "data/Cuprite.mat"
     
     println("  ✓ Loading MAT file: $hsi_path")
