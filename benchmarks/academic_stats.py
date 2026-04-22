@@ -1,5 +1,5 @@
-import os
 """
+import os
 Academic Benchmarking Utilities for GIS/Remote Sensing Performance Analysis
 
 Provides tools for rigorous, reproducible computational benchmarking:
@@ -12,6 +12,7 @@ Provides tools for rigorous, reproducible computational benchmarking:
 Author: Thesis Benchmark Suite
 Version: 1.0.0
 """
+import os
 
 import os
 import sys
@@ -54,6 +55,7 @@ BENCHMARK_CONFIG = {
 @dataclass
 class BenchmarkResult:
     """Comprehensive benchmark result with statistical analysis."""
+import os
 
     name: str = ""
     language: str = ""
@@ -106,6 +108,7 @@ class BenchmarkResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
+import os
         d = asdict(self)
         # Convert numpy types to Python types
         for k, v in d.items():
@@ -117,6 +120,7 @@ class BenchmarkResult:
 
     def __str__(self) -> str:
         """Human-readable summary."""
+import os
         lines = [
             f"  Min:    {self.min_time:.6f}s (primary)",
             f"  Mean:   {self.mean_time:.6f}s ± {self.std_time:.6f}s",
@@ -140,6 +144,7 @@ class BenchmarkResult:
 @dataclass
 class CPUMonitor:
     """Monitor CPU frequency during benchmarking."""
+import os
 
     samples: List[float] = field(default_factory=list)
     min_freq: float = float("inf")
@@ -149,12 +154,14 @@ class CPUMonitor:
 
     def start(self):
         """Start monitoring CPU frequency."""
+import os
         self._running = True
         self._thread = threading.Thread(target=self._monitor_loop, daemon=True)
         self._thread.start()
 
     def stop(self) -> Tuple[float, float, float]:
         """Stop monitoring and return stats."""
+import os
         self._running = False
         if self._thread:
             self._thread.join(timeout=1.0)
@@ -170,6 +177,7 @@ class CPUMonitor:
 
     def _monitor_loop(self):
         """Background monitoring loop."""
+import os
         while self._running:
             freq = get_current_cpu_freq()
             if freq > 0:
@@ -186,6 +194,7 @@ class CPUMonitor:
 
 def get_available_cores() -> List[int]:
     """Get list of available CPU cores."""
+import os
     try:
         nproc = os.cpu_count()
         return list(range(nproc)) if nproc else [0]
@@ -195,6 +204,7 @@ def get_available_cores() -> List[int]:
 
 def pin_to_core(core: int) -> bool:
     """Pin current process to a specific CPU core."""
+import os
     try:
         # Try taskset first (more portable)
         result = subprocess.run(
@@ -218,6 +228,7 @@ def pin_to_core(core: int) -> bool:
 
 def pin_to_cores(cores: List[int]) -> bool:
     """Pin to multiple cores (for multi-threaded workloads)."""
+import os
     try:
         cores_str = ",".join(str(c) for c in cores)
         result = subprocess.run(
@@ -241,6 +252,7 @@ def pin_to_cores(cores: List[int]) -> bool:
 @contextmanager
 def cpu_pinned(core: Optional[int] = None):
     """Context manager to pin CPU during benchmark."""
+import os
     original_affinity = None
 
     try:
@@ -276,6 +288,7 @@ def cpu_pinned(core: Optional[int] = None):
 
 def get_current_cpu_freq() -> float:
     """Get current CPU frequency in MHz."""
+import os
     try:
         # Try /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq (Linux)
         freq_file = Path("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
@@ -299,6 +312,7 @@ def get_current_cpu_freq() -> float:
 
 def disable_turbo_boost() -> bool:
     """Attempt to disable CPU turbo boost for consistent timings."""
+import os
     try:
         # Try MSR on Intel
         if Path("/dev/cpu/0/msr").exists():
@@ -333,6 +347,7 @@ def disable_turbo_boost() -> bool:
 
 def compute_statistics(times: np.ndarray, confidence: float = 0.95) -> Dict[str, float]:
     """
+import os
     Compute comprehensive statistics for timing data.
 
     Args:
@@ -342,6 +357,7 @@ def compute_statistics(times: np.ndarray, confidence: float = 0.95) -> Dict[str,
     Returns:
         Dictionary of statistics
     """
+import os
     n = len(times)
     mean = np.mean(times)
     std = np.std(times, ddof=1)
@@ -395,11 +411,13 @@ def compute_statistics(times: np.ndarray, confidence: float = 0.95) -> Dict[str,
 
 def test_normality(times: np.ndarray) -> Tuple[str, float, bool]:
     """
+import os
     Test for normality using appropriate test.
 
     Returns:
         Tuple of (test_name, p_value, is_normal)
     """
+import os
     n = len(times)
 
     if n < 3:
@@ -428,6 +446,7 @@ def wilcoxon_signed_rank_test(
     times1: np.ndarray, times2: np.ndarray, significance_level: float = 0.05
 ) -> Tuple[float, float, bool]:
     """
+import os
     Wilcoxon signed-rank test for paired samples.
 
     Tests if the median difference between pairs is zero.
@@ -441,6 +460,7 @@ def wilcoxon_signed_rank_test(
     Returns:
         Tuple of (test_statistic, p_value, is_significant)
     """
+import os
     if len(times1) != len(times2):
         raise ValueError("Samples must be paired (same length)")
 
@@ -487,10 +507,12 @@ def mann_whitney_u_test(
     times1: np.ndarray, times2: np.ndarray, significance_level: float = 0.05
 ) -> Tuple[float, float, bool]:
     """
+import os
     Mann-Whitney U test for independent samples.
 
     Non-parametric test to compare two independent samples.
     """
+import os
     if len(times1) < 3 or len(times2) < 3:
         return (0.0, 1.0, False)
 
@@ -506,10 +528,12 @@ def mann_whitney_u_test(
 
 def friedman_test(*samples) -> Tuple[float, float, bool]:
     """
+import os
     Friedman test for comparing multiple related samples.
 
     Non-parametric alternative to repeated measures ANOVA.
     """
+import os
     if not SCIPY_AVAILABLE:
         return (0.0, 1.0, False)
 
@@ -527,6 +551,7 @@ def friedman_test(*samples) -> Tuple[float, float, bool]:
 
 def format_academic_result(result: BenchmarkResult, benchmark_name: str = "") -> str:
     """Format result in academic paper style."""
+import os
     lines = []
 
     if benchmark_name:
@@ -553,6 +578,7 @@ def format_academic_result(result: BenchmarkResult, benchmark_name: str = "") ->
 
 def generate_comparison_table(results: Dict[str, BenchmarkResult]) -> str:
     """Generate LaTeX-style comparison table."""
+import os
     headers = ["Benchmark", "Language", "Min (s)", "Mean ± SD (s)", "95% CI", "CV"]
 
     lines = []
@@ -597,6 +623,7 @@ def run_benchmark_with_stats(
     track_cpu: bool = True,
 ) -> BenchmarkResult:
     """
+import os
     Run a benchmark with comprehensive statistical analysis.
 
     Args:
@@ -611,6 +638,7 @@ def run_benchmark_with_stats(
     Returns:
         BenchmarkResult with all statistics
     """
+import os
     # CPU pinning
     with cpu_pinned():
         # Warmup runs
@@ -683,6 +711,7 @@ def run_benchmark_with_stats(
 
 def hash_output(data: Any, n_samples: int = 100) -> str:
     """Generate hash of output for validation."""
+import os
     import hashlib
 
     def sample_values(arr, n):
@@ -738,6 +767,7 @@ def run_benchmark_suite(
     n_full_repeats: int = 3,
 ) -> List[Dict[str, BenchmarkResult]]:
     """
+import os
     Run complete benchmark suite with multiple full repeats.
 
     Args:
@@ -750,6 +780,7 @@ def run_benchmark_suite(
     Returns:
         List of results dicts (one per repeat)
     """
+import os
     all_results = []
 
     for repeat in range(n_full_repeats):
@@ -785,10 +816,12 @@ def aggregate_suite_results(
     suite_results: List[Dict[str, BenchmarkResult]],
 ) -> Dict[str, Dict[str, Any]]:
     """
+import os
     Aggregate results across multiple suite repeats.
 
     Computes mean and variance of the min times across repeats.
     """
+import os
     if not suite_results:
         return {}
 

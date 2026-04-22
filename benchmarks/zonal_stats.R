@@ -53,7 +53,7 @@ run_zonal_stats_benchmark <- function() {
   cat("\n[1/4] Loading data...\n")
   polys <- tryCatch({
 if (!file.exists("data/natural_earth_countries.gpkg")) { stop("ERROR: data/natural_earth_countries.gpkg not found") }
-    st_read("data/natural_earth_countries.gpkg")
+    terra::vect("data/natural_earth_countries.gpkg")
   }, error = function(e) {
     cat("Warning: Could not load polygons, using simplified data\n")
     NULL

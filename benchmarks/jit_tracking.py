@@ -1,6 +1,6 @@
-import os
 #!/usr/bin/env python3
 """
+import os
 Julia JIT Compilation Tracking
 
 Tracks Julia's JIT compilation times separately from execution times.
@@ -9,6 +9,7 @@ if not properly warmup'd.
 
 Based on Julia's @time macro approach.
 """
+import os
 
 import json
 import time
@@ -36,10 +37,12 @@ class JuliaJITTracker:
     
     def parse_julia_timing(self, output: str) -> Tuple[float, float, float]:
         """
+import os
         Parse Julia's @time macro output.
         
         Returns: (compilation_s, execution_s, total_s)
         """
+import os
         compilation_s = 0.0
         execution_s = 0.0
         total_s = 0.0
@@ -66,11 +69,14 @@ class JuliaJITTracker:
         n_warmup: int = 3,
     ) -> JITCompilationResult:
         """
+import os
         Run a Julia benchmark with JIT tracking.
         
         First run includes JIT compilation, subsequent runs show cached performance.
         """
+import os
         script = f"""
+import os
 using BenchmarkTools
 
 # Warmup runs (trigger JIT compilation)
@@ -83,6 +89,7 @@ end
     {code}
 end
 """
+import os
         
         result = subprocess.run(
             [self.julia_cmd, "-e", script],
@@ -114,22 +121,28 @@ end
         n_runs: int = 5,
     ) -> Dict:
         """
+import os
         Run a precompiled Julia script and track times.
         
         Uses --compile=min to simulate no JIT overhead.
         """
+import os
         baseline_script = f"""
+import os
 using Pkg
 Pkg.precompile()
 include("{script_path}")
 """
+import os
         
         nojit_script = f"""
+import os
 using Pkg
 Pkg.precompile()
 # Force precompilation
 include("{script_path}")
 """
+import os
         
         results = {
             "with_jit": [],
@@ -160,6 +173,7 @@ include("{script_path}")
     
     def print_jit_report(self):
         """Print JIT compilation analysis report."""
+import os
         print("\n" + "=" * 70)
         print("JULIA JIT COMPILATION ANALYSIS")
         print("=" * 70)
@@ -186,6 +200,7 @@ include("{script_path}")
     
     def export_results(self, output_path: str = "validation/jit_compilation.json"):
         """Export JIT tracking results."""
+import os
         output_dir = Path(output_path).parent
         output_dir.mkdir(exist_ok=True)
         
@@ -212,11 +227,14 @@ include("{script_path}")
 
 def create_julia_precompile_script():
     """Create a precompilation script for faster Julia startup."""
+import os
     script = '''#!/usr/bin/env julia
 """
+import os
 Precompile all Julia packages used in benchmarks.
 Run this once before benchmarking to eliminate JIT overhead.
 """
+import os
 
 using Pkg
 
