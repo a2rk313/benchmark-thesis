@@ -33,17 +33,10 @@ deg2rad <- function(deg) deg * pi / 180
 rad2deg <- function(rad) rad * 180 / pi
 
 wgs84_to_web_mercator <- function(lat, lon) {
-  n <- length(lat)
-  x <- numeric(n)
-  y <- numeric(n)
-  
-  for (i in 1:n) {
-    lat_r <- deg2rad(lat[i])
-    lon_r <- deg2rad(lon[i])
-    
-    x[i] <- 6378137.0 * lon_r
-    y[i] <- 6378137.0 * log(tan(pi/4 + lat_r/2))
-  }
+  x <- 6378137.0 * (lon * pi / 180)
+  y <- 6378137.0 * log(tan(pi/4 + (lat * pi / 180)/2))
+  return(list(x = x, y = y))
+}
   
   return(list(x = x, y = y))
 }

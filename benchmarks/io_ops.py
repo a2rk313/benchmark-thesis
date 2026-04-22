@@ -34,8 +34,8 @@ def benchmark_csv_write(n_rows=1_000_000):
     
     # Timed operation
     start = time.perf_counter()
-    # Using engine='pyarrow' for high-performance I/O
-    df.to_csv(output_path, index=False, engine='pyarrow')
+    # Using  for high-performance I/O
+    df.to_csv(output_path, index=False, )
     elapsed = time.perf_counter() - start
     
     return elapsed, os.path.getsize(output_path)
@@ -49,8 +49,8 @@ def benchmark_csv_read():
     
     # Timed operation
     start = time.perf_counter()
-    # Using engine='pyarrow' for high-performance I/O
-    df = pd.read_csv(input_path, engine='pyarrow')
+    # Using  for high-performance I/O
+    df = pd.read_csv(input_path, )
     elapsed = time.perf_counter() - start
     
     return elapsed, len(df)
