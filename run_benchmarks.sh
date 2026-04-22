@@ -167,6 +167,8 @@ R_LOCAL_TAG="thesis-r:4.5"
 
 export JULIA_NUM_THREADS=8
 export OPENBLAS_NUM_THREADS=8
+export FLEXIBLAS_NUM_THREADS=8
+export GOTO_NUM_THREADS=8
 export OMP_NUM_THREADS=8
 
 CPU_PIN_ENABLED=true
@@ -650,6 +652,8 @@ if [[ "$MODE" != "container" ]]; then
     
     echo -e "${YELLOW}  Matrix Operations (BLAS-heavy):${NC}"
     export OPENBLAS_NUM_THREADS=8
+export FLEXIBLAS_NUM_THREADS=8
+export GOTO_NUM_THREADS=8
     export JULIA_NUM_THREADS=1
     command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
     command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"

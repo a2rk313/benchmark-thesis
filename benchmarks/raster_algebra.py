@@ -62,8 +62,6 @@ def load_cuprite_bands():
             "swir": band_900,
             "shape": (data.shape[0], rows, cols),
         }
-    except Exception as e:
-        print(f"Warning: Could not load Cuprite data: {e}")
         print("Generating synthetic data instead...")
         rows, cols = 614, 512
         np.random.seed(42)
@@ -74,8 +72,6 @@ def load_cuprite_bands():
             "swir": np.random.rand(rows, cols).astype(np.float32) * 1500,
             "shape": (4, rows, cols),
         }
-    except Exception as e:
-        print(f"Warning: Could not load Cuprite data: {e}")
         print("Generating synthetic data instead...")
         shape = (512, 614)
         np.random.seed(42)

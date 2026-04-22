@@ -1,7 +1,7 @@
 # Chapter 3: Research Methodology
 
 ## 3.1 Experimental Design Overview
-This research employs a rigorous computational benchmarking framework to evaluate the performance of Julia (v1.12.6) against the industry-standard scientific languages Python (v3.13) and R (v4.5.x) within the context of Geographic Information Systems (GIS) and Remote Sensing (RS) workflows. The methodology is designed to prioritize three core pillars: **Scientific Rigor**, **Computational Fairness**, and **Bare-Metal Reproducibility**.
+This research employs a rigorous computational benchmarking framework to evaluate the performance of Julia (v1.11.x) against the industry-standard scientific languages Python (v3.14) and R (v4.5.x) within the context of Geographic Information Systems (GIS) and Remote Sensing (RS) workflows. The methodology is designed to prioritize three core pillars: **Scientific Rigor**, **Computational Fairness**, and **Bare-Metal Reproducibility**.
 
 ## 3.2 Infrastructure: The bootc Bare-Metal Appliance
 To eliminate the performance variance (the "virtualization tax") introduced by standard Docker/Podman containers or Virtual Machines, this study utilizes a custom-built, immutable operating system based on the **Fedora bootc (Bootable Container)** standard.
