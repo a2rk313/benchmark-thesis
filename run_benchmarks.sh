@@ -619,7 +619,6 @@ if [[ "$MODE" != "container" ]]; then
         
         # Setup environment for bootc or native
         if [[ "$IS_BOOTC" == "true" ]]; then
-            export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
             export JULIA_DEPOT_PATH="/usr/share/julia/depot"
         fi
 
