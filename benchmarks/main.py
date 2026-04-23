@@ -26,19 +26,19 @@ SCENARIOS = {
     "matrix_ops": {
         "name": "Matrix Operations",
         "files": {
-            "python": "benchmarks/matrix_ops.py",
+            "python": "benchmarks/matrix_ops.py", "python-jit": "benchmarks/matrix_ops.py",
             "julia": "benchmarks/matrix_ops.jl",
             "r": "benchmarks/matrix_ops.R",
         },
     },
     "io_ops": {
         "name": "I/O Operations",
-        "files": {"python": "benchmarks/io_ops.py", "julia": "benchmarks/io_ops.jl", "r": "benchmarks/io_ops.R"},
+        "files": {"python": "benchmarks/io_ops.py", "python-jit": "benchmarks/io_ops.py", "julia": "benchmarks/io_ops.jl", "r": "benchmarks/io_ops.R"},
     },
     "hsi_stream": {
         "name": "Hyperspectral SAM",
         "files": {
-            "python": "benchmarks/hsi_stream.py",
+            "python": "benchmarks/hsi_stream.py", "python-jit": "benchmarks/hsi_stream.py",
             "julia": "benchmarks/hsi_stream.jl",
             "r": "benchmarks/hsi_stream.R",
         },
@@ -46,7 +46,7 @@ SCENARIOS = {
     "vector_pip": {
         "name": "Vector Point-in-Polygon",
         "files": {
-            "python": "benchmarks/vector_pip.py",
+            "python": "benchmarks/vector_pip.py", "python-jit": "benchmarks/vector_pip.py",
             "julia": "benchmarks/vector_pip.jl",
             "r": "benchmarks/vector_pip.R",
         },
@@ -54,7 +54,7 @@ SCENARIOS = {
     "interpolation": {
         "name": "IDW Interpolation",
         "files": {
-            "python": "benchmarks/interpolation_idw.py",
+            "python": "benchmarks/interpolation_idw.py", "python-jit": "benchmarks/interpolation_idw.py",
             "julia": "benchmarks/interpolation_idw.jl",
             "r": "benchmarks/interpolation_idw.R",
         },
@@ -62,7 +62,7 @@ SCENARIOS = {
     "timeseries": {
         "name": "Time-Series NDVI",
         "files": {
-            "python": "benchmarks/timeseries_ndvi.py",
+            "python": "benchmarks/timeseries_ndvi.py", "python-jit": "benchmarks/timeseries_ndvi.py",
             "julia": "benchmarks/timeseries_ndvi.jl",
             "r": "benchmarks/timeseries_ndvi.R",
         },
@@ -70,7 +70,7 @@ SCENARIOS = {
     "raster_algebra": {
         "name": "Raster Algebra & Band Math",
         "files": {
-            "python": "benchmarks/raster_algebra.py",
+            "python": "benchmarks/raster_algebra.py", "python-jit": "benchmarks/raster_algebra.py",
             "julia": "benchmarks/raster_algebra.jl",
             "r": "benchmarks/raster_algebra.R",
         },
@@ -78,7 +78,7 @@ SCENARIOS = {
     "zonal_stats": {
         "name": "Zonal Statistics",
         "files": {
-            "python": "benchmarks/zonal_stats.py",
+            "python": "benchmarks/zonal_stats.py", "python-jit": "benchmarks/zonal_stats.py",
             "julia": "benchmarks/zonal_stats.jl",
             "r": "benchmarks/zonal_stats.R",
         },
@@ -86,7 +86,7 @@ SCENARIOS = {
     "reprojection": {
         "name": "Coordinate Reprojection",
         "files": {
-            "python": "benchmarks/reprojection.py",
+            "python": "benchmarks/reprojection.py", "python-jit": "benchmarks/reprojection.py",
             "julia": "benchmarks/reprojection.jl",
             "r": "benchmarks/reprojection.R",
         },
@@ -129,6 +129,21 @@ def run_command(cmd, cwd=None, description=None, env=None):
     except Exception as e:
         print(f"Error running command: {e}")
         return False
+
+
+
+def run_python_jit_benchmark(script):
+    """Run a Python benchmark using the JIT-enabled interpreter."""
+    env = {}
+    if is_bootc():
+        # Use custom JIT Python and bridge to system packages
+        env["PYTHONPATH"] = f"/usr/lib64/python3.14/site-packages:/usr/lib/python3.14/site-packages:/usr/local/lib/python3.14/site-packages:/usr/local/lib64/python3.14/site-packages"
+        cmd = f"python3-jit {script}"
+    else:
+        # Fallback to standard python3 if not in bootc (or assuming user has python3-jit)
+        cmd = f"python3-jit {script}"
+    
+    return run_command(cmd, description=f"Python-JIT: {script}", env=env)
 
 
 def run_python_benchmark(script):
@@ -188,6 +203,8 @@ def run_scenario(scenario_name, languages=None):
 
         if lang == "python":
             success = run_python_benchmark(script)
+        elif lang == "python-jit":
+            success = run_python_jit_benchmark(script)
         elif lang == "julia":
             success = run_julia_benchmark(script)
         elif lang == "r":
@@ -252,7 +269,7 @@ def main():
         "--lang",
         "-l",
         nargs="+",
-        choices=["python", "julia", "r"],
+        choices=["python", "python-jit", "julia", "r"],
         help="Run specific languages",
     )
     parser.add_argument("--all", "-a", action="store_true", help="Run all benchmarks")

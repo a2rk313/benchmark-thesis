@@ -65,6 +65,13 @@ check_python_native() {
     
     python3 -c "import numpy; print(f'    ✓ NumPy {numpy.__version__} detected'); numpy.show_config()" | grep -i blas || echo "    ! OpenBLAS not detected in NumPy config"
     python3 -c "import geopandas; print(f'    ✓ GeoPandas {geopandas.__version__} detected')"
+
+    if command -v python3-jit &> /dev/null; then
+        echo "    ✓ python3-jit detected"
+    else
+        echo "    ! python3-jit not found in PATH"
+    fi
+
     echo "    ✓ System Python ready"
 }
 
@@ -174,6 +181,13 @@ run_native_benchmarks() {
             echo "[Python] Running $scenario..."
             /usr/bin/time -v $PIN_CMD python3 "benchmarks/${scenario}.py" > "$RESULTS_BASE/${scenario}_python.json" 2> "$RESULTS_BASE/${scenario}_python_stats.txt" || echo "    ! Python $scenario failed"
         fi
+        # Python JIT
+        if [ -f "benchmarks/${scenario}.py" ] && command -v python3-jit &> /dev/null; then
+            echo "[Python-JIT] Running $scenario..."
+            export PYTHONPATH="/usr/lib64/python3.14/site-packages:/usr/lib/python3.14/site-packages:/usr/local/lib/python3.14/site-packages:/usr/local/lib64/python3.14/site-packages"
+            /usr/bin/time -v $PIN_CMD python3-jit "benchmarks/${scenario}.py" > "$RESULTS_BASE/${scenario}_python_jit.json" 2> "$RESULTS_BASE/${scenario}_python_jit_stats.txt" || echo "    ! Python-JIT $scenario failed"
+        fi
+
         
         # Julia
         if [ -f "benchmarks/${scenario}.jl" ]; then
