@@ -1,3 +1,18 @@
+
+# Dynamic path resolution
+get_project_root <- function() {
+  # Attempt to find root based on script location
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd()) # Fallback
+  }
+}
+PROJECT_ROOT <- get_project_root()
+DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 # =============================================================================
 # SCENARIO F: Zonal Statistics - R Implementation
@@ -52,8 +67,8 @@ run_zonal_stats_benchmark <- function() {
   # Load data
   cat("\n[1/4] Loading data...\n")
   polys <- tryCatch({
-if (!file.exists("data/natural_earth_countries.gpkg")) { stop("ERROR: data/natural_earth_countries.gpkg not found") }
-    terra::vect("data/natural_earth_countries.gpkg")
+if (!file.exists(file.path(DATA_DIR, "natural_earth_countries.gpkg"))) { stop("ERROR: data/natural_earth_countries.gpkg not found") }
+    terra::vect(file.path(DATA_DIR, "natural_earth_countries.gpkg"))
   }, error = function(e) {
     cat("Warning: Could not load polygons, using simplified data\n")
     NULL

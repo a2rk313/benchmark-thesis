@@ -5,16 +5,23 @@ Real MODIS NDVI Time Series Benchmark with Actual Data Download
 Downloads real MODIS NDVI data from NASA LP DAAC and benchmarks processing.
 This ensures benchmarks use real scientific data rather than synthetic approximations.
 """
+from pathlib import Path
 
 import numpy as np
 import hashlib
 import json
 import os
-from pathlib import Path
 from typing import Optional, Tuple
+
 import urllib.request
 import tarfile
 import tempfile
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 MODIS_NDVI_URL = (
@@ -24,7 +31,7 @@ MODIS_NDVI_URL = (
 
 
 def download_modis_subset(
-    output_dir: str = "data/modis",
+    output_dir: str = str(DATA_DIR / "modis"),
     force_redownload: bool = False,
 ) -> Optional[np.ndarray]:
     """
@@ -187,6 +194,19 @@ def spatial_statistics(ndvi_data: np.ndarray) -> dict:
     }
 
 
+
+def show_modis_instructions():
+    print('\n' + '!'*70)
+    print('MISSING DATA: MODIS NDVI Time Series (real_modis_real.npy)')
+    print('USGS has changed their API, so automatic download is disabled.')
+    print('To run this benchmark with real data:')
+    print('1. Download MCD13A1 HDF from NASA Earthdata Search.')
+    print('2. Convert to .npy or put the HDF in data/modis/')
+    print('3. For now, we will fallback to synthetic data.')
+    print('!'*70 + '\n')
+    return None
+
+
 def run_real_modis_benchmark(n_runs: int = 5) -> dict:
     """Run the real MODIS benchmark suite."""
     print("=" * 70)
@@ -195,7 +215,7 @@ def run_real_modis_benchmark(n_runs: int = 5) -> dict:
     
     ndvi_data = generate_realistic_modis_subset()
     
-    real_data = download_modis_subset()
+    real_data = show_modis_instructions() if not (DATA_DIR / 'modis' / 'modis_ndvi_real.npy').exists() else np.load(DATA_DIR / 'modis' / 'modis_ndvi_real.npy')
     if real_data is not None:
         ndvi_data = real_data
         print(f"Using real MODIS data: {ndvi_data.shape}")

@@ -10,8 +10,8 @@ function haversine_vectorized(lat1, lon1, lat2, lon2)
 end
 
 function main()
-    polys = GeoDataFrames.read("data/natural_earth_countries.gpkg")
-    points_df = CSV.read("data/gps_points_1m.csv", DataFrame)
+    polys = GeoDataFrames.read(joinpath(@__DIR__, "..", "data", "natural_earth_countries.gpkg"))
+    points_df = CSV.read(joinpath(@__DIR__, "..", "data", "gps_points_1m.csv"), DataFrame)
     
     # Create Spatial Index (STRtree) for fairness
     geos_polys = [LibGEOS.readgeom(ArchGDAL.toWKT(g)) for g in polys.geometry]

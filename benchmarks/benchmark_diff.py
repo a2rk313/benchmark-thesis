@@ -9,14 +9,21 @@ a detailed diff report showing:
 - New benchmarks added
 - Benchmarks removed
 """
+from pathlib import Path
 
 import json
 import argparse
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
 from datetime import datetime
+
 import numpy as np
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 @dataclass

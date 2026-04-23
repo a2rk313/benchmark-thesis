@@ -2,20 +2,22 @@
 """
 Main Benchmark Runner
 Runs all benchmarks across Python, Julia, and R languages.
-
-Usage:
-    python main.py                    # Run all benchmarks
-    python main.py --scenario matrix  # Run specific scenario
-    python main.py --lang python     # Run specific language
-    python main.py --validate        # Validate cross-language results
 """
+from pathlib import Path
 
 import argparse
 import os
 import subprocess
 import sys
-from pathlib import Path
 
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
+
+# Important: Run from project root so "data/" paths work
 BENCHMARK_DIR = Path(__file__).parent
 PROJECT_DIR = BENCHMARK_DIR.parent
 
@@ -24,69 +26,69 @@ SCENARIOS = {
     "matrix_ops": {
         "name": "Matrix Operations",
         "files": {
-            "python": "matrix_ops.py",
-            "julia": "matrix_ops.jl",
-            "r": "matrix_ops.R",
+            "python": "benchmarks/matrix_ops.py",
+            "julia": "benchmarks/matrix_ops.jl",
+            "r": "benchmarks/matrix_ops.R",
         },
     },
     "io_ops": {
         "name": "I/O Operations",
-        "files": {"python": "io_ops.py", "julia": "io_ops.jl", "r": "io_ops.R"},
+        "files": {"python": "benchmarks/io_ops.py", "julia": "benchmarks/io_ops.jl", "r": "benchmarks/io_ops.R"},
     },
     "hsi_stream": {
         "name": "Hyperspectral SAM",
         "files": {
-            "python": "hsi_stream.py",
-            "julia": "hsi_stream.jl",
-            "r": "hsi_stream.R",
+            "python": "benchmarks/hsi_stream.py",
+            "julia": "benchmarks/hsi_stream.jl",
+            "r": "benchmarks/hsi_stream.R",
         },
     },
     "vector_pip": {
         "name": "Vector Point-in-Polygon",
         "files": {
-            "python": "vector_pip.py",
-            "julia": "vector_pip.jl",
-            "r": "vector_pip.R",
+            "python": "benchmarks/vector_pip.py",
+            "julia": "benchmarks/vector_pip.jl",
+            "r": "benchmarks/vector_pip.R",
         },
     },
     "interpolation": {
         "name": "IDW Interpolation",
         "files": {
-            "python": "interpolation_idw.py",
-            "julia": "interpolation_idw.jl",
-            "r": "interpolation_idw.R",
+            "python": "benchmarks/interpolation_idw.py",
+            "julia": "benchmarks/interpolation_idw.jl",
+            "r": "benchmarks/interpolation_idw.R",
         },
     },
     "timeseries": {
         "name": "Time-Series NDVI",
         "files": {
-            "python": "timeseries_ndvi.py",
-            "julia": "timeseries_ndvi.jl",
-            "r": "timeseries_ndvi.R",
+            "python": "benchmarks/timeseries_ndvi.py",
+            "julia": "benchmarks/timeseries_ndvi.jl",
+            "r": "benchmarks/timeseries_ndvi.R",
         },
     },
     "raster_algebra": {
         "name": "Raster Algebra & Band Math",
         "files": {
-            "python": "raster_algebra.py",
-            "julia": "raster_algebra.jl",
-            "r": "raster_algebra.R",
+            "python": "benchmarks/raster_algebra.py",
+            "julia": "benchmarks/raster_algebra.jl",
+            "r": "benchmarks/raster_algebra.R",
         },
     },
     "zonal_stats": {
         "name": "Zonal Statistics",
         "files": {
-            "python": "zonal_stats.py",
-            "julia": "zonal_stats.jl",
-            "r": "zonal_stats.R",
+            "python": "benchmarks/zonal_stats.py",
+            "julia": "benchmarks/zonal_stats.jl",
+            "r": "benchmarks/zonal_stats.R",
         },
     },
     "reprojection": {
         "name": "Coordinate Reprojection",
         "files": {
-            "python": "reprojection.py",
-            "julia": "reprojection.jl",
-            "r": "reprojection.R",
+            "python": "benchmarks/reprojection.py",
+            "julia": "benchmarks/reprojection.jl",
+            "r": "benchmarks/reprojection.R",
         },
     },
 }
@@ -108,10 +110,19 @@ def run_command(cmd, cwd=None, description=None, env=None):
     current_env = os.environ.copy()
     if env:
         current_env.update(env)
+    
+    # ACADEMIC RIGOR: Force thread synchronization for all subprocesses
+    current_env["JULIA_NUM_THREADS"] = "8"
+    current_env["OPENBLAS_NUM_THREADS"] = "8"
+    current_env["FLEXIBLAS_NUM_THREADS"] = "8"
+    current_env["GOTO_NUM_THREADS"] = "8"
+    current_env["OMP_NUM_THREADS"] = "8"
+    current_env["FLEXIBLAS"] = "OPENBLAS-OPENMP"
 
     try:
+        # Run from PROJECT_DIR by default so data/ is accessible
         result = subprocess.run(
-            cmd, shell=True, cwd=cwd or BENCHMARK_DIR, capture_output=False, text=True,
+            cmd, shell=True, cwd=cwd or PROJECT_DIR, capture_output=False, text=True,
             env=current_env
         )
         return result.returncode == 0
@@ -128,12 +139,7 @@ def run_python_benchmark(script):
         env["PYTHONPATH"] = f"/usr/local/lib/python-deps:{os.environ.get('PYTHONPATH', '')}"
         cmd = f"python3 {script}"
     else:
-        # Check if venv exists
-        venv_python = PROJECT_DIR / ".venv" / "bin" / "python"
-        if venv_python.exists():
-            cmd = f"source {PROJECT_DIR}/.venv/bin/activate && python {script}"
-        else:
-            cmd = f"python3 {script}"
+        cmd = f"python3 {script}"
     
     return run_command(cmd, description=f"Python: {script}", env=env)
 
@@ -146,10 +152,7 @@ def run_julia_benchmark(script):
         env["JULIA_DEPOT_PATH"] = "/usr/share/julia/depot"
         julia_cmd = "/usr/bin/julia"
     else:
-        # Use julialauncher for proper Julia environment in mise/local
-        julia_cmd = os.path.expanduser("~/.juliaup/bin/julialauncher")
-        if not os.path.exists(julia_cmd):
-            julia_cmd = "julia"  # Fallback
+        julia_cmd = "julia"
     
     cmd = f"{julia_cmd} {script}"
     return run_command(cmd, description=f"Julia: {script}", env=env)
@@ -157,8 +160,7 @@ def run_julia_benchmark(script):
 
 def run_r_benchmark(script):
     """Run an R benchmark."""
-    cmd = "Rscript" if is_bootc() else "Rscript"
-    cmd = f"{cmd} {script}"
+    cmd = f"Rscript {script}"
     return run_command(cmd, description=f"R: {script}")
 
 
@@ -166,21 +168,20 @@ def run_scenario(scenario_name, languages=None):
     """Run a specific benchmark scenario."""
     if scenario_name not in SCENARIOS:
         print(f"Unknown scenario: {scenario_name}")
-        print(f"Available: {', '.join(SCENARIOS.keys())}")
-        return False
+        return {}
 
     scenario = SCENARIOS[scenario_name]
     print(f"\n{'#' * 60}")
     print(f"# {scenario['name']}")
     print(f"{'#' * 60}")
 
-    all_passed = True
+    scenario_results = {}
 
     for lang, script in scenario["files"].items():
         if languages and lang not in languages:
             continue
 
-        script_path = BENCHMARK_DIR / script
+        script_path = PROJECT_DIR / script
         if not script_path.exists():
             print(f"⚠ {script} not found, skipping...")
             continue
@@ -194,11 +195,11 @@ def run_scenario(scenario_name, languages=None):
         else:
             continue
 
+        scenario_results[lang] = success
         if not success:
-            all_passed = False
             print(f"✗ {lang.capitalize()} benchmark failed")
 
-    return all_passed
+    return scenario_results
 
 
 def run_all(languages=None):
@@ -207,49 +208,41 @@ def run_all(languages=None):
     print("RUNNING ALL BENCHMARKS")
     print("=" * 60)
 
-    results = {}
+    all_results = {}
 
     for scenario_name in SCENARIOS:
-        results[scenario_name] = run_scenario(scenario_name, languages)
+        all_results[scenario_name] = run_scenario(scenario_name, languages)
 
     # Print summary
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
 
-    passed = sum(1 for v in results.values() if v)
-    total = len(results)
+    total_scenarios = len(SCENARIOS)
+    scenarios_passed = 0
 
-    for scenario_name, success in results.items():
-        status = "✓" if success else "✗"
-        print(f"  {status} {SCENARIOS[scenario_name]['name']}")
+    for scenario_id, scenario in SCENARIOS.items():
+        results = all_results.get(scenario_id, {})
+        if not results:
+            continue
+            
+        langs_status = []
+        scenario_success = True
+        for lang, success in results.items():
+            status = "✓" if success else "✗"
+            langs_status.append(f"{lang}: {status}")
+            if not success:
+                scenario_success = False
+        
+        if scenario_success:
+            scenarios_passed += 1
+            
+        status_icon = "✓" if scenario_success else "✗"
+        print(f"  {status_icon} {scenario['name']:<30} [ {', '.join(langs_status)} ]")
 
-    print(f"\nPassed: {passed}/{total}")
+    print(f"\nScenarios Passed: {scenarios_passed}/{total_scenarios}")
 
-    return passed == total
-
-
-def run_validation():
-    """Run cross-language validation."""
-    print("\n" + "=" * 60)
-    print("CROSS-LANGUAGE VALIDATION")
-    print("=" * 60)
-
-    # Run validation script
-    validate_script = PROJECT_DIR / "tools" / "compare_results.py"
-    if validate_script.exists():
-        cmd = f"python {validate_script}"
-        run_command(cmd, description="Cross-language validation")
-    else:
-        print("Validation script not found")
-
-    # Run literature comparison
-    tedesco_script = PROJECT_DIR / "tools" / "compare_with_tedesco.py"
-    if tedesco_script.exists():
-        cmd = f"python {tedesco_script}"
-        run_command(cmd, description="Literature comparison (Tedesco et al.)")
-    else:
-        print("Literature comparison script not found")
+    return scenarios_passed == total_scenarios
 
 
 def main():
@@ -262,21 +255,14 @@ def main():
         choices=["python", "julia", "r"],
         help="Run specific languages",
     )
-    parser.add_argument(
-        "--validate", "-v", action="store_true", help="Run cross-language validation"
-    )
     parser.add_argument("--all", "-a", action="store_true", help="Run all benchmarks")
 
     args = parser.parse_args()
 
-    if args.validate:
-        run_validation()
-    elif args.scenario:
+    if args.scenario:
         run_scenario(args.scenario, args.lang)
-    elif args.all or not any([args.scenario, args.validate]):
-        run_all(args.lang)
     else:
-        parser.print_help()
+        run_all(args.lang)
 
 
 if __name__ == "__main__":

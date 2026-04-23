@@ -8,6 +8,7 @@ Dataset: 1M GPS points × Natural Earth countries (high-vertex complexity)
 Metrics: Computational throughput, GEOS interface efficiency
 ===============================================================================
 """
+from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
@@ -16,7 +17,13 @@ import shapely
 import sys
 import json
 import hashlib
-from pathlib import Path
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 
 def haversine_vectorized(lat1, lon1, lat2, lon2):
@@ -60,14 +67,14 @@ def main():
     print("\n[1/4] Loading data...")
 
     # Load polygon dataset (Natural Earth countries)
-    polys = gpd.read_file("data/natural_earth_countries.gpkg")
+    polys = gpd.read_file(str(DATA_DIR / "natural_earth_countries.gpkg"))
     print(f"  ✓ Loaded {len(polys)} polygons")
     # Count vertices - use shapely.get_coordinates for all geometries
     total_vertices = shapely.get_coordinates(polys.geometry.buffer(0).boundary).shape[0]
     print(f"  ✓ Total vertices: {total_vertices}")
 
     # Load point dataset
-    points_df = pd.read_csv("data/gps_points_1m.csv")
+    points_df = pd.read_csv(str(DATA_DIR / "gps_points_1m.csv"))
     points = gpd.GeoDataFrame(
         points_df,
         geometry=gpd.points_from_xy(points_df["lon"], points_df["lat"]),

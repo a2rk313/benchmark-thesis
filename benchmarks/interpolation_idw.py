@@ -8,14 +8,21 @@ Dataset: 50,000 random points → 1000x1000 grid interpolation
 Metrics: Computational throughput, numerical efficiency, vectorization
 ===============================================================================
 """
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import json
 import hashlib
 import time
-from pathlib import Path
+
 from scipy.spatial import cKDTree
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 def idw_interpolation(points, values, grid_x, grid_y, power=2, neighbors=12):
     """

@@ -3,12 +3,19 @@
 Hardware Detection Module
 Captures system specifications for benchmark reproducibility.
 """
+from pathlib import Path
 
 import platform
 import json
 import os
-from pathlib import Path
 from datetime import datetime
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 
 def get_hardware_info() -> dict:

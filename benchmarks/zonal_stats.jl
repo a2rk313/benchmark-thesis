@@ -75,7 +75,7 @@ function main()
     
     # 1. Load Data
     println("\n[1/4] Loading real-world polygons...")
-    polys = GeoDataFrames.read("data/natural_earth_countries.gpkg")
+    polys = GeoDataFrames.read(joinpath(@__DIR__, "..", "data", "natural_earth_countries.gpkg"))
     println("  ✓ Loaded $(nrow(polys)) country polygons")
     
     # 2. Create Raster

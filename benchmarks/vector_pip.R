@@ -1,3 +1,18 @@
+
+# Dynamic path resolution
+get_project_root <- function() {
+  # Attempt to find root based on script location
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd()) # Fallback
+  }
+}
+PROJECT_ROOT <- get_project_root()
+DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 ################################################################################
 # SCENARIO B: Complex Vector Operations – R Implementation (terra only)
@@ -39,11 +54,11 @@ main <- function() {
   cat("\n[1/4] Loading data...\n")
 
   # Load polygon dataset (Natural Earth countries) as SpatVector
-  polys <- vect("data/natural_earth_countries.gpkg")
+  polys <- vect(file.path(DATA_DIR, "natural_earth_countries.gpkg"))
   cat(sprintf("  ✓ Loaded %d polygons\n", nrow(polys)))
 
   # Load point dataset
-  points_df <- read.csv("data/gps_points_1m.csv")
+  points_df <- read.csv(file.path(DATA_DIR, "gps_points_1m.csv"))
   points <- vect(points_df, geom = c("lon", "lat"), crs = "EPSG:4326")
   cat(sprintf("  ✓ Loaded %d points\n", nrow(points)))
 

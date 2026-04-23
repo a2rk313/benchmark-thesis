@@ -25,7 +25,7 @@ function benchmark_csv_write(n_rows=1_000_000)
         device_id = rand(1:10000, n_rows)
     )
     
-    output_path = "data/io_test_julia.csv"
+    output_path = joinpath(@__DIR__, "..", "data", "io_test_julia.csv")
     
     # Timed operation
     start_time = time()
@@ -41,7 +41,7 @@ function benchmark_csv_read()
     """
     Task 2: Read CSV File
     """
-    input_path = "data/io_test_julia.csv"
+    input_path = joinpath(@__DIR__, "..", "data", "io_test_julia.csv")
     
     # Timed operation
     start_time = time()
@@ -58,7 +58,7 @@ function benchmark_binary_write(n_values=1_000_000)
     # Pre-generate data (not timed)
     arr = randn(Float64, n_values)
     
-    output_path = "data/io_test_julia.bin"
+    output_path = joinpath(@__DIR__, "..", "data", "io_test_julia.bin")
     
     # Timed operation
     start_time = time()
@@ -76,7 +76,7 @@ function benchmark_binary_read()
     """
     Task 4: Read Binary File
     """
-    input_path = "data/io_test_julia.bin"
+    input_path = joinpath(@__DIR__, "..", "data", "io_test_julia.bin")
     n = 1_000_000
     
     # Timed operation
@@ -214,7 +214,7 @@ function main()
     
     # Cleanup
     println("\nCleaning up test files...")
-    for path in ["data/io_test_julia.csv", "data/io_test_julia.bin"]
+    for path in [joinpath(@__DIR__, "..", "data", "io_test_julia.csv"), joinpath(@__DIR__, "..", "data", "io_test_julia.bin")]
         if isfile(path)
             rm(path)
         end

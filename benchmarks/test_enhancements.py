@@ -10,13 +10,14 @@ Tests all new statistical methods, benchmarks, and utilities:
 - Flaky detection
 - Benchmark diffing
 """
+from pathlib import Path
 
 import unittest
+
 import numpy as np
 import json
 import tempfile
 import shutil
-from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -41,6 +42,12 @@ from regression_tests import RegressionTestSuite, RegressionStatus
 from detect_flaky import FlakyTestDetector
 from benchmark_diff import BenchmarkDiffer
 from trend_analysis import TrendAnalyzer
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 class TestMedianOfMeans(unittest.TestCase):

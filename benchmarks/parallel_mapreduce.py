@@ -10,15 +10,22 @@ This is common in:
 - Regional climate model processing
 - Distributed feature extraction
 """
+from pathlib import Path
 
 import numpy as np
 import hashlib
 import json
 import time
-from pathlib import Path
 from typing import List, Callable, Any
+
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import multiprocessing
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 def process_tile(tile_data: np.ndarray, operation: str = "ndvi_stats") -> dict:

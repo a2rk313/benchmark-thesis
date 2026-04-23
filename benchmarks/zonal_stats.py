@@ -9,23 +9,30 @@ Academic rationale:
 - Used in land cover analysis, climate studies, hydrology
 - Tests raster-vector overlay performance
 """
+from pathlib import Path
 
 import os
 import sys
 import time
 import json
+
 import numpy as np
 import geopandas as gpd
-from pathlib import Path
 import tracemalloc
 
 sys.path.insert(0, str(Path(__file__).parent))
 from benchmark_stats import (
+
     generate_hash,
     shapiro_wilk_test,
     bootstrap_ci,
     run_benchmark,
 )
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
 
 OUTPUT_DIR = Path("validation")
 RESULTS_DIR = Path("results")
@@ -35,7 +42,7 @@ def load_or_create_data():
     """Load or create test data for zonal statistics."""
     try:
         # Load polygons
-        polys = gpd.read_file("data/natural_earth_countries.gpkg")
+        polys = gpd.read_file(str(DATA_DIR / "natural_earth_countries.gpkg"))
 
         # Try to load real NLCD land cover data
         raster, rows, cols = load_nlcd_data()
@@ -85,8 +92,8 @@ def load_or_create_data():
 def load_nlcd_data():
     """Load real NLCD land cover data if available."""
     nlcd_paths = [
-        "data/nlcd/nlcd_landcover.bin",
-        "data/nlcd/nlcd_landcover.tif",
+        str(DATA_DIR / "nlcd/nlcd_landcover.bin"),
+        str(DATA_DIR / "nlcd/nlcd_landcover.tif"),
     ]
 
     for path in nlcd_paths:

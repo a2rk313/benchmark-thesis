@@ -74,7 +74,7 @@ function main()
     # =========================================================================
     println("\n[2/5] Opening hyperspectral dataset...")
     
-    hsi_path = "data/Cuprite.mat"
+    hsi_path = joinpath(@__DIR__, "..", "data", "Cuprite.mat")
 if !isfile(hsi_path); println("ERROR: data file not found: $hsi_path"); return 1; end
     
     println("  ✓ Loading MAT file: $hsi_path")

@@ -1,3 +1,18 @@
+
+# Dynamic path resolution
+get_project_root <- function() {
+  # Attempt to find root based on script location
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd()) # Fallback
+  }
+}
+PROJECT_ROOT <- get_project_root()
+DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 ################################################################################
 # SCENARIO A.2: Hyperspectral Spectral Angle Mapper - R Implementation
@@ -66,7 +81,7 @@ main <- function() {
   # ===========================================================================
   cat("\n[2/5] Opening hyperspectral dataset...\n")
   
-  hsi_path <- "data/Cuprite.mat"
+  hsi_path <- file.path(DATA_DIR, "Cuprite.mat")
   
   cat(sprintf("  ✓ Loading MAT file: %s\n", hsi_path))
   mat_data <- readMat(hsi_path)

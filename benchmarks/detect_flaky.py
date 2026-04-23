@@ -8,14 +8,21 @@ Analyzes benchmark variance over time to detect:
 3. Tests with bimodal distributions (hot/cold cache effects)
 4. Outliers in timing distributions
 """
+from pathlib import Path
 
 import json
+
 import numpy as np
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 import argparse
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 @dataclass

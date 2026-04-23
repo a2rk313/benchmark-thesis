@@ -3,10 +3,18 @@
 Unified hashing utilities for cross-language validation.
 Uses SHA256 with consistent sampling for fair comparison.
 """
+from pathlib import Path
 
 import hashlib
 import json
 from typing import Union, List, Tuple
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 
 def sample_array(arr, n_samples: int = 100) -> List[float]:

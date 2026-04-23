@@ -4,8 +4,8 @@
 
 set -e
 
-BENCHMARK_DIR="/benchmarks"
-DATA_DIR="/data"
+BENCHMARK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="${BENCHMARK_DIR}/data"
 REPO_URL="https://github.com/a2rk313/benchmark-thesis.git"
 
 echo "=========================================================================="

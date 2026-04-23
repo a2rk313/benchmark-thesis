@@ -5,14 +5,21 @@ Regression Testing Module for Thesis Benchmarks
 Validates that benchmark results haven't regressed against known-good baselines.
 Supports both output hash validation and statistical regression detection.
 """
+from pathlib import Path
 
 import json
 import hashlib
+
 import numpy as np
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from enum import Enum
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 class RegressionStatus(Enum):

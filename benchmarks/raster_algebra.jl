@@ -18,7 +18,7 @@ include(joinpath(@__DIR__, "common_hash.jl"))
 
 function load_cuprite_bands()
     try
-        mat_file = matopen("data/Cuprite.mat", "r")
+        mat_file = matopen(joinpath(@__DIR__, "..", "data", "Cuprite.mat"), "r")
         keys_list = keys(mat_file)
         data_key = first(keys_list)
         data = read(mat_file, data_key)

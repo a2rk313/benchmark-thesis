@@ -37,6 +37,7 @@ Output Format:
 
 Usage:
     from thesis_formatter import ThesisFormatter
+
     formatter = ThesisFormatter("python", "matrix_ops")
     formatter.add_task("matrix_creation", times_array)
     formatter.add_validation_hash(hash_value)
@@ -44,17 +45,23 @@ Usage:
 
 ================================================================================
 """
+from pathlib import Path
 
 import json
 import hashlib
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, asdict
 from contextlib import contextmanager
 
 import numpy as np
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 # =============================================================================

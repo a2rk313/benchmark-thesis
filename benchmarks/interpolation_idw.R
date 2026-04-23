@@ -1,3 +1,18 @@
+
+# Dynamic path resolution
+get_project_root <- function() {
+  # Attempt to find root based on script location
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd()) # Fallback
+  }
+}
+PROJECT_ROOT <- get_project_root()
+DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 ################################################################################
 # SCENARIO C: Spatial Interpolation – R (IDW with FNN, synthetic only)

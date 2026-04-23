@@ -3,8 +3,8 @@
 set -euo pipefail
 
 BENCHMARK_REPO="https://github.com/a2rk313/benchmark-thesis.git"
-BENCHMARK_DIR="/benchmarks"
-DATA_DIR="/data"
+BENCHMARK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="${BENCHMARK_DIR}/data"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -52,8 +52,6 @@ if [ -f "$BENCHMARK_DIR/tools/download_data.py" ]; then
     python3 tools/download_data.py --all || log "Warning: Data download encountered issues"
 fi
 
-# Ensure the global /data link points to the repo's data folder
-log "Configuring data paths..."
-sudo ln -sf "$BENCHMARK_DIR/data" "$DATA_DIR" 2>/dev/null || true
+
 
 success "Setup complete! You can now run benchmarks using 'native_benchmark.sh'"

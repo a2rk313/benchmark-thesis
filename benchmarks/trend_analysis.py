@@ -7,15 +7,22 @@ Analyzes benchmark performance trends across git commits to identify:
 - Sudden performance changes
 - Regression patterns
 """
+from pathlib import Path
 
 import json
 import subprocess
 import argparse
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from collections import defaultdict
+
 import numpy as np
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
 
 
 @dataclass

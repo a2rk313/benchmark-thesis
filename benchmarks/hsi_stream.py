@@ -8,15 +8,22 @@ Dataset: NASA AVIRIS Cuprite (224 bands, freely available)
 Metrics: Memory striding efficiency, cache utilization, FLOPS
 ==============================================================================
 """
+from pathlib import Path
 
 import numpy as np
 import scipy.io as sio
 import sys
 import json
 import hashlib
-from pathlib import Path
 import psutil
 import os
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 
 def spectral_angle_mapper(pixel_spectra, reference_spectrum):
@@ -78,7 +85,7 @@ def main():
     # =========================================================================
     print("\n[2/5] Opening hyperspectral dataset...")
 
-    hsi_path = "data/Cuprite.mat"
+    hsi_path = str(DATA_DIR / "Cuprite.mat")
 
     print(f"  ✓ Loading MAT file: {hsi_path}")
     mat = sio.loadmat(hsi_path)

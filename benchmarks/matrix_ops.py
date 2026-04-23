@@ -7,11 +7,18 @@ Reproduces Tedesco et al. (2025) matrix operation benchmarks
 Tasks: Creation/Transpose/Reshape, Power, Sorting, Cross-product, Determinant
 ==================================================================================
 """
+from pathlib import Path
 
 import numpy as np
 import json
 import time
-from pathlib import Path
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 def benchmark_matrix_creation_transpose_reshape(n=2500):
     start = time.perf_counter()

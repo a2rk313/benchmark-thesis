@@ -5,19 +5,26 @@ Cross-Language Result Converter
 Converts Julia and R benchmark outputs to Python BenchmarkResult format
 for unified statistical analysis.
 """
+from pathlib import Path
 
 import json
+
 import numpy as np
-from pathlib import Path
 from typing import Dict, List, Optional, Any
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 from benchmark_stats import (
+
     median_of_means, dagostino_pearson_test, jarque_bera_test,
     cohen_d, glass_delta, bootstrap_ci
 )
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
 
 
 def convert_julia_results(julia_json_path: str, language: str = "julia") -> Dict[str, Any]:

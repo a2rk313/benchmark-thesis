@@ -3,13 +3,20 @@
 SCENARIO E: NDVI Time-Series - Python Implementation
 Tests: Temporal aggregation, trend analysis (OLS), and multi-band processing
 """
+from pathlib import Path
 
 import numpy as np
 import time
 import json
 import hashlib
-from pathlib import Path
 import os
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 
 def generate_synthetic_ndvi_stack(n_dates=46, height=100, width=100):

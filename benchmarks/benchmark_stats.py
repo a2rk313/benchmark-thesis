@@ -15,8 +15,10 @@ Key principles:
 Academic Citation:
 Chen, D., & Revels, J. (2016). "Benchmarking Julia against R and Python."
 """
+from pathlib import Path
 
-import numpy as np
+import numpy
+from pathlib import Path as np
 import time
 import tracemalloc
 import math
@@ -25,6 +27,13 @@ from dataclasses import dataclass, field
 import json
 import gc
 import hashlib
+
+# Dynamic path resolution
+PROJECT_ROOT = Path(__file__).parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+
+
 
 try:
     from scipy import stats as scipy_stats
