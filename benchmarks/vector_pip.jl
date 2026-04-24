@@ -22,12 +22,19 @@ function main()
     
     for (i, row) in enumerate(eachrow(points_df))
         pt = LibGEOS.Point(row.lon, row.lat)
-        # Query tree for candidate polygons
-        candidate_idxs = LibGEOS.query(tree, pt)
-        for idx in candidate_idxs
-            if LibGEOS.within(pt, geos_polys[idx])
+        # Query tree for candidate polygons - this returns polygon OBJECTS, not indices
+        candidate_objs = LibGEOS.query(tree, pt)
+        for obj in candidate_objs
+            # obj IS the polygon - use it directly, not as index
+            if LibGEOS.within(pt, obj)
                 push!(matched_pt_indices, i)
-                push!(matched_poly_indices, idx)
+                # Find which polygon index this object corresponds to
+                for (j, p) in enumerate(geos_polys)
+                    if p === obj
+                        push!(matched_poly_indices, j)
+                        break
+                    end
+                end
                 break
             end
         end

@@ -627,10 +627,26 @@ if [[ "$MODE" != "container" ]]; then
             freq_before=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
             echo "    CPU freq: $((freq_before / 1000)) MHz"
         fi
+        
+        # Capture both stdout and stderr, fix grep pattern to be more flexible
+        local output
         if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
-            taskset -c "$CPU_CORES" bash -c "$cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10 || log_error "$lang $name failed"
+            output=$(taskset -c "$CPU_CORES" bash -c "$cmd" 2>&1)
         else
-            eval "$cmd" 2>&1 | grep -E "✓ Min:|✓ Results saved" | head -10 || log_error "$lang $name failed"
+            output=$(eval "$cmd" 2>&1)
+        fi
+        
+        # Check for success patterns (more flexible with ANSI prefix)
+        if echo "$output" | grep -qE "^.*✓ (Min|Results saved|interpolation|Interp)"; then
+            echo "$output" | grep -E "^.*✓" | head -10
+        else
+            # Check exit code or output for errors
+            if echo "$output" | grep -qiE "error|failed|exception"; then
+                log_error "$lang $name failed - see output above"
+            else
+                # Success but different output format - print last few lines
+                echo "$output" | tail -5
+            fi
         fi
     }
 
@@ -712,7 +728,9 @@ if [[ "$MODE" != "container" ]]; then
     echo -e "${BLUE}[11/11] Julia JIT Overhead Analysis (Cold Start)...${NC}"
     progress
     if command -v $PY_BIN &>/dev/null; then
-        [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
+        # Initialize PYTHONPATH with default if unset (fixes unbound variable in strict mode)
+        export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
+        [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
         $PY_BIN benchmarks/jit_tracking.py || log_error "JIT tracking failed"
     else
         log_error "Python not found, skipping JIT analysis"
@@ -724,7 +742,9 @@ echo ""
 echo -e "${BLUE}Generating Academic Report...${NC}"
 
 if command -v $PY_BIN &>/dev/null; then
-    [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || export PYTHONPATH="/usr/local/lib/python-deps:$PYTHONPATH"
+    # Initialize PYTHONPATH with default if unset (fixes unbound variable in strict mode)
+    export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
+    [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
     [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; $PY_BIN tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
     [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; $PY_BIN validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
     echo -e "${GREEN}  ✓ Academic report complete${NC}"

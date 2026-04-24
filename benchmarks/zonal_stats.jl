@@ -34,10 +34,10 @@ function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
         geom = polys.geometry[i]
         bbox = ArchGDAL.boundingbox(geom)
         
-        # Convert bbox to raster coordinates (simplified for benchmark)
-        # Assuming raster covers -180 to 180 and 90 to -90
-        xmin, xmax = ArchGDAL.getx(bbox, 0), ArchGDAL.getx(bbox, 1)
-        ymin, ymax = ArchGDAL.gety(bbox, 0), ArchGDAL.gety(bbox, 2)
+        # boundingbox returns NamedTuple with min_x, min_y, max_x, max_y
+        # Access fields directly (not ArchGDAL.getx which is for geometry objects)
+        xmin, xmax = bbox.min_x, bbox.max_x
+        ymin, ymax = bbox.min_y, bbox.max_y
         
         col_start = max(1, floor(Int, (xmin + 180) / 360 * cols))
         col_end = min(cols, ceil(Int, (xmax + 180) / 360 * cols))
