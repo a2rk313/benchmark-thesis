@@ -11,6 +11,7 @@ Key principles:
 6. Multiple comparison corrections (Bonferroni, Benjamini-Hochberg)
 7. Median-of-means as robust alternative estimator
 8. Power analysis for required runs
+9. CPU utilization and throughput tracking
 
 Academic Citation:
 Chen, D., & Revels, J. (2016). "Benchmarking Julia against R and Python."
@@ -21,6 +22,7 @@ import numpy as np
 import time
 import tracemalloc
 import math
+import threading
 from typing import List, Tuple, Dict, Callable, Optional, Any, Union
 from dataclasses import dataclass, field
 import json
@@ -82,6 +84,17 @@ class BenchmarkResult:
     memory_rss_mb: Optional[float] = None
     memory_vms_mb: Optional[float] = None
 
+    # NEW: Additional metrics
+    total_time: Optional[float] = None      # Sum of all runs
+    cpu_util_percent: Optional[float] = None  # Average CPU utilization
+    cpu_util_max: Optional[float] = None    # Peak CPU utilization
+    cpu_freq_mhz: Optional[float] = None # Average CPU frequency
+    cpu_freq_min: Optional[float] = None   # Min CPU frequency
+    cpu_freq_max: Optional[float] = None   # Max CPU frequency
+    throughput_value: Optional[float] = None   # Throughput (e.g., MB/s)
+    throughput_unit: Optional[str] = None    # Throughput unit
+    data_size_mb: Optional[float] = None  # Data processed size
+
     metadata: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
@@ -110,6 +123,16 @@ class BenchmarkResult:
             "allocations_peak": self.allocations_peak,
             "memory_rss_mb": self.memory_rss_mb,
             "memory_vms_mb": self.memory_vms_mb,
+            # NEW: Additional metrics
+            "total_time": self.total_time,
+            "cpu_util_percent": self.cpu_util_percent,
+            "cpu_util_max": self.cpu_util_max,
+            "cpu_freq_mhz": self.cpu_freq_mhz,
+            "cpu_freq_min": self.cpu_freq_min,
+            "cpu_freq_max": self.cpu_freq_max,
+            "throughput_value": self.throughput_value,
+            "throughput_unit": self.throughput_unit,
+            "data_size_mb": self.data_size_mb,
             "metadata": self.metadata,
         }
         return {k: v for k, v in result.items() if v is not None}
@@ -615,6 +638,9 @@ def run_benchmark(
     warmup: int = DEFAULT_WARMUP,
     track_memory: bool = True,
     memory_unit: str = "MB",
+    track_cpu: bool = True,
+    track_throughput: bool = False,
+    data_size_mb: float = 0.0,
 ) -> Tuple[List[float], Optional[float], Optional[Dict[str, float]]]:
     """
     Run a benchmark with proper methodology.
@@ -625,6 +651,9 @@ def run_benchmark(
         warmup: Number of warmup runs (excluded from measurements)
         track_memory: Whether to track peak memory
         memory_unit: Unit for memory ('MB' or 'GB')
+        track_cpu: Whether to track CPU utilization
+        track_throughput: Whether to track throughput
+        data_size_mb: Data size in MB for throughput calculation
 
     Returns:
         Tuple of (times_list, peak_memory_mb, memory_details)
@@ -637,8 +666,19 @@ def run_benchmark(
     allocations_peak = None
     memory_rss_mb = None
     memory_vms_mb = None
-    
+    cpu_samples = []
+
     process = psutil.Process() if PSUTIL_AVAILABLE else None
+
+    # CPU monitoring thread
+    cpu_monitor = None
+    cpu_stop = threading.Event()
+    if track_cpu and PSUTIL_AVAILABLE:
+        def _cpu_monitor_thread():
+            while not cpu_stop.is_set():
+                cpu_percent = psutil.cpu_percent(interval=0.05, percpu=False)
+                cpu_samples.append(cpu_percent)
+                time.sleep(0.05)
 
     if track_memory:
         tracemalloc.start()
@@ -649,10 +689,22 @@ def run_benchmark(
 
         if PSUTIL_AVAILABLE and process:
             mem_before = process.memory_info()
-        
+
+        # Start CPU monitoring if enabled
+        if track_cpu and PSUTIL_AVAILABLE:
+            cpu_samples.clear()
+            cpu_stop.clear()
+            monitor_thread = threading.Thread(target=_cpu_monitor_thread, daemon=True)
+            monitor_thread.start()
+
         start = time.perf_counter()
         result = func()
         end = time.perf_counter()
+
+        # Stop CPU monitoring
+        if track_cpu and PSUTIL_AVAILABLE:
+            cpu_stop.set()
+            monitor_thread.join(timeout=0.5)
 
         times.append(end - start)
 
@@ -660,7 +712,7 @@ def run_benchmark(
             current, peak = tracemalloc.get_traced_memory()
             peak_memory_mb = peak / (1024 * 1024)
             allocations_peak = peak
-        
+
         if PSUTIL_AVAILABLE and process:
             mem_after = process.memory_info()
             memory_rss_mb = max(memory_rss_mb or 0, mem_after.rss / (1024 * 1024))
@@ -682,6 +734,21 @@ def run_benchmark(
             "vms_mb": memory_vms_mb,
         }
 
+    # Add CPU and throughput to memory_details
+    if memory_details is None:
+        memory_details = {}
+
+    if track_cpu and cpu_samples:
+        memory_details["cpu_util_percent"] = np.mean(cpu_samples)
+        memory_details["cpu_util_max"] = np.max(cpu_samples)
+        memory_details["cpu_util_min"] = np.min(cpu_samples)
+
+    if track_throughput and data_size_mb > 0 and times:
+        min_time = min(times)
+        memory_details["throughput_value"] = data_size_mb / min_time  # MB/s
+        memory_details["throughput_unit"] = "MB/s"
+        memory_details["data_size_mb"] = data_size_mb
+
     return times, peak_memory_mb, memory_details
 
 
@@ -693,6 +760,9 @@ def analyze_benchmark(
     warmup: int = DEFAULT_WARMUP,
     track_memory: bool = True,
     validator_func: Optional[Callable] = None,
+    track_cpu: bool = True,
+    track_throughput: bool = False,
+    data_size_mb: float = 0.0,
 ) -> BenchmarkResult:
     """
     Run a complete benchmark analysis.
@@ -705,11 +775,19 @@ def analyze_benchmark(
         warmup: Warmup runs (default 5)
         track_memory: Track memory usage
         validator_func: Optional function to generate output hash
+        track_cpu: Track CPU utilization
+        track_throughput: Track throughput
+        data_size_mb: Data size in MB for throughput
 
     Returns:
         BenchmarkResult with all statistics
     """
-    times, peak_memory, memory_details = run_benchmark(func, runs, warmup, track_memory)
+    times, peak_memory, memory_details = run_benchmark(
+        func, runs, warmup, track_memory,
+        track_cpu=track_cpu,
+        track_throughput=track_throughput,
+        data_size_mb=data_size_mb
+    )
     times_arr = np.array(times)
 
     output_hash = None
@@ -720,6 +798,7 @@ def analyze_benchmark(
     mean_time = times_arr.mean()
     std_time = times_arr.std()
     median_time = np.median(times_arr)
+    total_time = times_arr.sum()
 
     cv = (std_time / mean_time) if mean_time > 0 else 0.0
 
@@ -743,6 +822,16 @@ def analyze_benchmark(
     allocations_peak = memory_details.get("allocations_peak") if memory_details else None
     memory_rss_mb = memory_details.get("rss_mb") if memory_details else None
     memory_vms_mb = memory_details.get("vms_mb") if memory_details else None
+
+    # Extract new CPU and throughput metrics
+    cpu_util_percent = memory_details.get("cpu_util_percent") if memory_details else None
+    cpu_util_max = memory_details.get("cpu_util_max") if memory_details else None
+    cpu_freq_mhz = None  # Would need additional monitoring
+    cpu_freq_min = None
+    cpu_freq_max = None
+    throughput_value = memory_details.get("throughput_value") if memory_details else None
+    throughput_unit = memory_details.get("throughput_unit") if memory_details else None
+    data_size = memory_details.get("data_size_mb") if memory_details else None
 
     return BenchmarkResult(
         name=name,
@@ -768,6 +857,15 @@ def analyze_benchmark(
         allocations_peak=allocations_peak,
         memory_rss_mb=memory_rss_mb,
         memory_vms_mb=memory_vms_mb,
+        total_time=total_time,
+        cpu_util_percent=cpu_util_percent,
+        cpu_util_max=cpu_util_max,
+        cpu_freq_mhz=cpu_freq_mhz,
+        cpu_freq_min=cpu_freq_min,
+        cpu_freq_max=cpu_freq_max,
+        throughput_value=throughput_value,
+        throughput_unit=throughput_unit,
+        data_size_mb=data_size,
     )
 
 
