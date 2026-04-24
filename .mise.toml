@@ -4,22 +4,22 @@
 # This configuration is designed for NATIVE (non-container) execution.
 # For container-based execution, use run_benchmarks.sh instead.
 #
-# IMPORTANT VERSION NOTES:
-# - Container images use Debian Bookworm with Python 3.13, R 4.5.3, Julia 1.11.9
-# - Python 3.13 introduced experimental features - must match for fairness
-# - All languages are managed by mise with explicit backend declarations
-# - For thesis reproducibility, prefer container execution
+# CANONICAL VERSIONS (aligned with benchmark-bootc):
+# - Python 3.14.4 (Fedora 43 rawhide)
+# - Julia 1.12.6
+# - R 4.5.3
+# All languages must match for fair benchmark comparisons.
 #
 # https://mise.jdx.dev
 
 min_version = "2024.1.0"
 
 # =============================================================================
-# TOOL VERSIONS - Must match container for fair benchmarks
+# TOOL VERSIONS - Must match bootc OS for fair benchmarks
 # =============================================================================
 [tools]
-# Python 3.14 - managed by mise (uses uv backend)
-python = "3.14"
+# Python 3.14.4 - managed by mise (uses uv backend)
+python = "3.14.4"
 
 # Julia 1.12.6 - managed by mise (asdf backend)
 julia = "1.12.6"

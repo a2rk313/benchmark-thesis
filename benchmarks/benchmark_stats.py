@@ -17,8 +17,7 @@ Chen, D., & Revels, J. (2016). "Benchmarking Julia against R and Python."
 """
 from pathlib import Path
 
-import numpy
-from pathlib import Path as np
+import numpy as np
 import time
 import tracemalloc
 import math
