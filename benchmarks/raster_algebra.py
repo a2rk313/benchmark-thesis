@@ -97,7 +97,7 @@ def run_raster_algebra_benchmark():
     print("\n[2/4] Testing NDVI calculation...")
     tracemalloc.start()
     def ndvi_task(): return benchmark_ndvi(bands["nir"], bands["red"])
-    times, peak = run_benchmark(ndvi_task, runs=10, warmup=2)
+    times, peak, _ = run_benchmark(ndvi_task, runs=10, warmup=2)
     ndvi_result = ndvi_task()
     ndvi_hash = generate_hash(ndvi_result)
     all_hashes.append(ndvi_hash)
@@ -105,7 +105,7 @@ def run_raster_algebra_benchmark():
     results["ndvi"] = {"min_time_s": min(times), "mean_time_s": np.mean(times), "std_time_s": np.std(times), "hash": ndvi_hash}
     print("\n[3/4] Testing band arithmetic...")
     def band_math_task(): return benchmark_band_arithmetic(bands["green"], bands["red"], bands["nir"], bands["swir"])
-    times, peak = run_benchmark(band_math_task, runs=10, warmup=2)
+    times, peak, _ = run_benchmark(band_math_task, runs=10, warmup=2)
     indices_result = band_math_task()
     indices_hash = generate_hash(list(indices_result.values()))
     all_hashes.append(indices_hash)
@@ -113,7 +113,7 @@ def run_raster_algebra_benchmark():
     results["band_arithmetic"] = {"min_time_s": min(times), "mean_time_s": np.mean(times), "std_time_s": np.std(times), "hash": indices_hash}
     print("\n[4/4] Testing 3x3 convolution filter...")
     def conv_task(): return benchmark_convolution_3x3(bands["nir"])
-    times, peak = run_benchmark(conv_task, runs=10, warmup=2)
+    times, peak, _ = run_benchmark(conv_task, runs=10, warmup=2)
     conv_result = conv_task()
     conv_hash = generate_hash(conv_result)
     all_hashes.append(conv_hash)

@@ -144,7 +144,7 @@ def run_reprojection_benchmark():
                 lats_np, lons_np, "EPSG:4326", "EPSG:3857"
             )
 
-        times, peak = run_benchmark(mercator_task, runs=10, warmup=2)
+        times, peak, _ = run_benchmark(mercator_task, runs=10, warmup=2)
 
         p_val, is_norm = shapiro_wilk_test(np.array(times))
         ci_lower, ci_upper = bootstrap_ci(np.array(times))
@@ -176,7 +176,7 @@ def run_reprojection_benchmark():
         def utm_task():
             return reproject_with_zone_optimization(lats, lons)
 
-        times, peak = run_benchmark(utm_task, runs=5, warmup=2)
+        times, peak, _ = run_benchmark(utm_task, runs=5, warmup=2)
 
         print(f"    ✓ Min: {min(times):.4f}s (primary)")
         print(f"    ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")

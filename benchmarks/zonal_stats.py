@@ -229,7 +229,7 @@ def run_zonal_stats_benchmark():
     def mask_task():
         return create_latitude_zones(rows, cols, n_zones)
 
-    times, peak = run_benchmark(mask_task, runs=5, warmup=1)
+    times, peak, _ = run_benchmark(mask_task, runs=5, warmup=1)
 
     mask_hash = generate_hash(mask)
     all_hashes.append(mask_hash)
@@ -258,7 +258,7 @@ def run_zonal_stats_benchmark():
     def zonal_task():
         return vectorized_zonal_stats(raster, mask)
 
-    times, peak = run_benchmark(zonal_task, runs=10, warmup=2)
+    times, peak, _ = run_benchmark(zonal_task, runs=10, warmup=2)
     stats_hash = generate_hash(np.array(stats_result["means"]))
     all_hashes.append(stats_hash)
 
@@ -285,7 +285,7 @@ def run_zonal_stats_benchmark():
     def full_stats_task():
         return vectorized_zonal_stats(raster, mask)
 
-    times, peak = run_benchmark(full_stats_task, runs=10, warmup=2)
+    times, peak, _ = run_benchmark(full_stats_task, runs=10, warmup=2)
 
     print(f"  ✓ Min: {min(times):.4f}s (primary)")
     print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")

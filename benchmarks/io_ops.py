@@ -33,15 +33,15 @@ def benchmark_csv_write(n_rows=1_000_000):
     })
     output_path = 'data/io_test_python.csv'
     start = time.perf_counter()
-    df.to_csv(output_path, index=False, engine='pyarrow')
+    df.to_csv(output_path, index=False)
     elapsed = time.perf_counter() - start
     return elapsed, os.path.getsize(output_path)
 
 def benchmark_csv_read():
-    """Task 2: Read CSV File using PyArrow engine."""
+    """Task 2: Read CSV File."""
     input_path = 'data/io_test_python.csv'
     start = time.perf_counter()
-    df = pd.read_csv(input_path, engine='pyarrow')
+    df = pd.read_csv(input_path)
     elapsed = time.perf_counter() - start
     return elapsed, len(df)
 
