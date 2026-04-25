@@ -112,7 +112,7 @@ mise run scaling
    - Shows O(n²), O(n³) curves
    - Publication-ready figures
 
-6. **`native_benchmark.sh`**
+6. **`./run_benchmarks.sh --native-only`**
    - Bare-metal benchmarking (Linux)
    - CPU optimization
    - Performance mode
@@ -318,7 +318,7 @@ brew install r
 
 - [ ] Run full benchmark suite
 - [ ] Run scaling analysis: `mise run scaling`
-- [ ] Run native benchmarks (Linux): `./native_benchmark.sh`
+- [ ] Run native benchmarks (Linux): `./run_benchmarks.sh --native-only`
 - [ ] Update thesis Chapter 4 (datasets)
 - [ ] Update thesis methodology with mise info
 - [ ] Commit `.mise.toml` to git

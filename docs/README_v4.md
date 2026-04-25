@@ -84,7 +84,7 @@ thesis-benchmarks/
 │
 ├── benchmark_scaling.py                # ⭐ Multi-scale benchmarks
 ├── visualize_scaling.py                # ⭐ Scaling analysis
-├── native_benchmark.sh                 # ⭐ Native performance testing
+├── ./run_benchmarks.sh --native-only                 # ⭐ Native performance testing
 ├── compare_native_vs_container.py      # ⭐ Overhead analysis
 │
 ├── containers/                         # Docker/Podman containerfiles
@@ -149,7 +149,7 @@ podman build -f containers/r.Containerfile -t thesis-r:4.4
 ./run_benchmarks.sh
 
 # Then run native benchmarks
-./native_benchmark.sh
+./run_benchmarks.sh --native-only
 
 # Compare overhead
 python compare_native_vs_container.py
@@ -412,7 +412,7 @@ python benchmark_scaling.py
 python visualize_scaling.py
 
 # Native
-./native_benchmark.sh
+./run_benchmarks.sh --native-only
 python compare_native_vs_container.py
 ```
 
@@ -485,7 +485,7 @@ Validates container approach ✓
 3. **Run benchmarks** (45 min): `mise run bench`
 4. **Validate** (10 min): `mise run validate`
 5. **Analyze scaling** (90 min): `mise run scaling`
-6. **Compare native** (30 min): `./native_benchmark.sh`
+6. **Compare native** (30 min): `./run_benchmarks.sh --native-only`
 7. **Write thesis** (8-10 hours)
 
 **Total time to completion**: ~2 weeks with proper writing

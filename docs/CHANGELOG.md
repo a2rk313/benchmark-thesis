@@ -165,7 +165,7 @@ This release adds **cross-platform native performance** with mise, replaces the 
 - Overhead analysis (~2% typical)
 
 **Files**:
-- `native_benchmark.sh` (native runner)
+- `./run_benchmarks.sh --native-only` (native runner)
 - `compare_native_vs_container.py` (overhead analysis)
 - `NATIVE_BARE_METAL_GUIDE.md` (detailed guide)
 - `NATIVE_QUICK_START.md` (quick guide)
@@ -252,7 +252,7 @@ This release adds **cross-platform native performance** with mise, replaces the 
 .mise.toml                          # mise configuration
 benchmark_scaling.py                # Multi-scale benchmarks
 visualize_scaling.py                # Scaling analysis
-native_benchmark.sh                 # Native benchmarks
+./run_benchmarks.sh --native-only                 # Native benchmarks
 compare_native_vs_container.py      # Overhead analysis
 tools/download_cuprite.py           # Cuprite download
 
@@ -435,7 +435,7 @@ None! All v3.0 functionality preserved.
 ### Optional (2 hours)
 
 - [ ] Run scaling analysis: `mise run scaling`
-- [ ] Run native comparison: `./native_benchmark.sh`
+- [ ] Run native comparison: `./run_benchmarks.sh --native-only`
 - [ ] Add new thesis sections (5.5, 5.6)
 - [ ] Update thesis data description
 

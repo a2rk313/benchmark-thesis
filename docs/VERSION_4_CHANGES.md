@@ -98,7 +98,7 @@ mise run scaling
 ### 4. Native Bare-Metal Benchmarking
 
 **New Files**:
-- `native_benchmark.sh` - Run without containers
+- `./run_benchmarks.sh --native-only` - Run without containers
 - `compare_native_vs_container.py` - Overhead analysis
 
 **What it does**:
@@ -113,7 +113,7 @@ mise run scaling
 
 **Usage**:
 ```bash
-./native_benchmark.sh
+./run_benchmarks.sh --native-only
 python compare_native_vs_container.py
 ```
 
@@ -192,7 +192,7 @@ mise run bench
 - `.mise.toml` - Cross-platform configuration
 - `benchmark_scaling.py` - Multi-scale benchmarks
 - `visualize_scaling.py` - Complexity plots
-- `native_benchmark.sh` - Bare-metal testing
+- `./run_benchmarks.sh --native-only` - Bare-metal testing
 - `compare_native_vs_container.py` - Overhead analysis
 - `tools/download_cuprite.py` - Cuprite download
 

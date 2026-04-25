@@ -72,7 +72,7 @@ python visualize_scaling.py
 
 **Run**:
 ```bash
-./native_benchmark.sh
+./run_benchmarks.sh --native-only
 python compare_native_vs_container.py
 ```
 
@@ -160,7 +160,7 @@ mise run bench                          # Runs everything
 .mise.toml                              # ⭐ Main config file
 benchmark_scaling.py                    # ⭐ Scaling benchmarks
 visualize_scaling.py                    # ⭐ Scaling analysis
-native_benchmark.sh                     # ⭐ Native benchmarks
+./run_benchmarks.sh --native-only                     # ⭐ Native benchmarks
 compare_native_vs_container.py          # ⭐ Overhead analysis
 tools/download_cuprite.py               # ⭐ Cuprite download
 
@@ -263,7 +263,7 @@ mise run check
 
 2. **Native comparison** (30 min)
    ```bash
-   ./native_benchmark.sh
+   ./run_benchmarks.sh --native-only
    python compare_native_vs_container.py
    ```
 

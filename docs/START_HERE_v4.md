@@ -104,7 +104,7 @@ thesis-benchmarks-IMPROVED/
 │
 ├── .mise.toml                       ⭐ Cross-platform config
 ├── benchmark_scaling.py             ⭐ Multi-scale analysis
-├── native_benchmark.sh              ⭐ Native testing
+├── ./run_benchmarks.sh --native-only              ⭐ Native testing
 │
 ├── tools/download_cuprite.py        ⭐ Cuprite dataset
 ├── DATA_PROVENANCE.md               ⭐ Updated for Cuprite

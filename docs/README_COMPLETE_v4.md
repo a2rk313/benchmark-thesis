@@ -99,7 +99,7 @@ thesis-benchmarks-IMPROVED/
 │   ├── .mise.toml                    ⭐ Cross-platform config
 │   ├── benchmark_scaling.py          Multi-scale analysis
 │   ├── visualize_scaling.py          Complexity plots
-│   ├── native_benchmark.sh           Bare-metal testing
+│   ├── ./run_benchmarks.sh --native-only           Bare-metal testing
 │   └── compare_native_vs_container.py Overhead analysis
 │
 ├── 🐳 OPTIMIZED CONTAINERS (NEW!)
@@ -393,7 +393,7 @@ zero performance impact verified by validation tests."
 
 13. **benchmark_scaling.py** - Multi-scale implementation
 14. **visualize_scaling.py** - Scaling visualization
-15. **native_benchmark.sh** - Bare-metal script
+15. **./run_benchmarks.sh --native-only** - Bare-metal script
 16. **compare_native_vs_container.py** - Overhead analysis
 
 ### Container Documentation

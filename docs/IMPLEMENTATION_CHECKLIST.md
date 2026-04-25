@@ -282,7 +282,7 @@ python tools/compare_with_tedesco.py
 
 ```bash
 # Run native benchmarks
-./native_benchmark.sh
+./run_benchmarks.sh --native-only
 
 # Compare overhead
 python compare_native_vs_container.py

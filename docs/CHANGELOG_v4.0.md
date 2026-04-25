@@ -91,7 +91,7 @@ This release adds **cross-platform native benchmarking**, **industry-standard da
 **Added**: Bare-metal performance testing
 
 **New Scripts**:
-- `native_benchmark.sh` - Run benchmarks without containers
+- `./run_benchmarks.sh --native-only` - Run benchmarks without containers
 - `compare_native_vs_container.py` - Overhead analysis
 
 **Functionality**:
@@ -180,7 +180,7 @@ benchmarks/hsi_stream.R     - Ready for Cuprite
 .mise.toml                           - Main configuration
 benchmark_scaling.py                 - Scaling benchmarks
 visualize_scaling.py                 - Scaling visualization
-native_benchmark.sh                  - Native benchmarking
+./run_benchmarks.sh --native-only                  - Native benchmarking
 compare_native_vs_container.py       - Overhead analysis
 tools/download_cuprite.py            - Cuprite download
 
