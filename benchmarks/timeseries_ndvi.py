@@ -20,23 +20,38 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 
 def generate_synthetic_ndvi_stack(n_dates=46, height=100, width=100):
-    """Generate synthetic NDVI data stack (standardized for all languages)"""
+    """Generate synthetic NDVI data with RED/NIR bands then compute actual NDVI
+    
+    This matches R and Julia implementations which generate red/nir bands
+    then compute NDVI = (nir - red) / (nir + red)
+    """
     np.random.seed(42)
     
-    # Base vegetation pattern
+    # Base vegetation pattern spatial distribution
     x = np.linspace(-1, 1, width)
     y = np.linspace(-1, 1, height)
     xx, yy = np.meshgrid(x, y)
     base_vegetation = 0.5 * (1 - (xx**2 + yy**2))
     
-    ndvi_stack = np.zeros((n_dates, height, width), dtype=np.float32)
+    # Generate RED and NIR bands separately (then compute NDVI)
+    red_bands = np.zeros((n_dates, height, width), dtype=np.float32)
+    nir_bands = np.zeros((n_dates, height, width), dtype=np.float32)
     
     for t in range(n_dates):
         # Seasonal cycle (Sine wave)
         seasonality = 0.3 * np.sin(2 * np.pi * t / n_dates)
         noise = np.random.normal(0, 0.05, (height, width))
-        ndvi = base_vegetation + seasonality + noise
-        ndvi_stack[t] = np.clip(ndvi, -0.1, 1.0).astype(np.float32)
+        
+        # RED band: vegetation reduces red reflectance
+        red_bands[t] = (0.1 + 0.2 * (1 - base_vegetation * base_vegetation) + noise).astype(np.float32)
+        
+        # NIR band: vegetation increases NIR reflectance  
+        nir_bands[t] = (0.3 + 0.5 * base_vegetation + noise).astype(np.float32)
+    
+    # Compute actual NDVI from red/nir bands: NDVI = (nir - red) / (nir + red + epsilon)
+    epsilon = 1e-6
+    ndvi_stack = ((nir_bands - red_bands) / (nir_bands + red_bands + epsilon)).astype(np.float32)
+    ndvi_stack = np.clip(ndvi_stack, -0.1, 1.0)
         
     return ndvi_stack
 

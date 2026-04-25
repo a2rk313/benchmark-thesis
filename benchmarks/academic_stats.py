@@ -649,10 +649,8 @@ def run_benchmark_with_stats(
     stats_dict = compute_statistics(times)
     test_name, p_norm, is_normal = test_normality(times)
 
-    # Get CPU frequency
-    cpu_mean, cpu_min, cpu_max = (
-        (monitor.samples, monitor.min_freq, monitor.max_freq) if monitor else (0, 0, 0)
-    )
+    # Fix: Use monitor.stop() return value (mean, min, max) instead of samples
+    cpu_mean, cpu_min, cpu_max = monitor.stop() if monitor else (0.0, 0.0, 0.0)
 
     # Generate output hash
     output_hash = None

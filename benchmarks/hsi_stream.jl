@@ -132,9 +132,12 @@ if !isfile(hsi_path); println("ERROR: data file not found: $hsi_path"); return 1
             # Extract chunk
             @views chunk = data[:, row_start:row_end, col_start:col_end]
             
-            # Reshape to (n_pixels, n_bands) and convert to Float32
+            # Fix: Julia is column-major, so we need to reorder before reshape
+            # chunk is (n_bands, rows, cols), we want (pixels, bands) where pixels vary fastest
+            # Permute to put cols as last dimension, then collect/reshape
+            chunk_perm = permutedims(chunk, (1, 3, 2))  # (bands, cols, rows)
             n_pixels_chunk = (row_end - row_start + 1) * (col_end - col_start + 1)
-            pixel_spectra = Float32.(reshape(collect(chunk), n_pixels_chunk, n_bands))
+            pixel_spectra = Float32.(reshape(collect(chunk_perm), n_pixels_chunk, n_bands))
             
             # Calculate SAM
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)

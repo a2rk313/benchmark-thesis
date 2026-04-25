@@ -92,14 +92,11 @@ def main():
     data_key = [k for k in mat.keys() if not k.startswith("__")][0]
     raw_data = mat[data_key]
 
-    # Cuprite.mat has shape (512, 614, 224)
-    # AVIRIS Cuprite has 224 bands, so the correct layout is (bands, rows, cols)
-    # Shape (512, 614, 224) -> we want (bands=224, rows=614, cols=224)
-    # Transpose from (0,1,2) to (2,1,0): (512, 614, 224) -> (224, 614, 224)
+    # Cuprite.mat has shape (512, 614, 224) = (rows, cols, bands)
+    # R and Julia use permutedims/aperm to get (bands=224, rows=512, cols=614)
+    # Fix Python to match R/Julia: use (2, 0, 1) to get (224, 512, 614)
     if raw_data.shape[2] == 224:
-        # (bands_wrong, rows, cols) with bands=512 -> swap to get (cols, rows, bands_wrong)
-        # Then take [:224,:,:] to get (224, rows, cols)
-        data = raw_data.transpose(2, 1, 0)[:224, :, :]
+        data = raw_data.transpose(2, 0, 1)[:224, :, :]
         print(f"  ✓ Transposed data to (bands, rows, cols)")
     else:
         data = raw_data

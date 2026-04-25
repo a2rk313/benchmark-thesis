@@ -144,7 +144,8 @@ function run_reprojection_benchmark()
         
         println("  UTM (zone-optimized)...")
         
-        zones = Vector{Int}(floor.(Int, (points.lon .+ 180.0) ./ 6.0) .+ 1)
+        # Compute zones and clamp to valid range 1-60
+        zones = clamp.(Vector{Int}(floor.(Int, (points.lon .+ 180.0) ./ 6.0) .+ 1), 1, 60)
         
         utm_task() = wgs84_to_utm(points.lat, points.lon, zones)
         
