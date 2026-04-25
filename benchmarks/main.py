@@ -163,8 +163,9 @@ def run_julia_benchmark(script):
     """Run a Julia benchmark."""
     env = {}
     if is_bootc():
-        # Use system Julia and pre-baked depot
-        env["JULIA_DEPOT_PATH"] = "/usr/share/julia/depot"
+        # Use /var/lib/julia (writable at runtime in bootc)
+        # This avoids EROFS errors when Julia writes pidlock files
+        env["JULIA_DEPOT_PATH"] = "/var/lib/julia"
         julia_cmd = "/usr/bin/julia"
     else:
         julia_cmd = "julia"

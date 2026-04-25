@@ -27,8 +27,9 @@ sample_array <- function(arr, n_samples = 100) {
   if (len <= n_samples) {
     return(flat)
   }
-  indices <- floor(seq(1, len, length.out = n_samples))
-  return(flat[indices])
+  # Use 0-indexed sampling to match Python (not 1-indexed)
+  indices <- floor(seq(0, len - 1, length.out = n_samples))
+  return(flat[indices + 1])  # R is 1-indexed, so add 1
 }
 
 round_val <- function(v, precision = 6) {
