@@ -27,6 +27,9 @@
 # =============================================================================
 set -euo pipefail
 
+# Determine benchmark directory
+BENCHMARK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ── Parse arguments ───────────────────────────────────────────────────────────
 MODE="all"
 # Detect bootc environment
@@ -617,10 +620,9 @@ if [[ "$MODE" != "container" ]]; then
         progress
         echo -e "  ${GREEN}$lang${NC}: $name"
         
-        # Setup environment for bootc or native
-        if [[ "$IS_BOOTC" == "true" ]]; then
-            export JULIA_DEPOT_PATH="/usr/share/julia/depot"
-        fi
+        # Always use relative .julia depot (works on bootc + host system)
+        mkdir -p "$BENCHMARK_DIR/.julia"
+        export JULIA_DEPOT_PATH="$BENCHMARK_DIR/.julia"
 
         local freq_before=""
         if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then

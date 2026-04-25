@@ -22,11 +22,8 @@
 ### Step 1: Run Native Benchmarks (30 min)
 
 ```bash
-# Make script executable
-chmod +x native_benchmark.sh
-
-# Run native benchmarks
-./native_benchmark.sh
+# Run native benchmarks (no containers)
+./run_benchmarks.sh --native-only
 
 # Results saved to: results/native/
 ```
@@ -273,7 +270,7 @@ A: Use native or special GPU containers. Regular containers don't pass through G
 ## FILES PROVIDED
 
 ```
-native_benchmark.sh                  - Run native benchmarks
+./run_benchmarks.sh --native-only                  - Run native benchmarks
 compare_native_vs_container.py       - Compare overhead
 NATIVE_BARE_METAL_GUIDE.md          - Detailed guide (600+ lines)
 ```
@@ -283,7 +280,7 @@ NATIVE_BARE_METAL_GUIDE.md          - Detailed guide (600+ lines)
 ## BOTTOM LINE
 
 **What to do**:
-1. Run `./native_benchmark.sh` (30 min)
+1. Run `./run_benchmarks.sh --native-only` (30 min)
 2. Run `python3 compare_native_vs_container.py` (5 min)
 3. Verify overhead <5% (should be ~2%)
 4. Use container results as primary
@@ -295,4 +292,4 @@ NATIVE_BARE_METAL_GUIDE.md          - Detailed guide (600+ lines)
 
 ---
 
-**START HERE**: `chmod +x native_benchmark.sh && ./native_benchmark.sh`
+**START HERE**: `chmod +x ./run_benchmarks.sh --native-only && ./run_benchmarks.sh --native-only`

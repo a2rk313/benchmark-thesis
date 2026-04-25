@@ -457,10 +457,9 @@ thesis-benchmarks/
 ├── benchmark_scaling.py            # Data scaling benchmarks
 ├── visualize_scaling.py           # Scaling visualization
 ├── compare_native_vs_container.py  # Compare execution modes
-├── run_benchmarks.sh             # Container orchestrator
+├── run_benchmarks.sh             # Main orchestrator (native + containers)
 ├── build_optimized.sh            # Build optimized containers
 ├── build_slim_containers.sh      # Build slim containers
-├── native_benchmark.sh           # Native benchmark runner
 ├── native_helper.sh              # Native helper utilities
 ├── check_system.sh               # System check
 ├── cleanup_containers.sh          # Cleanup containers

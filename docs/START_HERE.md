@@ -112,7 +112,7 @@ mise run validate
 **New Scripts**:
 - `benchmark_scaling.py` - Multi-scale benchmarks
 - `visualize_scaling.py` - Scaling visualization
-- `native_benchmark.sh` - Native performance testing
+- `run_benchmarks.sh` - Main orchestrator (native + containers)
 - `compare_native_vs_container.py` - Overhead analysis
 - `tools/download_cuprite.py` - Cuprite download
 
