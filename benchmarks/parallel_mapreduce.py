@@ -90,6 +90,11 @@ def sequential_processing(
     return time.perf_counter() - start
 
 
+def process_tile_wrapper(args):
+    """Wrapper to avoid lambda in thread pool."""
+    tile, operation = args
+    return process_tile(tile, operation)
+
 def parallel_processing_threads(
     tiles: List[np.ndarray],
     n_workers: int = 4,
@@ -98,7 +103,7 @@ def parallel_processing_threads(
     """Process tiles in parallel using threads."""
     start = time.perf_counter()
     with ThreadPoolExecutor(max_workers=n_workers) as executor:
-        list(executor.map(lambda t: process_tile(t, operation), tiles))
+        list(executor.map(process_tile_wrapper, [(t, operation) for t in tiles]))
     return time.perf_counter() - start
 
 
@@ -117,6 +122,14 @@ def parallel_processing_processes(
             process_tile(tile, operation)
     return time.perf_counter() - start
 
+
+def run_benchmark_map(tile):
+    """Helper for map-reduce to avoid lambda."""
+    return process_tile(tile, "ndvi_stats")
+
+def run_benchmark_reduce(results):
+    """Helper for map-reduce to avoid lambda."""
+    return results
 
 def parallel_map_reduce(
     tiles: List[np.ndarray],
@@ -239,8 +252,8 @@ def run_parallel_benchmark(
         for run in range(n_runs):
             t = parallel_map_reduce(
                 tiles, 
-                lambda t: process_tile(t, "ndvi_stats"),
-                lambda x: x,
+                run_benchmark_map,
+                run_benchmark_reduce,
                 n_workers
             )
             mr_times.append(t)

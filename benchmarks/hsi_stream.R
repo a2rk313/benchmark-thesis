@@ -91,7 +91,7 @@ main <- function() {
   # Cuprite.mat has shape (512, 614, 224) but AVIRIS Cuprite has 224 bands
   # Transpose from (bands_wrong, rows, cols) to (bands_correct, rows, cols)
   if (dim(raw_data)[1] == 512 && dim(raw_data)[3] == 224) {
-    data <- aperm(raw_data, c(3, 1, 2))  # (512, 614, 224) -> (224, 614, 512)
+    data <- aperm(raw_data, c(3, 1, 2))  # (512, 614, 224) -> (224, 512, 614)
     data <- data[1:224, , ]  # Take first 224 bands
     cat("  ✓ Transposed data to (bands, rows, cols)\n")
   } else {
