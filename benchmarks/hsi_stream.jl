@@ -59,10 +59,10 @@ function main()
     # =========================================================================
     println("\n[1/5] Initializing...")
     
-    # Random but reproducible reference spectrum
-    Random.seed!(42)
+    # Deterministic reference spectrum (same across all languages)
+    # Using linspace ensures identical values regardless of RNG
     n_bands = 224
-    reference_spectrum = rand(Float32, n_bands)
+    reference_spectrum = collect(LinRange{Float32}(0.1, 0.9, n_bands))
     reference_spectrum ./= norm(reference_spectrum)  # Normalize
     
     println("  ✓ Reference spectrum: $n_bands bands")

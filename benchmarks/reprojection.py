@@ -117,7 +117,7 @@ def run_reprojection_benchmark():
     print("=" * 70)
 
     # Test sizes
-    sizes = [10000, 50000, 100000, 500000]
+    sizes = [1000, 5000, 10000]  # Match R and Julia for fair comparison
 
     results = {}
     all_hashes = []

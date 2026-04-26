@@ -644,17 +644,16 @@ def run_benchmark_with_stats(
             end = time.perf_counter()
             times.append(end - start)
 
+        # Capture CPU stats from the first call (before the thread exits)
+        cpu_mean, cpu_min, cpu_max = (0.0, 0.0, 0.0)
         if monitor:
-            monitor.stop()
+            cpu_mean, cpu_min, cpu_max = monitor.stop()
 
     times = np.array(times)
 
     # Compute statistics
     stats_dict = compute_statistics(times)
     test_name, p_norm, is_normal = test_normality(times)
-
-    # Fix: Use monitor.stop() return value (mean, min, max) instead of samples
-    cpu_mean, cpu_min, cpu_max = monitor.stop() if monitor else (0.0, 0.0, 0.0)
 
     # Generate output hash
     output_hash = None

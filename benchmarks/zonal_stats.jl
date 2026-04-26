@@ -41,6 +41,7 @@ function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
         else
             # Plain tuple: (min_x, min_y, max_x, max_y)
             xmin, ymin, xmax, ymax = bbox[1], bbox[2], bbox[3], bbox[4]
+        end
         
         col_start = max(1, floor(Int, (xmin + 180) / 360 * cols))
         col_end = min(cols, ceil(Int, (xmax + 180) / 360 * cols))

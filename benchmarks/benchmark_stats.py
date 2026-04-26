@@ -818,7 +818,7 @@ def analyze_benchmark(
 
     mom_value, mom_blocks = median_of_means(times_arr)
 
-    p_value, is_normal = shapiro_wilk_test(times_arr)
+    shapiro_p, shapiro_is_normal = shapiro_wilk_test(times_arr)
     dagostino_p, _ = dagostino_pearson_test(times_arr)
     jarque_p, _ = jarque_bera_test(times_arr)
 

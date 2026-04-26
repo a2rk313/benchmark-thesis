@@ -37,11 +37,15 @@ def load_cuprite_bands():
         mat_data = sio.loadmat(str(DATA_DIR / "Cuprite.mat"))
         data_key = [k for k in mat_data.keys() if not k.startswith("__")][0]
         data = mat_data[data_key]
-        # Cuprite.mat has shape (512, 614, 224) = (rows, cols, bands)
-        # Check if it's in (rows, cols, bands) format (band axis is 224)
-        if data.shape[2] == 224:
-            # Transpose to get (bands, rows, cols) layout
+        # Cuprite.mat has shape (512, 614, 224) = (rows, cols, bands) or (614, 512, 224)
+        # Ensure consistent (bands, rows, cols) = (4, 512, 614) format
+        if data.shape[2] == 224:  # (rows, cols, bands) format
             data = np.transpose(data, (2, 0, 1))
+        elif data.shape[0] == 224:  # Already (bands, rows, cols)
+            pass  # Already in correct format
+        elif data.shape[1] == 224 and data.shape[2] == 614:  # (cols, bands, rows) - transpose
+            data = np.transpose(data, (2, 0, 1))  # (rows, cols, bands)
+            data = np.transpose(data, (2, 0, 1))  # (bands, rows, cols)
         # Now index by band: data[band, row, col]
         band_560 = data[30, :, :].astype(np.float32)
         band_670 = data[50, :, :].astype(np.float32)

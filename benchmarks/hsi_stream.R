@@ -66,10 +66,10 @@ main <- function() {
   # ===========================================================================
   cat("\n[1/5] Initializing...\n")
   
-  # Random but reproducible reference spectrum
-  set.seed(42)
+  # Deterministic reference spectrum (same across all languages)
+  # Using seq ensures identical values regardless of RNG
   n_bands <- 224
-  reference_spectrum <- runif(n_bands)
+  reference_spectrum <- seq(0.1, 0.9, length.out = n_bands)
   reference_spectrum <- reference_spectrum / sqrt(sum(reference_spectrum^2))
   
   cat(sprintf("  ✓ Reference spectrum: %d bands\n", n_bands))

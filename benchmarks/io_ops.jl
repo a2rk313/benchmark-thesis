@@ -104,12 +104,18 @@ function main()
     # Configuration
     n_csv_rows = 1_000_000
     n_binary_values = 1_000_000
-    n_runs = 10
+    n_runs = 30
+    n_warmup = 5
     
     # Create data directory
     mkpath("data")
     
     results = Dict()
+    
+    # Warmup runs
+    for _ in 1:n_warmup
+        benchmark_csv_write(n_csv_rows)
+    end
     
     # Task 1: CSV Write
     println("\n[1/4] CSV Write ($(format_number(n_csv_rows)) rows)...")

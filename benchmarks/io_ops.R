@@ -40,8 +40,8 @@ benchmark_csv_read <- function() {
 
 main <- function() {
   cat("R - I/O Operations Benchmark (Standardized)\n")
-  n_runs <- 10
-  n_warmup <- 2
+  n_runs <- 30
+  n_warmup <- 5
   
   # Warmup
   for(i in 1:n_warmup) benchmark_csv_write(100000)

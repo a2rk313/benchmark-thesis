@@ -69,10 +69,10 @@ def main():
     # =========================================================================
     print("\n[1/5] Initializing...")
 
-    # Random but reproducible reference spectrum
-    np.random.seed(42)
+    # Deterministic reference spectrum (same across all languages)
+    # Using linspace ensures identical values regardless of RNG
     n_bands = 224
-    reference_spectrum = np.random.rand(n_bands).astype(np.float32)
+    reference_spectrum = np.linspace(0.1, 0.9, n_bands).astype(np.float32)
     reference_spectrum /= np.linalg.norm(reference_spectrum)  # Normalize
 
     print(f"  ✓ Reference spectrum: {n_bands} bands")
