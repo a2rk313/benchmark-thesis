@@ -459,8 +459,19 @@ def power_analysis_required_runs(
     if effect_size <= 0:
         return 30
     
-    z_alpha = scipy_stats.norm.ppf(1 - alpha / 2) if two_tailed else scipy_stats.norm.ppf(1 - alpha)
-    z_beta = scipy_stats.norm.ppf(power)
+    # Manual normal quantile calculation if scipy unavailable
+    try:
+        from scipy import stats as scipy_stats
+        z_alpha = scipy_stats.norm.ppf(1 - alpha / 2) if two_tailed else scipy_stats.norm.ppf(1 - alpha)
+        z_beta = scipy_stats.norm.ppf(power)
+    except ImportError:
+        # Approximation using inverse error function
+        import math
+        def normal_ppf(p):
+            # Approximation of normal inverse CDF
+            return math.sqrt(2) * math.erfinv(2 * p - 1)
+        z_alpha = normal_ppf(1 - alpha / 2) if two_tailed else normal_ppf(1 - alpha)
+        z_beta = normal_ppf(power)
     
     n = 2 * ((z_alpha + z_beta) / effect_size) ** 2
     
@@ -812,10 +823,16 @@ def analyze_benchmark(
     jarque_p, _ = jarque_bera_test(times_arr)
 
     test_used = "shapiro-wilk"
+    p_value = shapiro_p
+    is_normal = shapiro_is_normal
     if runs >= 50 and runs < 5000:
         test_used = "dagostino-pearson"
+        p_value = dagostino_p
+        is_normal = dagostino_p > 0.05
     elif runs >= 5000:
         test_used = "jarque-bera"
+        p_value = jarque_p
+        is_normal = jarque_p > 0.05
 
     ci_lower, ci_upper = bootstrap_ci(times_arr)
 

@@ -1,0 +1,309 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary);background:transparent}
+.report{padding:1rem 0}
+.legend{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
+.summary{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;white-space:nowrap}
+.pill-new{background:#FCEBEB;color:#791F1F}
+.pill-fixed{background:#EAF3DE;color:#27500A}
+.pill-remain{background:#FAEEDA;color:#633806}
+h2{font-size:15px;font-weight:500;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--color-border-tertiary)}
+.bug{margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid var(--color-border-tertiary)}
+.bug-header{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;background:var(--color-background-secondary)}
+.bug-header:hover{background:var(--color-background-tertiary)}
+.sev{font-size:11px;font-weight:500;padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0;margin-top:1px}
+.sev-new{background:#F7C1C1;color:#791F1F}
+.sev-fix{background:#C0DD97;color:#3B6D11}
+.sev-rem{background:#FAC775;color:#633806}
+.bug-title{font-weight:500;font-size:13px;line-height:1.4}
+.bug-files{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.chevron{margin-left:auto;flex-shrink:0;color:var(--color-text-tertiary);font-size:12px;transition:transform .2s}
+.bug-body{display:none;padding:12px;background:var(--color-background-primary);border-top:1px solid var(--color-border-tertiary)}
+.bug-body.open{display:block}
+.chevron.open{transform:rotate(180deg)}
+pre{background:var(--color-background-tertiary);border-radius:6px;padding:10px;font-family:var(--font-mono);font-size:12px;overflow-x:auto;margin:8px 0;white-space:pre-wrap;word-break:break-all;border:1px solid var(--color-border-tertiary)}
+.fix{background:#EAF3DE;border-radius:6px;padding:10px;margin-top:8px;border:1px solid #C0DD97}
+.fix-label{font-size:11px;font-weight:500;color:#3B6D11;margin-bottom:4px}
+.fix-body{font-size:13px;color:#27500A}
+p{font-size:13px;line-height:1.6;color:var(--color-text-secondary);margin-bottom:6px}
+.tag{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;margin-left:6px;vertical-align:middle}
+.tag-introduced{background:#FCEBEB;color:#791F1F}
+.tag-partial{background:#FAEEDA;color:#633806}
+</style>
+<div class="report">
+<div class="summary">
+  <span class="pill pill-new">5 newly introduced bugs</span>
+  <span class="pill pill-remain">9 still unfixed</span>
+  <span class="pill pill-fixed">10 confirmed fixed</span>
+</div>
+
+<h2>Newly introduced — bugs created by the v2 fixes</h2>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-new">NEW BUG</span>
+    <div><div class="bug-title">hsi_stream.jl — permutedims axes are wrong; spectral mixing remains</div><div class="bug-files">benchmarks/hsi_stream.jl — chunk processing loop</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <p>The fix replaced the raw reshape with a permute+reshape, but chose the wrong permutation. With Julia's column-major storage, producing a (n_pixels, n_bands) matrix where row p contains all bands of pixel p requires putting the band axis <em>last</em>:</p>
+    <pre>chunk shape: (n_bands, chunk_rows, chunk_cols)
+Need:        (chunk_rows, chunk_cols, n_bands)  →  permutedims(chunk, (2, 3, 1))
+
+Fix in code uses:  permutedims(chunk, (1, 3, 2))
+Result shape:      (n_bands, chunk_cols, chunk_rows)  ← bands still first
+
+After reshape(…, (n_pixels_chunk, n_bands)):
+  pixel_spectra[p, b]  maps to  band = ((p-1) % n_bands) + 1
+  i.e., "band b" of pixel p is actually band p-mod-n_bands of an arbitrary pixel.
+Spectral vectors are still scrambled.</pre>
+    <div class="fix"><div class="fix-label">Fix</div><div class="fix-body"><code>chunk_perm = permutedims(collect(chunk), (2, 3, 1))  # → (rows, cols, bands)</code><br>Then <code>reshape(chunk_perm, n_pixels_chunk, n_bands)</code> is correct in column-major.</div></div>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-new">NEW BUG</span>
+    <div><div class="bug-title">reprojection.R — UTM missing easting and southing offsets; every coordinate is wrong</div><div class="bug-files">benchmarks/reprojection.R — wgs84_to_utm()</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <p>The new R implementation omits the false easting and southing that define the UTM coordinate system. The Julia implementation has them correctly:</p>
+    <pre># Julia (correct)
+x[i] = x_utm + 500000.0
+y[i] = lat[i] < 0.0 ? y_utm + 10000000.0 : y_utm
+
+# R implementation (missing both)
+x <- k0 * N * lon_r * cos(lat_r)
+y <- k0 * N * (lat_r - ...)
+# No +500000 or +10000000 — every UTM coordinate is ~500 km off in X and
+# ~10,000 km off in Y for southern hemisphere points.</pre>
+    <div class="fix"><div class="fix-label">Fix</div><div class="fix-body">Add <code>x &lt;- x + 500000</code> and <code>y[lat &lt; 0] &lt;- y[lat &lt; 0] + 10000000</code> at the end of wgs84_to_utm().</div></div>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-new">NEW BUG</span>
+    <div><div class="bug-title">reprojection.R — single measurement only; no benchmark loop</div><div class="bug-files">benchmarks/reprojection.R — main()</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <p>The new implementation takes exactly one timing measurement per transform with no warm-up and no repeat runs. Every other language benchmark uses 3–10 repeated runs with warmup:</p>
+    <pre>start <- Sys.time()
+merc <- wgs84_to_web_mercator(points$lat, points$lon)
+elapsed <- as.numeric(difftime(Sys.time(), start, units="secs"))
+# That's it — one cold run, no loop</pre>
+    <p>The reported <code>min_time_s</code> is a single cold-run sample, incomparable with the 5–10 warm-run minimum times the other languages report.</p>
+    <div class="fix"><div class="fix-label">Fix</div><div class="fix-body">Wrap in <code>run_benchmark()</code> following the same pattern as raster_algebra.R, using at least 5 runs and 2 warmup runs.</div></div>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-new">NEW BUG</span>
+    <div><div class="bug-title">reprojection.R — output JSON structure incompatible with cross-language comparison tools</div><div class="bug-files">benchmarks/reprojection.R, tools/compare_results.py</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <p>The R output nests results under <code>results$mercator</code> (a single entry for n=10000), while the Julia and Python outputs key by size: <code>mercator_1000</code>, <code>mercator_5000</code>, <code>mercator_10000</code>. The <code>tools/compare_results.py</code> looks for these suffixed keys and will find nothing from R, so R is silently excluded from all speedup tables.</p>
+    <pre># R output
+{"results": {"mercator": {"min_time_s": 0.001, "n_points": 10000}}}
+
+# Julia/Python expected by compare tools
+{"results": {"mercator_1000": {...}, "mercator_5000": {...}, "mercator_10000": {...}}}</pre>
+    <div class="fix"><div class="fix-label">Fix</div><div class="fix-body">Loop over sizes [1000, 5000, 10000] in the R implementation and key results as <code>paste0("mercator_", size)</code> and <code>paste0("utm_", size)</code>.</div></div>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-new">NEW BUG</span>
+    <div><div class="bug-title">timeseries_ndvi.py — dimensions and seasonal formula still don't match R and Julia</div><div class="bug-files">benchmarks/timeseries_ndvi.py</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <p>The fix now correctly computes NDVI from red/NIR bands, but two fundamental mismatches remain:</p>
+    <pre># Python generates: 46 dates × 250×250 pixels
+n_dates, height, width = 46, 250, 250
+
+# R and Julia generate: 12 dates × 500×500 pixels
+n_dates = 12; width = height = 500
+
+# Python seasonal formula
+red = 0.1 + 0.2 * (1 - base_vegetation * base_vegetation)  ← squares base_vegetation
+
+# R/Julia seasonal formula
+red = 0.1 + 0.2 * (1 - base_vegetation * vegetation_level)  ← uses vegetation_level</pre>
+    <p>The dataset size differs by 3×, the vegetation dynamics are computed differently, and there is no <code>vegetation_level</code> seasonal term in Python. Mean NDVI, trend, and amplitude statistics will all differ substantially. Cross-language hash comparison will never pass.</p>
+    <div class="fix"><div class="fix-label">Fix</div><div class="fix-body">Change Python to <code>n_dates=12, height=500, width=500</code> and replace the vegetation formula with <code>vegetation_level = 0.5 + 0.3 * sin(2π*(t)/12)</code> then compute bands as R/Julia do.</div></div>
+  </div>
+</div>
+
+<h2>Still unfixed — bugs carried over from v1</h2>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">hsi_stream.R comment still claims (224, 614, 512); actual result is (224, 512, 614)</div><div class="bug-files">benchmarks/hsi_stream.R</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>data <- aperm(raw_data, c(3, 1, 2))  # (512, 614, 224) -> (224, 614, 512)
+# Actual:  output_dim[i] = input_dim[perm[i]]
+#   dim 1 = input dim 3 = 224
+#   dim 2 = input dim 1 = 512  ← not 614
+#   dim 3 = input dim 2 = 614  ← not 512
+# Correct output: (224, 512, 614)
+# Comment says: (224, 614, 512) — rows and cols are swapped</pre>
+    <p>The code is correct (matching Julia), but the wrong comment may mislead a reader into thinking the Python convention (224, 614, 512) is also correct when they debug mismatches.</p>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">academic_stats.py — test_normality() fallback imports from scipy when scipy is unavailable</div><div class="bug-files">benchmarks/academic_stats.py</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>else:
+    # Only reached when SCIPY_AVAILABLE is False
+    from scipy.stats import skew, kurtosis  # ImportError here!</pre>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">benchmark_stats.py — normality test label is wrong (always uses Shapiro-Wilk, labels it D'Agostino)</div><div class="bug-files">benchmarks/benchmark_stats.py — analyze_benchmark()</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>p_value, is_normal = shapiro_wilk_test(times_arr)  # Always called
+
+test_used = "shapiro-wilk"
+if runs >= 50 and runs < 5000:
+    test_used = "dagostino-pearson"  # Label changes but the test above doesn't</pre>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">benchmark_stats.py — power_analysis_required_runs() calls scipy_stats without guard</div><div class="bug-files">benchmarks/benchmark_stats.py</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>def power_analysis_required_runs(effect_size, ...):
+    if effect_size <= 0:
+        return 30
+    z_alpha = scipy_stats.norm.ppf(...)   # NameError if SCIPY_AVAILABLE is False</pre>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">detect_flaky.py — "results" key excluded from recursion; timing arrays never reached</div><div class="bug-files">benchmarks/detect_flaky.py — _analyze_json_data()</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>for key, value in data.items():
+    if key not in ("languages", "results", "config"):  # "results" excluded!
+        self._analyze_json_data(value, key)
+# All benchmark timing data is under "results" → tool always finds 0 benchmarks</pre>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">parallel_mapreduce.py — lambda functions in ProcessPoolExecutor raise PicklingError</div><div class="bug-files">benchmarks/parallel_mapreduce.py</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>t = parallel_map_reduce(
+    tiles,
+    lambda t: process_tile(t, "ndvi_stats"),  # not picklable
+    lambda x: x,
+    n_workers
+)</pre>
+    <p>This silently falls back to sequential processing because <code>RuntimeError</code> is caught, so the map-reduce benchmark never tests actual parallelism.</p>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">cross_language_converter.py — Python results processed by convert_r_results()</div><div class="bug-files">benchmarks/cross_language_converter.py — convert_all_results()</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>for lang in ["python", "julia", "r"]:
+    if lang == "julia":
+        converted = convert_julia_results(str(json_file), lang)
+    else:
+        converted = convert_r_results(str(json_file), lang)  # Python uses R converter</pre>
+    <p>Python benchmark files use <code>min_time_s</code> as the key. <code>convert_r_results</code> looks for <code>"min"</code>, finding nothing, so all Python results convert to zeros.</p>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">vector_pip.jl — identity check on STRtree results; matched_poly_indices always empty</div><div class="bug-files">benchmarks/vector_pip.jl</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>for (j, p) in enumerate(geos_polys)
+    if p === obj   # STRtree returns new wrapper objects; identity always false
+        push!(matched_poly_indices, j)
+        break
+    end
+end
+# matched_poly_indices remains empty → distances array is empty → result is 0</pre>
+  </div>
+</div>
+
+<div class="bug">
+  <div class="bug-header" onclick="toggle(this)">
+    <span class="sev sev-rem">UNFIXED</span>
+    <div><div class="bug-title">zonal_stats.jl — ArchGDAL.contains() and boundingbox field access both crash on first call</div><div class="bug-files">benchmarks/zonal_stats.jl</div></div>
+    <span class="chevron">▼</span>
+  </div>
+  <div class="bug-body">
+    <pre>bbox = ArchGDAL.boundingbox(geom)
+xmin, xmax = bbox.min_x, bbox.max_x   # boundingbox returns a plain 4-tuple, not NamedTuple
+                                        # MethodError: type does not have field min_x
+
+if ArchGDAL.contains(geom, point)      # ArchGDAL has no contains() — use LibGEOS.contains()</pre>
+  </div>
+</div>
+
+<h2>Confirmed fixed ✓</h2>
+<div style="background:var(--color-background-secondary);border-radius:8px;padding:12px;font-size:13px;color:var(--color-text-secondary);line-height:1.8">
+  ✓ main.py Julia depot path corrected to /var/lib/julia<br>
+  ✓ common_hash.R now uses 0-indexed sampling to match Python<br>
+  ✓ common_hash.jl first_arr initialized to nothing before the loop<br>
+  ✓ hsi_stream.py transpose changed to (2,0,1) producing (224,512,614)<br>
+  ✓ raster_algebra.py band extraction axis check fixed<br>
+  ✓ academic_stats.py monitor.stop() return value now captured correctly<br>
+  ✓ reprojection.R is no longer an empty stub — main() exists<br>
+  ✓ reprojection.jl UTM zones clamped to 1–60 with clamp.(…, 1, 60)<br>
+  ✓ timeseries_ndvi.py now generates red/NIR bands and computes NDVI from them<br>
+  ✓ hsi_stream.R O(n²) c() accumulation remains, but all other HSI layout issues resolved
+</div>
+
+</div>
+<script>
+function toggle(header){
+  const body=header.nextElementSibling;
+  const chev=header.querySelector('.chevron');
+  const open=body.classList.toggle('open');
+  chev.classList.toggle('open',open);
+}
+</script>

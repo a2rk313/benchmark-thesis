@@ -420,13 +420,17 @@ def test_normality(times: np.ndarray) -> Tuple[str, float, bool]:
         stat, p = stats.normaltest(times)
         return ("dagostino-pearson", p, p > 0.05)
     else:
-        # Simple skewness/kurtosis test
-        from scipy.stats import skew, kurtosis
-
-        skewness = abs(skew(times))
-        k = abs(kurtosis(times))
+        # Simple skewness/kurtosis test - compute manually without scipy
+        mean = np.mean(times)
+        std = np.std(times, ddof=1)
+        if std > 0:
+            skewness = abs(np.mean(((times - mean) / std) ** 3))
+            kurtosis_val = np.mean(((times - mean) / std) ** 4) - 3
+        else:
+            skewness = 0
+            kurtosis_val = 0
         # Heuristic: data is normal if skewness < 2 and kurtosis < 7
-        is_normal = skewness < 2 and k < 7
+        is_normal = skewness < 2 and kurtosis_val < 7
         return ("skewness-kurtosis", 0.05 if is_normal else 0.01, is_normal)
 
 

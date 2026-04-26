@@ -19,7 +19,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 
 
-def generate_synthetic_ndvi_stack(n_dates=46, height=100, width=100):
+def generate_synthetic_ndvi_stack(n_dates=12, height=500, width=500):
     """Generate synthetic NDVI data with RED/NIR bands then compute actual NDVI
     
     This matches R and Julia implementations which generate red/nir bands
@@ -38,15 +38,15 @@ def generate_synthetic_ndvi_stack(n_dates=46, height=100, width=100):
     nir_bands = np.zeros((n_dates, height, width), dtype=np.float32)
     
     for t in range(n_dates):
-        # Seasonal cycle (Sine wave)
-        seasonality = 0.3 * np.sin(2 * np.pi * t / n_dates)
+        # Seasonal cycle - vegetation_level as in R/Julia
+        vegetation_level = 0.5 + 0.3 * np.sin(2 * np.pi * t / n_dates)
         noise = np.random.normal(0, 0.05, (height, width))
         
-        # RED band: vegetation reduces red reflectance
-        red_bands[t] = (0.1 + 0.2 * (1 - base_vegetation * base_vegetation) + noise).astype(np.float32)
+        # RED band: vegetation reduces red reflectance (uses vegetation_level)
+        red_bands[t] = (0.1 + 0.2 * (1 - base_vegetation * vegetation_level) + noise).astype(np.float32)
         
         # NIR band: vegetation increases NIR reflectance  
-        nir_bands[t] = (0.3 + 0.5 * base_vegetation + noise).astype(np.float32)
+        nir_bands[t] = (0.3 + 0.5 * base_vegetation * vegetation_level + noise).astype(np.float32)
     
     # Compute actual NDVI from red/nir bands: NDVI = (nir - red) / (nir + red + epsilon)
     epsilon = 1e-6
@@ -92,7 +92,7 @@ def main():
     
     # 1. Generate/Load Data
     print("\n[1/4] Generating synthetic NDVI stack...")
-    n_dates, height, width = 46, 250, 250
+    n_dates, height, width = 12, 500, 500
     ndvi_stack = generate_synthetic_ndvi_stack(n_dates, height, width)
     print(f"  ✓ Stack shape: {n_dates} dates × {height} × {width} pixels")
     

@@ -68,6 +68,10 @@ wgs84_to_utm <- function(lat, lon, zone) {
   x <- k0 * N * lon_r * cos(lat_r)
   y <- k0 * N * (lat_r - (1 - e2) * lat_r / (2 * N) * sin(lat_r)^2)
   
+  # Add false easting and false southing (Southern Hemisphere)
+  x <- x + 500000.0
+  y[lat < 0] <- y[lat < 0] + 10000000.0
+  
   return(list(x = x, y = y))
 }
 
@@ -85,40 +89,73 @@ main <- function() {
   cat("R - Scenario G: Coordinate Reprojection\n")
   cat(rep("=", 70), "\n\n", sep="")
   
+  # Benchmark settings
+  n_runs <- 5
+  n_warmup <- 2
+  sizes <- c(1000, 5000, 10000)
+  
   # Generate test data
-  n_points <- 10000
-  points <- generate_test_points(n_points)
+  points <- generate_test_points(10000)
   
   cat("[1/2] Web Mercator (EPSG:4326 -> 3857)...\n")
-  start <- Sys.time()
-  merc <- wgs84_to_web_mercator(points$lat, points$lon)
-  elapsed <- as.numeric(difftime(Sys.time(), start, units="secs"))
-  cat(sprintf("  Min: %.4fs (primary)\n", elapsed))
-  cat(sprintf("  Rate: %d points/sec\n", round(n_points/elapsed)))
+  
+  # Warmup runs
+  for (i in 1:n_warmup) {
+    merc <- wgs84_to_web_mercator(points$lat[1:1000], points$lon[1:1000])
+  }
+  
+  # Timed runs with multiple sizes
+  merc_results <- list()
+  for (n in sizes) {
+    start <- Sys.time()
+    for (i in 1:n_runs) {
+      merc <- wgs84_to_web_mercator(points$lat[1:n], points$lon[1:n])
+    }
+    elapsed <- as.numeric(difftime(Sys.time(), start, units="secs")) / n_runs
+    key <- paste0("mercator_", n)
+    merc_results[[key]] <- list(
+      n_points = n,
+      min_time_s = elapsed,
+      mean_time_s = elapsed,
+      points_per_second = round(n/elapsed)
+    )
+    cat(sprintf("  %d points: %.4fs\n", n, elapsed))
+  }
   
   # UTM benchmark
   zones <- floor((points$lon + 180) / 6) + 1
   zones <- pmax(pmin(zones, 60), 1)
   
   cat("[2/2] UTM (zone-optimized)...\n")
-  start <- Sys.time()
-  utm <- wgs84_to_utm(points$lat, points$lon, zones)
-  elapsed <- as.numeric(difftime(Sys.time(), start, units="secs"))
-  cat(sprintf("  Min: %.4fs (primary)\n", elapsed))
-  cat(sprintf("  Rate: %d points/sec\n", round(n_points/elapsed)))
+  
+  # Warmup runs
+  for (i in 1:n_warmup) {
+    utm <- wgs84_to_utm(points$lat[1:1000], points$lon[1:1000], zones[1:1000])
+  }
+  
+  # Timed runs
+  utm_results <- list()
+  for (n in sizes) {
+    start <- Sys.time()
+    for (i in 1:n_runs) {
+      utm <- wgs84_to_utm(points$lat[1:n], points$lon[1:n], zones[1:n])
+    }
+    elapsed <- as.numeric(difftime(Sys.time(), start, units="secs")) / n_runs
+    key <- paste0("utm_", n)
+    utm_results[[key]] <- list(
+      n_points = n,
+      min_time_s = elapsed,
+      mean_time_s = elapsed,
+      points_per_second = round(n/elapsed)
+    )
+    cat(sprintf("  %d points: %.4fs\n", n, elapsed))
+  }
   
   # Results
   results <- list(
     language = "r",
     scenario = "coordinate_reprojection",
-    results = list(
-      mercator = list(
-        n_points = n_points,
-        min_time_s = elapsed,
-        mean_time_s = elapsed,
-        points_per_second = round(n_points/elapsed)
-      )
-    )
+    results = c(merc_results, utm_results)
   )
   
   # Save results

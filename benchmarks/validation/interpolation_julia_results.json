@@ -1,0 +1,1 @@
+{"language":"julia","mean_value":-1.1264652516734843,"scenario":"interpolation_idw","validation_hash":"d9cb3f93244e3b9a","median_value":4.383975047645509,"points_per_second":306867.2558032411,"total_interpolated":1000000,"execution_time_s":3.2587380409240723,"grid_size":1000,"std_value":61.39848220484701,"n_points":50000}

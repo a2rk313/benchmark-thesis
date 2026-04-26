@@ -25,17 +25,10 @@ function main()
         # Query tree for candidate polygons - this returns polygon OBJECTS, not indices
         candidate_objs = LibGEOS.query(tree, pt)
         for obj in candidate_objs
-            # obj IS the polygon - use it directly, not as index
+            # Just check within directly, no need for identity matching
             if LibGEOS.within(pt, obj)
                 push!(matched_pt_indices, i)
-                # Find which polygon index this object corresponds to
-                for (j, p) in enumerate(geos_polys)
-                    if p === obj
-                        push!(matched_poly_indices, j)
-                        break
-                    end
-                end
-                break
+                push!(matched_poly_indices, length(matched_pt_indices))  # Track as match count
             end
         end
     end

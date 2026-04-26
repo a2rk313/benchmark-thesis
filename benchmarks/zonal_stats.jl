@@ -34,10 +34,13 @@ function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
         geom = polys.geometry[i]
         bbox = ArchGDAL.boundingbox(geom)
         
-        # boundingbox returns NamedTuple with min_x, min_y, max_x, max_y
-        # Access fields directly (not ArchGDAL.getx which is for geometry objects)
-        xmin, xmax = bbox.min_x, bbox.max_x
-        ymin, ymax = bbox.min_y, bbox.max_y
+        # boundingbox might return a tuple or namedtuple - handle both
+        if hasproperty(bbox, :min_x)
+            xmin, xmax = bbox.min_x, bbox.max_x
+            ymin, ymax = bbox.min_y, bbox.max_y
+        else
+            # Plain tuple: (min_x, min_y, max_x, max_y)
+            xmin, ymin, xmax, ymax = bbox[1], bbox[2], bbox[3], bbox[4]
         
         col_start = max(1, floor(Int, (xmin + 180) / 360 * cols))
         col_end = min(cols, ceil(Int, (xmax + 180) / 360 * cols))
@@ -47,10 +50,10 @@ function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
         zone_values = Float32[]
         for r in row_start:row_end
             for c in col_start:col_end
-                # Real polygon-point check
+                # Real polygon-point check using LibGEOS (not ArchGDAL.contains)
                 # Note: This is where Julia's JIT and loops shine
-                point = ArchGDAL.createpoint(c/cols*360-180, 90-r/rows*180)
-                if ArchGDAL.contains(geom, point)
+                point = LibGEOS.createpoint(c/cols*360-180, 90-r/rows*180)
+                if LibGEOS.contains(geom, point)
                     push!(zone_values, raster[r, c])
                 end
             end

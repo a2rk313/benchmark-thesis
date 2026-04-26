@@ -1,0 +1,7 @@
+{
+  "language": "python",
+  "scenario": "timeseries_ndvi",
+  "min_time_s": 0.016159534454345703,
+  "n_dates": 46,
+  "hash": "2ca1d2a187bc9128"
+}

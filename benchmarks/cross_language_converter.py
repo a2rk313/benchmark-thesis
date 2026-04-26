@@ -98,6 +98,43 @@ def convert_r_results(r_json_path: str, language: str = "r") -> Dict[str, Any]:
     return converted
 
 
+def convert_python_results(python_json_path: str, language: str = "python") -> Dict[str, Any]:
+    """
+    Convert Python benchmark JSON output to standardized format.
+    
+    Python output format:
+    {
+        "language": "python",
+        "results": {
+            "matrix_ops": {"min_time_s": ..., "mean_time_s": ..., "std_time_s": ..., "max_time_s": ...},
+            ...
+        }
+    }
+    
+    Returns standardized format with all new statistical fields.
+    """
+    with open(python_json_path) as f:
+        data = json.load(f)
+    
+    results = data.get("results", data)
+    converted = {}
+    
+    for benchmark_name, stats in results.items():
+        if isinstance(stats, dict) and "min_time_s" in stats:
+            converted[benchmark_name] = {
+                "name": benchmark_name,
+                "language": language,
+                "min_time": stats.get("min_time_s", stats.get("min", 0)),
+                "mean_time": stats.get("mean_time_s", stats.get("mean", 0)),
+                "std_time": stats.get("std_time_s", stats.get("std", 0)),
+                "median_time": stats.get("median_time_s", stats.get("median", stats.get("mean", 0))),
+                "max_time": stats.get("max_time_s", stats.get("max", 0)),
+                "cv": stats.get("std_time_s", stats.get("std", 0)) / stats.get("mean_time_s", 1) if stats.get("mean_time_s", 0) > 0 else 0,
+            }
+    
+    return converted
+
+
 def convert_all_results(
     results_dir: str,
     output_path: Optional[str] = None
@@ -124,6 +161,8 @@ def convert_all_results(
                 try:
                     if lang == "julia":
                         converted = convert_julia_results(str(json_file), lang)
+                    elif lang == "python":
+                        converted = convert_python_results(str(json_file), lang)
                     else:
                         converted = convert_r_results(str(json_file), lang)
                     

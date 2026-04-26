@@ -139,7 +139,7 @@ class FlakyTestDetector:
                     self.results.append(result)
             
             for key, value in data.items():
-                if key not in ("languages", "results", "config"):
+                if key not in ("languages", "config"):
                     self._analyze_json_data(value, key)
         
         elif isinstance(data, list):
