@@ -1,0 +1,13 @@
+{
+  "language": "r",
+  "scenario": "interpolation_idw",
+  "n_points": 50000,
+  "grid_size": 1000,
+  "total_interpolated": 1000000,
+  "execution_time_s": 2.1234,
+  "points_per_second": 470938.6033,
+  "mean_value": -1.3553,
+  "std_value": 61.2604,
+  "median_value": 3.6154,
+  "validation_hash": "0e0c6690c867d530"
+}

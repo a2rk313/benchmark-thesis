@@ -622,7 +622,7 @@ if [[ "$MODE" != "container" ]]; then
         
         # Always use relative .julia depot (works on bootc + host system)
         mkdir -p "$BENCHMARK_DIR/.julia"
-        export JULIA_DEPOT_PATH="$BENCHMARK_DIR/.julia"
+        source "$(dirname "$0")/julia_env_setup.sh"
 
         local freq_before=""
         if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then

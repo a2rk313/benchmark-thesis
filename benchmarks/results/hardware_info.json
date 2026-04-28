@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-04-28T15:29:01.699865",
+  "platform": {
+    "system": "Linux",
+    "release": "6.19.14-200.fc43.x86_64",
+    "version": "#1 SMP PREEMPT_DYNAMIC Thu Apr 23 17:34:07 UTC 2026",
+    "machine": "x86_64",
+    "processor": ""
+  },
+  "cpu": {
+    "model": "Intel(R) Core(TM) i5-8350U CPU @ 1.70GHz",
+    "physical_cores": 8,
+    "logical_cores": 8
+  },
+  "memory": {
+    "total_mb": 15852,
+    "available_mb": 13192
+  },
+  "python": {
+    "version": "3.14.4",
+    "implementation": "CPython",
+    "compiler": "GCC 15.2.1 20260123 (Red Hat 15.2.1-7)"
+  },
+  "packages": {
+    "numpy": "2.3.5",
+    "scipy": "1.16.2",
+    "pandas": "2.3.3",
+    "rasterio": "1.4.4",
+    "geopandas": "1.1.3"
+  }
+}

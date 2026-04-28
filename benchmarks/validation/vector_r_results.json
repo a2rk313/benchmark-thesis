@@ -1,0 +1,10 @@
+{
+  "language": "r",
+  "scenario": "vector_pip",
+  "points_processed": 519939,
+  "matches_found": 171675,
+  "total_distance_m": 182036423537.8911,
+  "mean_distance_m": 1060354.8772,
+  "max_distance_m": 4301802.1342,
+  "validation_hash": "c5b82cf20a8fdfd6"
+}

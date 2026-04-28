@@ -1,0 +1,34 @@
+{
+  "language": "python",
+  "scenario": "zonal_statistics",
+  "results": {
+    "mask_creation": {
+      "min_time_s": 0.0003556919999709862,
+      "mean_time_s": 0.000518883800009462,
+      "std_time_s": 0.00019662326734400294,
+      "peak_memory_mb": 0.0,
+      "n_zones": 10,
+      "hash": "3a5bb2f82dc39678"
+    },
+    "zonal_mean": {
+      "min_time_s": 0.007267922999972143,
+      "mean_time_s": 0.007554512800027169,
+      "std_time_s": 0.0005756729323182232,
+      "normality_p": 0.001,
+      "is_normal": false,
+      "n_zones": 10,
+      "hash": "57e0bde9c8afef16"
+    },
+    "zonal_stats": {
+      "min_time_s": 0.007268288999966899,
+      "mean_time_s": 0.007420643400018889,
+      "std_time_s": 0.00019820931057889767,
+      "hash": "57e0bde9c8afef16"
+    }
+  },
+  "all_hashes": [
+    "3a5bb2f82dc39678",
+    "57e0bde9c8afef16"
+  ],
+  "combined_hash": "2a634ad578893fad"
+}

@@ -1,0 +1,15 @@
+{
+  "language": "r",
+  "scenario": "hyperspectral_sam",
+  "pixels_processed": 314368,
+  "chunks_processed": 6,
+  "n_bands": 224,
+  "mean_sam_rad": 0.5362,
+  "median_sam_rad": 0.5349,
+  "std_sam_rad": 0.0362,
+  "min_sam_rad": 0.3899,
+  "max_sam_rad": 0.8005,
+  "mean_sam_deg": 30.7207,
+  "validation_hash": "3680c87c1450913b",
+  "reference_hash": "91ce0fa829078a73"
+}

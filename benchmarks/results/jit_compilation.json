@@ -1,0 +1,41 @@
+{
+  "results": [
+    {
+      "benchmark": "Matrix Operations (Linear Algebra)",
+      "compilation_time_s": 0.0,
+      "execution_time_s": 0.0,
+      "total_time_s": 0.0,
+      "compilation_overhead_pct": 0,
+      "is_cached": false
+    },
+    {
+      "benchmark": "Vector Processing (Point-in-Polygon logic)",
+      "compilation_time_s": 0.0,
+      "execution_time_s": 0.0,
+      "total_time_s": 0.0,
+      "compilation_overhead_pct": 0,
+      "is_cached": false
+    },
+    {
+      "benchmark": "Spatial Statistics (Aggregations)",
+      "compilation_time_s": 0.0,
+      "execution_time_s": 0.0,
+      "total_time_s": 0.0,
+      "compilation_overhead_pct": 0,
+      "is_cached": false
+    },
+    {
+      "benchmark": "Hyperspectral Math (SAM Logic)",
+      "compilation_time_s": 0.0,
+      "execution_time_s": 0.0,
+      "total_time_s": 0.0,
+      "compilation_overhead_pct": 0,
+      "is_cached": false
+    }
+  ],
+  "summary": {
+    "total_benchmarks": 4,
+    "avg_compilation_time": 0.0,
+    "avg_overhead_pct": 0.0
+  }
+}

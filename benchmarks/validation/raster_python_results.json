@@ -4,12 +4,12 @@
   "pixels_processed": 314368,
   "chunks_processed": 6,
   "n_bands": 224,
-  "mean_sam_rad": 0.7002025034170004,
-  "median_sam_rad": 0.6993296393677814,
-  "std_sam_rad": 0.02466633519668023,
-  "min_sam_rad": 0.6454960852788232,
-  "max_sam_rad": 0.8845792125189533,
-  "mean_sam_deg": 40.11864825028873,
-  "validation_hash": "6bebb6c6d8794175",
-  "reference_hash": "559e0c869bf5cf90"
+  "mean_sam_rad": 0.5361776390620593,
+  "median_sam_rad": 0.5348736646925452,
+  "std_sam_rad": 0.03621227549575923,
+  "min_sam_rad": 0.38986362963777904,
+  "max_sam_rad": 0.8004753834464132,
+  "mean_sam_deg": 30.720715787544783,
+  "validation_hash": "8bfacd6cf706f65b",
+  "reference_hash": "cdb6398dcedbbaf9"
 }

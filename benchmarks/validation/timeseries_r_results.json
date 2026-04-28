@@ -1,0 +1,14 @@
+{
+  "language": "r",
+  "scenario": "timeseries_ndvi",
+  "image_size": "500x500",
+  "n_dates": 12,
+  "total_pixels_processed": 3000000,
+  "execution_time_s": 13.9533,
+  "throughput_pixels_per_sec": 215003.1413,
+  "mean_ndvi": 0.2502,
+  "mean_trend": -0.0211,
+  "mean_amplitude": 0.4908,
+  "avg_growing_season": 4.5538,
+  "validation_hash": "db8b7c787a34be07"
+}
