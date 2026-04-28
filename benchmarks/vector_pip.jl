@@ -36,8 +36,8 @@ function main()
     # Calculate Distances
     centroids = [LibGEOS.centroid(g) for g in geos_polys]
     p_lat, p_lon = points_df[matched_pt_indices, :lat], points_df[matched_pt_indices, :lon]
-    c_lat = [LibGEOS.getY(centroids[i]) for i in matched_poly_indices]
-    c_lon = [LibGEOS.getX(centroids[i]) for i in matched_poly_indices]
+    c_lat = [LibGEOS.centroid(geos_polys[i]).y for i in matched_poly_indices]
+    c_lon = [LibGEOS.centroid(geos_polys[i]).x for i in matched_poly_indices]
     dist = haversine_vectorized(p_lat, p_lon, c_lat, c_lon)
     
     # Save Results

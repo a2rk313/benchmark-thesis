@@ -277,6 +277,7 @@ println("Warmup complete!")
 '''
     
     script_path = Path("benchmarks/julia_precompile.jl")
+    script_path.parent.mkdir(parents=True, exist_ok=True)
     with open(script_path, "w") as f:
         f.write(script)
     

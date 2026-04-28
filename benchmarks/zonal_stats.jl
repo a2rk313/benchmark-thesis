@@ -30,8 +30,7 @@ function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
     
     # We'll use a simplified bounding-box approach for fairness with Python's basic loop
     # but still perform the actual polygon intersection check
-    for i in 1:n_polys
-        geom = polys.geometry[i]
+    for geom in polys.geometry
         bbox = ArchGDAL.boundingbox(geom)
         
         # boundingbox might return a tuple or namedtuple - handle both
