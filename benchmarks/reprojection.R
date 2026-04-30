@@ -63,7 +63,8 @@ reproject_to_utm_batch <- function(lat, lon) {
   zones <- integer(n)
 
   # Group by UTM zone
-  for (zone in unique(zones <- pmax(pmin(floor((lon + 180) / 6) + 1), 60), 1))) {
+  zones <- pmax(pmin(floor((lon + 180) / 6) + 1, 60), 1)
+  for (zone in unique(zones)) {
     mask <- zones == zone
     epsg <- ifelse(any(lat[mask] >= 0), paste0("326", zone), paste0("327", zone))
 

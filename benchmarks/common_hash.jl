@@ -1,9 +1,9 @@
 # =============================================================================
 # Unified Hashing Utilities for Julia
-# Uses consistent sampling for cross-language validation.
 # =============================================================================
 
 using SHA
+using JSON3
 
 const HASH_SAMPLES = 100
 
@@ -27,33 +27,16 @@ function round_val(v, precision=6)
     end
 end
 
-# Convert data to JSON-compatible string for consistent cross-language hashing
-function json_stringify_vector(vec)
-    # Convert to JSON array format: [1.234567, 2.345678, ...]
-    elements = ["$(round(v, digits=6))" for v in vec]
-    return "[" * join(elements, ", ") * "]"
-end
-
 function generate_hash(data; n_samples=100)
     if data === nothing || isempty(data)
         return "0" ^ 16
-    end
-
-    # Import JSON for consistent formatting with Python
-    json_str = ""
-
-    try
-        using JSON
-        json_available = true
-    catch
-        json_available = false
     end
 
     local content::String
 
     if data isa AbstractVector && length(data) > 0
         if data[1] isa AbstractArray
-            local first_arr
+            first_arr = nothing
             for item in data
                 if item isa AbstractArray && length(item) > 0
                     first_arr = item
@@ -62,37 +45,21 @@ function generate_hash(data; n_samples=100)
             end
             if first_arr !== nothing
                 sampled = sample_array(first_arr, n_samples)
-                if json_available
-                    content = JSON.json(round_val.(sampled))
-                else
-                    content = json_stringify_vector(round_val.(sampled))
-                end
+                content = JSON3.write(round_val.(sampled))
             else
                 content = "[]"
             end
         else
             sampled = sample_array(data, n_samples)
-            if json_available
-                content = JSON.json(round_val.(sampled))
-            else
-                content = json_stringify_vector(round_val.(sampled))
-            end
+            content = JSON3.write(round_val.(sampled))
         end
     elseif data isa AbstractArray
         sampled = sample_array(data, n_samples)
-        if json_available
-            content = JSON.json(round_val.(sampled))
-        else
-            content = json_stringify_vector(round_val.(sampled))
-        end
+        content = JSON3.write(round_val.(sampled))
     elseif data isa Dict || data isa NamedTuple
         items = Dict{String, Any}()
-        if data isa NamedTuple
-            keys = collect(keys(data)) |> sort
-        else
-            keys = sort(collect(keys(data)))
-        end
-        for k in keys
+        ks = sort(collect(keys(data)))
+        for k in ks
             v = data[k]
             if v isa AbstractArray
                 sampled = sample_array(v, n_samples)
@@ -101,19 +68,9 @@ function generate_hash(data; n_samples=100)
                 items[string(k)] = round_val(v)
             end
         end
-        if json_available
-            content = JSON.json(items)
-        else
-            # Manual JSON formatting
-            pairs = ["\"$k\": $(v isa AbstractArray ? json_stringify_vector(v) : v)" for (k, v) in items]
-            content = "{" * join(pairs, ", ") * "}"
-        end
+        content = JSON3.write(items)
     else
-        if json_available
-            content = JSON.json(round_val(data))
-        else
-            content = string(round_val(data))
-        end
+        content = JSON3.write(round_val(data))
     end
 
     h = bytes2hex(sha256(content))
