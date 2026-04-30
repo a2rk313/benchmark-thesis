@@ -31,6 +31,20 @@ try:
     import seaborn as sns
 
     PLOTTING_AVAILABLE = True
+    
+    # Configure matplotlib only when available
+    plt.rcParams.update(
+        {
+            "figure.dpi": 150,
+            "savefig.dpi": 300,
+            "font.size": 11,
+            "axes.titlesize": 13,
+            "axes.labelsize": 12,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+            "legend.fontsize": 10,
+        }
+    )
 except ImportError:
     PLOTTING_AVAILABLE = False
     print(
@@ -59,19 +73,6 @@ COLORS = {
     "r": "#009E73",  # Green
 }
 
-plt.rcParams.update(
-    {
-        "figure.dpi": 150,
-        "savefig.dpi": 300,
-        "font.size": 11,
-        "axes.titlesize": 13,
-        "axes.labelsize": 12,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "legend.fontsize": 10,
-    }
-)
-
 
 # =============================================================================
 # Data Loading
@@ -87,9 +88,41 @@ def load_json(filepath: Path) -> Optional[dict]:
         return None
 
 
-def get_all_results() -> Dict:
-    """Load all benchmark results."""
+def get_all_results(normalized: bool = True) -> Dict:
+    """Load all benchmark results.
+    
+    Args:
+        normalized: Prefer normalized results (default: True)
+    """
     results = {}
+    
+    # Prefer normalized results if available
+    normalized_dir = RESULTS_DIR / "normalized"
+    if normalized and normalized_dir.exists():
+        print(f"  Using normalized results from {normalized_dir}...")
+        for json_file in normalized_dir.glob("*.json"):
+            if json_file.name == "master_summary.json":
+                continue
+            try:
+                data = load_json(json_file)
+                if data:
+                    benchmark = data.get("benchmark", json_file.stem)
+                    language = data.get("language", "unknown")
+                    mode = data.get("execution_mode", "unknown")
+                    
+                    if benchmark not in results:
+                        results[benchmark] = {}
+                    if mode not in results[benchmark]:
+                        results[benchmark][mode] = {}
+                    results[benchmark][mode][language] = data
+            except Exception as e:
+                print(f"    Warning: Could not load {json_file}: {e}")
+        
+        if results:
+            print(f"  ✓ Loaded {len(results)} normalized benchmark results")
+            return results
+        else:
+            print(f"  No normalized results found, falling back to raw results...")
 
     for suffix in ["python", "julia", "r"]:
         for json_file in RESULTS_DIR.glob(f"*_{suffix}.json"):

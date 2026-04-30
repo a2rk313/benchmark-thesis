@@ -128,29 +128,65 @@ def load_nlcd_data():
     return None, 0, 0
 
 
-def create_latitude_zones(rows, cols, n_zones):
-    """Create simple latitude-based zones for benchmarking."""
-    mask = np.zeros((rows, cols), dtype=np.int32)
-    zone_height = rows // n_zones
+def create_polygon_zones(n_zones: int = 10):
+    """Create simple rectangular polygon zones for consistent cross-language comparison.
 
-    for z in range(n_zones):
-        row_start = z * zone_height
-        row_end = (z + 1) * zone_height if z < n_zones - 1 else rows
-        mask[row_start:row_end, :] = z + 1
+    All languages use identical axis-aligned rectangles spanning lat/lon ranges.
+    This ensures the benchmark measures zonal statistics performance, not
+    polygon complexity or library differences.
+    """
+    from shapely.geometry import box
+
+    zones = []
+    lat_step = 180.0 / n_zones
+    lon_step = 360.0 / n_zones
+
+    for i in range(n_zones):
+        for j in range(n_zones):
+            min_lon = -180.0 + j * lon_step
+            max_lon = min_lon + lon_step
+            min_lat = -90.0 + i * lat_step
+            max_lat = min_lat + lat_step
+            zones.append(box(min_lon, min_lat, max_lon, max_lat))
+
+    import geopandas as gpd
+    gdf = gpd.GeoDataFrame(geometry=zones, crs="EPSG:4326")
+    return gdf
+
+
+def rasterize_polygons_to_mask(gdf, rows, cols):
+    """Rasterize polygons to a grid mask matching the raster extent."""
+    from shapely.geometry import box
+
+    mask = np.zeros((rows, cols), dtype=np.int32)
+    lats = np.linspace(90, -90, rows)
+    lons = np.linspace(-180, 180, cols)
+
+    lat_step = 180.0 / rows
+    lon_step = 360.0 / cols
+
+    unique_zones = list(range(1, len(gdf) + 1))
+    for zone_id, geom in zip(unique_zones, gdf.geometry):
+        min_lon, min_lat, max_lon, max_lat = geom.bounds
+
+        r0 = int(max(0, (90 - max_lat) / lat_step))
+        r1 = int(min(rows, (90 - min_lat) / lat_step + 1))
+        c0 = int(max(0, (min_lon + 180) / lon_step))
+        c1 = int(min(cols, (max_lon + 180) / lon_step + 1))
+
+        for r in range(r0, min(r1, rows)):
+            for c in range(c0, min(c1, cols)):
+                lat = lats[r]
+                lon = lons[c]
+                pt = box(lon - lon_step / 2, lat - lat_step / 2, lon + lon_step / 2, lat + lat_step / 2)
+                if geom.contains(pt) or geom.intersects(pt):
+                    mask[r, c] = zone_id
 
     return mask
 
 
-def zonal_mean(raster, mask, zone_id):
-    """Calculate mean raster value for a zone."""
-    zone_mask = mask == zone_id
-    if zone_mask.sum() == 0:
-        return 0.0
-    return raster[zone_mask].mean()
-
-
-def zonal_statistics(raster, mask, zone_ids):
-    """Calculate statistics for all zones."""
+def zonal_statistics_with_polygons(raster, mask, zone_ids):
+    """Calculate statistics for all zones using rasterized mask."""
     results = []
     for zone_id in zone_ids:
         zone_mask = mask == zone_id
@@ -171,39 +207,6 @@ def zonal_statistics(raster, mask, zone_ids):
     return results
 
 
-def vectorized_zonal_stats(raster, mask):
-    """Vectorized zonal statistics using numpy."""
-    unique_zones = np.unique(mask)
-    unique_zones = unique_zones[unique_zones > 0]  # Exclude background
-
-    means = []
-    stds = []
-    sums = []
-    counts = []
-
-    for zone_id in unique_zones:
-        zone_mask = mask == zone_id
-        values = raster[zone_mask]
-        if len(values) > 0:
-            means.append(values.mean())
-            stds.append(values.std())
-            sums.append(values.sum())
-            counts.append(len(values))
-        else:
-            means.append(0.0)
-            stds.append(0.0)
-            sums.append(0.0)
-            counts.append(0)
-
-    return {
-        "zones": unique_zones.tolist(),
-        "means": means,
-        "stds": stds,
-        "sums": sums,
-        "counts": counts,
-    }
-
-
 def run_zonal_stats_benchmark():
     print("=" * 70)
     print("PYTHON - Scenario F: Zonal Statistics")
@@ -218,18 +221,19 @@ def run_zonal_stats_benchmark():
     results = {}
     all_hashes = []
 
-    # Create mask grid
-    print("\n[2/4] Creating raster mask grid...")
-    tracemalloc.start()
-
-    # Use latitude-based zones for faster testing
+    # Create polygon-based mask grid (consistent across all languages)
+    print("\n[2/4] Creating polygon zone mask grid...")
     n_zones = 10
-    mask = create_latitude_zones(rows, cols, n_zones)
+    gdf_zones = create_polygon_zones(n_zones)
+    print(f"  ✓ Created {len(gdf_zones)} rectangular polygon zones")
 
     def mask_task():
-        return create_latitude_zones(rows, cols, n_zones)
+        return rasterize_polygons_to_mask(gdf_zones, rows, cols)
 
-    times, peak, _ = run_benchmark(mask_task, runs=5, warmup=1)
+    tracemalloc.start()
+    times, peak, _ = run_benchmark(mask_task, runs=5, warmup=2)
+    mask = mask_task()
+    tracemalloc.stop()
 
     mask_hash = generate_hash(mask)
     all_hashes.append(mask_hash)
@@ -239,61 +243,47 @@ def run_zonal_stats_benchmark():
     print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
 
     current, peak = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
-
     results["mask_creation"] = {
         "min_time_s": min(times),
         "mean_time_s": np.mean(times),
         "std_time_s": np.std(times),
         "peak_memory_mb": peak / 1024 / 1024,
-        "n_zones": n_zones,
+        "n_zones": n_zones * n_zones,
         "hash": mask_hash,
     }
 
-    # Zonal mean calculation
-    print("\n[3/4] Testing zonal mean calculation...")
+    # Full zonal statistics using polygon-based mask
+    print("\n[3/4] Testing zonal statistics with polygon mask...")
 
-    stats_result = vectorized_zonal_stats(raster, mask)
+    unique_zones = np.unique(mask)
+    unique_zones = unique_zones[unique_zones > 0]
 
     def zonal_task():
-        return vectorized_zonal_stats(raster, mask)
+        return zonal_statistics_with_polygons(raster, mask, unique_zones)
+
+    stats_result = zonal_task()
 
     times, peak, _ = run_benchmark(zonal_task, runs=10, warmup=2)
-    stats_hash = generate_hash(np.array(stats_result["means"]))
+    stats_hash = generate_hash(np.array([r["mean"] for r in stats_result]))
     all_hashes.append(stats_hash)
 
     p_val, is_norm = shapiro_wilk_test(np.array(times))
+    ci_lower, ci_upper = bootstrap_ci(np.array(times))
 
     print(f"  ✓ Min: {min(times):.4f}s (primary)")
     print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
+    print(f"  ✓ 95% CI: [{ci_lower:.4f}, {ci_upper:.4f}]")
     print(f"  ✓ Normality: p={p_val:.4f} ({'normal' if is_norm else 'non-normal'})")
     print(f"  ✓ Hash: {stats_hash}")
-
-    results["zonal_mean"] = {
-        "min_time_s": min(times),
-        "mean_time_s": np.mean(times),
-        "std_time_s": np.std(times),
-        "normality_p": p_val,
-        "is_normal": is_norm,
-        "n_zones": len(stats_result["zones"]),
-        "hash": stats_hash,
-    }
-
-    # Full zonal statistics
-    print("\n[4/4] Testing full zonal statistics...")
-
-    def full_stats_task():
-        return vectorized_zonal_stats(raster, mask)
-
-    times, peak, _ = run_benchmark(full_stats_task, runs=10, warmup=2)
-
-    print(f"  ✓ Min: {min(times):.4f}s (primary)")
-    print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
 
     results["zonal_stats"] = {
         "min_time_s": min(times),
         "mean_time_s": np.mean(times),
         "std_time_s": np.std(times),
+        "normality_p": p_val,
+        "is_normal": is_norm,
+        "ci_95": [ci_lower, ci_upper],
+        "n_zones": len(stats_result),
         "hash": stats_hash,
     }
 
@@ -308,12 +298,17 @@ def run_zonal_stats_benchmark():
     output_data = {
         "language": "python",
         "scenario": "zonal_statistics",
+        "zone_type": "rectangular_polygons",
+        "n_zones": n_zones * n_zones,
         "results": results,
         "all_hashes": all_hashes,
         "combined_hash": generate_hash(all_hashes),
     }
 
     with open(OUTPUT_DIR / "zonal_stats_python_results.json", "w") as f:
+        json.dump(output_data, f, indent=2, default=str)
+
+    with open(RESULTS_DIR / "zonal_stats_python.json", "w") as f:
         json.dump(output_data, f, indent=2, default=str)
 
     print(f"✓ Results saved")

@@ -154,11 +154,19 @@ def generate_hash(data: Any, n_samples: int = 100) -> str:
     """
 
     def sample_values(arr, n):
-        """Sample n values uniformly from array."""
+        """Sample n values uniformly from array.
+
+        Matches Julia's round.(Int, range(1, len, length=n_samples)) for
+        cross-language consistency.
+        """
         flat = np.asarray(arr).flatten()
-        if len(flat) <= n:
+        n_arr = len(flat)
+        if n_arr <= n:
             return flat.tolist()
-        indices = [int(i * len(flat) / n) for i in range(n)]
+        # Match Julia's round.(Int, range(1, len, length=n))  (1-based indexing)
+        # Python equivalent: round to nearest int and convert to 0-based
+        indices = np.round(np.linspace(1, n_arr, n)).astype(int) - 1
+        indices = np.clip(indices, 0, n_arr - 1)  # Clamp to valid range
         return [float(flat[i]) for i in indices]
 
     def round_val(v, precision=6):
@@ -265,9 +273,22 @@ def dagostino_pearson_test(times: np.ndarray) -> Tuple[float, bool]:
     
     A = 0.5 * b1 + 0.25 * b2
     chi2_stat = A * (n - 1)
-    
-    p_value = 1 - 0.5 * (1 + math.erf(math.sqrt(A) / math.sqrt(2)))
-    
+
+    # Calculate p-value using chi-square CDF with 2 degrees of freedom
+    # The D'Agostino-Pearson K-squared statistic is chi-square distributed with df=2
+    if SCIPY_AVAILABLE:
+        try:
+            p_value = 1 - scipy_stats.chi2.cdf(chi2_stat, df=2)
+        except:
+            # Manual fallback using chi-square survival function: sf(x, df) = 1 - cdf(x, df)
+            # For df=2, chi-square CDF: F(x; 2) = 1 - exp(-x/2)
+            # Therefore: p_value = 1 - F(x; 2) = exp(-x/2)
+            p_value = math.exp(-chi2_stat / 2)
+    else:
+        # Manual fallback using chi-square survival with df=2
+        # p_value = exp(-chi2_stat / 2) for chi-square with 2 degrees of freedom
+        p_value = math.exp(-chi2_stat / 2)
+
     return max(0.001, min(0.999, p_value)), p_value > 0.05
 
 
@@ -303,9 +324,20 @@ def jarque_bera_test(times: np.ndarray) -> Tuple[float, bool]:
     kurtosis = np.sum(((x - mean) / std) ** 4) / n - 3
     
     JB = (n / 6) * (skewness ** 2 + 0.25 * kurtosis ** 2)
-    
-    p_value = 1 - 0.5 * (1 + math.erf(math.sqrt(JB) / math.sqrt(2)))
-    
+
+    # Calculate p-value using chi-square CDF with 2 degrees of freedom
+    # The Jarque-Bera statistic is chi-square distributed with df=2
+    if SCIPY_AVAILABLE:
+        try:
+            p_value = 1 - scipy_stats.chi2.cdf(JB, df=2)
+        except:
+            # Manual fallback using chi-square with df=2
+            # p_value = 1 - F(x; 2) = exp(-x/2)
+            p_value = math.exp(-JB / 2)
+    else:
+        # Manual fallback: p_value = exp(-JB / 2) for chi-square with 2 df
+        p_value = math.exp(-JB / 2)
+
     return max(0.001, min(0.999, p_value)), p_value > 0.05
 
 
@@ -694,43 +726,45 @@ def run_benchmark(
     if track_memory:
         tracemalloc.start()
 
-    for _ in range(runs):
+    try:
+        for _ in range(runs):
+            if track_memory:
+                tracemalloc.reset_peak()
+
+            if PSUTIL_AVAILABLE and process:
+                mem_before = process.memory_info()
+
+            # Start CPU monitoring if enabled
+            if track_cpu and PSUTIL_AVAILABLE:
+                cpu_samples.clear()
+                cpu_stop.clear()
+                monitor_thread = threading.Thread(target=_cpu_monitor_thread, daemon=True)
+                monitor_thread.start()
+
+            start = time.perf_counter()
+            result = func()
+            end = time.perf_counter()
+
+            # Stop CPU monitoring
+            if track_cpu and PSUTIL_AVAILABLE:
+                cpu_stop.set()
+                monitor_thread.join(timeout=0.5)
+
+            times.append(end - start)
+
+            if track_memory:
+                current, peak = tracemalloc.get_traced_memory()
+                peak_memory_mb = peak / (1024 * 1024)
+                allocations_peak = peak
+
+            if PSUTIL_AVAILABLE and process:
+                mem_after = process.memory_info()
+                memory_rss_mb = max(memory_rss_mb or 0, mem_after.rss / (1024 * 1024))
+                memory_vms_mb = max(memory_vms_mb or 0, mem_after.vms / (1024 * 1024))
+
+    finally:
         if track_memory:
-            tracemalloc.reset_peak()
-
-        if PSUTIL_AVAILABLE and process:
-            mem_before = process.memory_info()
-
-        # Start CPU monitoring if enabled
-        if track_cpu and PSUTIL_AVAILABLE:
-            cpu_samples.clear()
-            cpu_stop.clear()
-            monitor_thread = threading.Thread(target=_cpu_monitor_thread, daemon=True)
-            monitor_thread.start()
-
-        start = time.perf_counter()
-        result = func()
-        end = time.perf_counter()
-
-        # Stop CPU monitoring
-        if track_cpu and PSUTIL_AVAILABLE:
-            cpu_stop.set()
-            monitor_thread.join(timeout=0.5)
-
-        times.append(end - start)
-
-        if track_memory:
-            current, peak = tracemalloc.get_traced_memory()
-            peak_memory_mb = peak / (1024 * 1024)
-            allocations_peak = peak
-
-        if PSUTIL_AVAILABLE and process:
-            mem_after = process.memory_info()
-            memory_rss_mb = max(memory_rss_mb or 0, mem_after.rss / (1024 * 1024))
-            memory_vms_mb = max(memory_vms_mb or 0, mem_after.vms / (1024 * 1024))
-
-    if track_memory:
-        tracemalloc.stop()
+            tracemalloc.stop()
 
     memory_details = None
     if track_memory:

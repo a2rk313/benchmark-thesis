@@ -34,6 +34,21 @@ try:
     import seaborn as sns
 
     PLOTLY_AVAILABLE = True
+    
+    # Configure matplotlib only when available
+    plt.style.use("seaborn-v0_8-whitegrid")
+    plt.rcParams.update(
+        {
+            "font.size": 11,
+            "axes.titlesize": 13,
+            "axes.labelsize": 12,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+            "legend.fontsize": 10,
+            "figure.titlesize": 14,
+            "font.family": "sans-serif",
+        }
+    )
 except ImportError:
     PLOTLY_AVAILABLE = False
     print("Install dependencies: uv pip install matplotlib seaborn scipy")
@@ -56,20 +71,6 @@ COLORS = {
     "r": "#009E73",  # Green
 }
 COLOR_PALETTE = [COLORS["python"], COLORS["julia"], COLORS["r"]]
-
-plt.style.use("seaborn-v0_8-whitegrid")
-plt.rcParams.update(
-    {
-        "font.size": 11,
-        "axes.titlesize": 13,
-        "axes.labelsize": 12,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "legend.fontsize": 10,
-        "figure.titlesize": 14,
-        "font.family": "sans-serif",
-    }
-)
 
 
 def load_json(filepath: Path) -> Optional[dict]:

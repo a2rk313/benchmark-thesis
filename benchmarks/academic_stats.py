@@ -248,11 +248,14 @@ def pin_to_cores(cores: List[int]) -> bool:
 
 @contextmanager
 def cpu_pinned(core: Optional[int] = None):
-    """Context manager to pin CPU during benchmark."""
+    """Context manager to pin CPU during benchmark.
+
+    Pins to specified core, or uses available cores up to a reasonable limit
+    based on the system configuration."""
     original_affinity = None
 
     try:
-        
+
         original_affinity = os.sched_getaffinity(os.getpid())
     except (AttributeError, OSError):
         pass
@@ -262,14 +265,23 @@ def cpu_pinned(core: Optional[int] = None):
     elif BENCHMARK_CONFIG["cpu_pin_enabled"]:
         cores = BENCHMARK_CONFIG["cpu_cores"] or get_available_cores()
         if cores:
-            pin_to_cores(cores[:4])  # Use first 4 cores
+            # Dynamically determine number of cores to use:
+            # - Use all available cores on systems with <= 8 cores
+            # - Use 50% of cores on systems with > 8 cores
+            # - Cap at 8 cores for parallel workloads
+            n_available = len(cores)
+            if n_available <= 8:
+                n_to_use = n_available
+            else:
+                n_to_use = min(8, max(4, n_available // 2))
+            pin_to_cores(cores[:n_to_use])
 
     try:
         yield
     finally:
         if original_affinity is not None:
             try:
-                
+
                 os.sched_setaffinity(os.getpid(), original_affinity)
             except:
                 pass

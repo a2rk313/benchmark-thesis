@@ -445,6 +445,34 @@ else
     if [[ -f "tools/download_data.py" ]]; then
         source .venv/bin/activate 2>/dev/null || true
         python3 tools/download_data.py --all 2>&1 | grep -E "✓|⚠" | head -10 || true
+        
+        # STRICT VALIDATION: Verify critical data exists before proceeding
+        echo -e "  ${BLUE}Validating required datasets...${NC}"
+        python3 tools/download_data.py --check > /tmp/data_check.log 2>&1
+        if [[ $? -ne 0 ]]; then
+            echo -e "  ${RED}✗ CRITICAL: Required datasets missing!${NC}"
+            echo -e "  ${YELLOW}Cannot proceed without valid data.${NC}"
+            cat /tmp/data_check.log | sed 's/^/    /'
+            exit 1
+        fi
+        
+        # Additional check for critical Cuprite hyperspectral data
+        if [[ ! -f "data/Cuprite.mat" ]] && [[ ! -f "data/Cuprite.npy" ]]; then
+            echo -e "  ${RED}✗ CRITICAL: Hyperspectral data (Cuprite.mat/npy) not found!${NC}"
+            echo -e "  ${YELLOW}Run: python3 tools/download_data.py --hsi${NC}"
+            exit 1
+        fi
+        
+        # Check GPS points
+        if [[ ! -f "data/gps_points_1m.csv" ]]; then
+            echo -e "  ${RED}✗ CRITICAL: GPS points data not found!${NC}"
+            exit 1
+        fi
+        
+        echo -e "  ${GREEN}✓${NC} All critical datasets validated"
+    else
+        echo -e "  ${RED}✗ tools/download_data.py not found!${NC}"
+        exit 1
     fi
     mark_checkpoint "data"
 fi
@@ -574,18 +602,55 @@ if [[ "$MODE" != "native" ]]; then
     if check_resume "memory"; then
         :
     else
-        profile_memory() {
+        # Use Python-based memory profiler for consistent methodology with native mode
+        # This records tracemalloc peak RSS/VMS via psutil, matching native benchmarking
+        profile_memory_container() {
+            local lang="$1" test_name="$2" tag="$3" script="$4"
+            progress
+            echo "  $lang memory ($test_name)..."
+            podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
+                python3 -c "
+import sys
+sys.path.insert(0, '/benchmarks')
+from benchmarks.benchmark_stats import run_benchmark
+import json
+
+# Run benchmark with memory tracking
+result = run_benchmark(
+    lambda: __import__('subprocess').run(['$lang', '/benchmarks/$script'], capture_output=True),
+    runs=1,
+    warmup=0,
+    track_memory=True,
+    track_cpu=False
+)
+
+output = {
+    'language': '$lang',
+    'benchmark': '$test_name',
+    'mode': 'container',
+    'memory_rss_mb': result[2].get('rss_mb') if result[2] else None,
+    'memory_vms_mb': result[2].get('vms_mb') if result[2] else None,
+    'memory_peak_mb': result[1],
+}
+print(json.dumps(output, indent=2))
+" 2>&1 | tee "results/memory/${test_name}_${lang}_mem.json" || true
+        }
+
+        # Use time-based memory as fallback, but also try to run Python if available
+        profile_memory_time() {
             local lang="$1" cmd="$2" tag="$3" outfile="$4"
             progress
-            echo "  $lang memory..."
+            echo "  $lang memory (time-based fallback)..."
             podman run --rm -v "$(pwd)":/benchmarks:Z "$tag" \
-                bash -c "/usr/bin/time -v $cmd 2>&1 | grep -E 'Maximum resident|wall clock'" \
+                bash -c "/usr/bin/time -v $cmd 2>&1" \
             | tee "results/memory/${outfile}.txt" || true
         }
+
         [ "$ENABLE_VECTOR" = "true" ] && {
-            profile_memory "Python" "python3 benchmarks/vector_pip.py"       "$PYTHON_TAG" "vector_python_mem"
-            profile_memory "Julia"  "julia -t auto benchmarks/vector_pip.jl" "$JULIA_TAG"  "vector_julia_mem"
-            profile_memory "R"      "Rscript benchmarks/vector_pip.R"        "$R_TAG"      "vector_r_mem"
+            # Try unified Python-based profiling first
+            profile_memory_container "$PYTHON_TAG" "Python" "vector_pip" "benchmarks/vector_pip.py"
+            profile_memory_container "$JULIA_TAG" "Julia" "vector_pip" "benchmarks/vector_pip.jl"
+            profile_memory_container "$R_TAG" "R" "vector_pip" "benchmarks/vector_pip.R"
         }
         mark_checkpoint "memory"
     fi
@@ -621,8 +686,8 @@ if [[ "$MODE" != "container" ]]; then
         echo -e "  ${GREEN}$lang${NC}: $name"
         
         # Always use relative .julia depot (works on bootc + host system)
-        mkdir -p "$BENCHMARK_DIR/.julia"
-        source "$(dirname "$0")/julia_env_setup.sh"
+        export JULIA_DEPOT_PATH="/usr/share/julia/depot:/var/lib/julia:$PWD/.julia"
+
 
         local freq_before=""
         if [[ -f /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq ]]; then
@@ -669,8 +734,8 @@ if [[ "$MODE" != "container" ]]; then
     
     echo -e "${YELLOW}  Matrix Operations (BLAS-heavy):${NC}"
     export OPENBLAS_NUM_THREADS=8
-export FLEXIBLAS_NUM_THREADS=8
-export GOTO_NUM_THREADS=8
+    export FLEXIBLAS_NUM_THREADS=8
+    export GOTO_NUM_THREADS=8
     export JULIA_NUM_THREADS=1
     command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
     command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
@@ -747,8 +812,19 @@ if command -v $PY_BIN &>/dev/null; then
     # Initialize PYTHONPATH with default if unset (fixes unbound variable in strict mode)
     export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
     [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
+    
+    # Step 1: Normalize results (unified format for container + native)
+    [[ -f "tools/normalize_results.py" ]] && { 
+        echo "  Normalizing results (unified format)..."; 
+        $PY_BIN tools/normalize_results.py --input results/ --output results/normalized/ --summary 2>&1 | tail -5 || log_error "Result normalization failed"; 
+    }
+    
+    # Step 2: Generate visualizations (uses normalized results if available)
     [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; $PY_BIN tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
+    
+    # Step 3: Validation
     [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; $PY_BIN validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
+    
     echo -e "${GREEN}  ✓ Academic report complete${NC}"
 fi
 

@@ -107,22 +107,41 @@ def main():
     file_size_gb = os.path.getsize(hsi_path) / (1024**3)
     print(f"  ✓ File size: {file_size_gb:.2f} GB")
 
-    available_ram = psutil.virtual_memory().available / (1024**3)
-    print(f"  ✓ Available RAM: {available_ram:.2f} GB")
+    # Try to clear GDAL cache if available
+    try:
+        from osgeo import gdal
+        gdal.VSICurlClearCache()
+        print("  ✓ GDAL cache cleared")
+    except ImportError:
+        pass
+
+    # Try to clear GDAL cache if available
+    try:
+        from osgeo import gdal
+        gdal.PushErrorHandler('CPLQuietErrorHandler')
+        gdal.VSICurlClearCache()
+    except ImportError:
+        pass
 
     if file_size_gb > available_ram * 0.8:
         print(
             f"  ⚠ Dataset size exceeds 80% of available RAM - using chunked processing"
         )
 
+# =========================================================================
+    # 3. Process in Chunks with STREAMING aggregation (memory efficient)
     # =========================================================================
-    # 3. Process in Chunks (Out-of-Core)
-    # =========================================================================
-    print("\n[3/5] Processing hyperspectral data (chunked I/O)...")
+    print("\n[3/5] Processing hyperspectral data (streaming, memory-efficient)...")
 
     chunk_size = 256
 
-    sam_results = []
+    # STREAMING: Accumulate incremental statistics instead of storing all results
+    # This allows processing of arbitrarily large datasets without OOM
+    sum_angles = 0.0
+    sum_sq_angles = 0.0
+    sum_min = float('inf')
+    sum_max = float('-inf')
+    count = 0
     pixels_processed = 0
     chunks_processed = 0
 
@@ -131,16 +150,21 @@ def main():
             row_end = min(row + chunk_size, n_rows)
             col_end = min(col + chunk_size, n_cols)
 
-            # Extract chunk: shape (n_bands, chunk_rows, chunk_cols)
             chunk_data = data[:, row:row_end, col:col_end]
             chunk_pixels = chunk_data.shape[1] * chunk_data.shape[2]
 
-            # Reshape to (n_pixels, n_bands): (bands, rows, cols) -> (rows*cols, bands)
             pixel_spectra = chunk_data.transpose(1, 2, 0).reshape(-1, n_bands)
 
             sam_angles = spectral_angle_mapper(pixel_spectra, reference_spectrum)
 
-            sam_results.extend(sam_angles.tolist())
+            # STREAMING AGGREGATION: Update running statistics
+            chunk_sum = sam_angles.sum()
+            chunk_sum_sq = (sam_angles ** 2).sum()
+            sum_angles += chunk_sum
+            sum_sq_angles += chunk_sum_sq
+            sum_min = min(sum_min, sam_angles.min())
+            sum_max = max(sum_max, sam_angles.max())
+            count += len(sam_angles)
             pixels_processed += len(sam_angles)
             chunks_processed += 1
 
@@ -149,6 +173,24 @@ def main():
                     f"    Processed {chunks_processed} chunks ({pixels_processed:,} pixels)...",
                     end="\r",
                 )
+
+    print(
+        f"    Processed {chunks_processed} chunks ({pixels_processed:,} pixels)... Done!"
+    )
+
+    # Compute final statistics from streaming aggregates
+    mean_angle = sum_angles / count if count > 0 else 0
+    std_angle = np.sqrt(sum_sq_angles / count - mean_angle ** 2) if count > 0 else 0
+
+    print(f"  ✓ Mean SAM angle: {mean_angle:.6f} rad")
+    print(f"  ✓ Std SAM angle: {std_angle:.6f} rad")
+    print(f"  ✓ Min SAM angle: {sum_min:.6f} rad")
+    print(f"  ✓ Max SAM angle: {sum_max:.6f} rad")
+
+    # Generate hash from streaming statistics (not all pixels - just aggregate)
+    streaming_hash_input = f"{mean_angle:.8f},{std_angle:.8f},{sum_min:.8f},{sum_max:.8f}"
+    validation_hash = hashlib.sha256(streaming_hash_input.encode()).hexdigest()[:16]
+    print(f"  ✓ Validation hash: {validation_hash}")
 
     print(
         f"    Processed {chunks_processed} chunks ({pixels_processed:,} pixels)... Done!"

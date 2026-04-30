@@ -7,6 +7,7 @@ from pathlib import Path
 
 import hashlib
 import json
+import numpy as np
 from typing import Union, List, Tuple
 
 # Dynamic path resolution
@@ -18,11 +19,21 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 
 def sample_array(arr, n_samples: int = 100) -> List[float]:
-    """Sample n_samples uniformly from array."""
+    """Sample n_samples uniformly from array.
+
+    Uses the same logic as Julia: round(Int, range(1, len, length=n_samples))
+    for cross-language consistency.
+    """
     flat = arr.flatten()
-    if len(flat) <= n_samples:
+    n = len(flat)
+    if n <= n_samples:
         return flat.tolist()
-    indices = [int(i * len(flat) / n_samples) for i in range(n_samples)]
+    # Match Julia's round.(Int, range(1, len, length=n_samples))
+    # Julia: indices = round(Int, range(1, len, length=n_samples))  # 1-based indexing
+    # Python equivalent: indices = np.round(np.linspace(1, n, n_samples)).astype(int) - 1
+    indices = np.round(np.linspace(1, n, n_samples)).astype(int) - 1
+    # Clamp indices to valid range [0, n-1]
+    indices = np.clip(indices, 0, n - 1)
     return [float(flat[i]) for i in indices]
 
 

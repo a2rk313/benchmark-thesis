@@ -1,26 +1,15 @@
 
-# Dynamic path resolution
-get_project_root <- function() {
-  # Attempt to find root based on script location
-  args <- commandArgs(trailingOnly = FALSE)
-  file_arg <- args[grep("--file=", args)]
-  if (length(file_arg) > 0) {
-    script_path <- sub("--file=", "", file_arg)
-    return(normalizePath(file.path(dirname(script_path), "..")))
-  } else {
-    return(getwd()) # Fallback
-  }
-}
-PROJECT_ROOT <- get_project_root()
-DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 # =============================================================================
 # SCENARIO F: Zonal Statistics - R Implementation
 # Tests: Polygon-based raster statistics (mean, std, sum over zones)
+#
+# Uses IDENTICAL rectangular polygon zones as Python and Julia for valid comparison.
 # =============================================================================
 
 suppressPackageStartupMessages({
   library(terra)
+  library(sf)
   library(jsonlite)
   library(digest)
 })
@@ -46,7 +35,7 @@ run_benchmark <- function(func, runs = 10, warmup = 2) {
   for (i in 1:warmup) {
     invisible(func())
   }
-  
+
   times <- numeric(runs)
   result <- NULL
   for (i in 1:runs) {
@@ -55,107 +44,182 @@ run_benchmark <- function(func, runs = 10, warmup = 2) {
     t_end <- proc.time()
     times[i] <- (t_end - t_start)["elapsed"]
   }
-  
+
   list(times = times, result = result)
+}
+
+create_rectangular_zones <- function(n_zones = 10) {
+  zones <- list()
+  zone_id <- 1
+  lat_step <- 180.0 / n_zones
+  lon_step <- 360.0 / n_zones
+
+  for (i in 0:(n_zones - 1)) {
+    for (j in 0:(n_zones - 1)) {
+      min_lon <- -180.0 + j * lon_step
+      max_lon <- min_lon + lon_step
+      min_lat <- -90.0 + i * lat_step
+      max_lat <- min_lat + lat_step
+
+      # Create polygon using sf
+      coords <- matrix(c(
+        min_lon, min_lat,
+        max_lon, min_lat,
+        max_lon, max_lat,
+        min_lon, max_lat,
+        min_lon, min_lat
+      ), ncol = 2, byrow = TRUE)
+
+      poly <- sf::st_polygon(list(coords))
+      zones[[zone_id]] <- poly
+      zone_id <- zone_id + 1
+    }
+  }
+
+  sf::st_sfc(zones, crs = "EPSG:4326")
+}
+
+rasterize_polygons_to_mask <- function(zones_sfc, rows, cols) {
+  mask <- matrix(0, nrow = rows, ncol = cols)
+  lat_step <- 180.0 / rows
+  lon_step <- 360.0 / cols
+  n_zones <- length(zones_sfc)
+
+  for (zone_id in 1:n_zones) {
+    geom <- zones_sfc[[zone_id]]
+    bbox <- sf::st_bbox(geom)
+
+    r0 <- max(1, floor((90 - bbox["ymax"]) / lat_step) + 1)
+    r1 <- min(rows, ceiling((90 - bbox["ymin"]) / lat_step))
+    c0 <- max(1, floor((bbox["xmin"] + 180) / lon_step) + 1)
+    c1 <- min(cols, ceiling((bbox["xmax"] + 180) / lon_step))
+
+    r0 <- max(1, r0)
+    r1 <- min(rows, r1)
+    c0 <- max(1, c0)
+    c1 <- min(cols, c1)
+
+    for (r in r0:r1) {
+      for (c in c0:c1) {
+        lat <- 90 - (r - 0.5) * lat_step
+        lon <- -180 + (c - 0.5) * lon_step
+        pt <- sf::st_point(c(lon, lat))
+        if (sf::st_contains(geom, pt, sparse = FALSE) || sf::st_intersects(geom, pt, sparse = FALSE)) {
+          mask[r, c] <- zone_id
+        }
+      }
+    }
+  }
+
+  mask
+}
+
+vectorized_zonal_stats <- function(raster_matrix, mask_matrix) {
+  unique_zones <- sort(unique(c(mask_matrix)))
+  unique_zones <- unique_zones[unique_zones > 0]
+
+  means <- numeric()
+  stds <- numeric()
+  sums <- numeric()
+  counts <- integer()
+
+  for (zone_id in unique_zones) {
+    values <- raster_matrix[mask_matrix == zone_id]
+    if (length(values) > 0) {
+      means <- c(means, mean(values))
+      stds <- c(stds, sd(values))
+      sums <- c(sums, sum(values))
+      counts <- c(counts, length(values))
+    } else {
+      means <- c(means, 0.0)
+      stds <- c(stds, 0.0)
+      sums <- c(sums, 0.0)
+      counts <- c(counts, 0)
+    }
+  }
+
+  list(
+    means = means,
+    stds = stds,
+    sums = sums,
+    counts = counts,
+    zones = unique_zones
+  )
 }
 
 run_zonal_stats_benchmark <- function() {
   cat(strrep("=", 70), "\n")
   cat("R - Scenario F: Zonal Statistics\n")
   cat(strrep("=", 70), "\n")
-  
-  # Load data
-  cat("\n[1/4] Loading data...\n")
-  polys <- tryCatch({
-if (!file.exists(file.path(DATA_DIR, "natural_earth_countries.gpkg"))) { stop("ERROR: data/natural_earth_countries.gpkg not found") }
-    terra::vect(file.path(DATA_DIR, "natural_earth_countries.gpkg"))
-  }, error = function(e) {
-    cat("Warning: Could not load polygons, using simplified data\n")
-    NULL
-  })
-  
-  # Create synthetic raster
+
+  rows <- 600
+  cols <- 600
+  n_zones <- 10
+
   set.seed(42)
-  rows <- 180
-  cols <- 360
-  raster <- rast(nrows = rows, ncols = cols, 
-                 xmin = -180, xmax = 180, ymin = -90, ymax = 90,
-                 crs = "EPSG:4326")
-  values(raster) <- runif(ncell(raster)) * 3000
-  
-  cat(sprintf("  ✓ Created raster: %d x %d cells\n", rows, cols))
-  
-  results <- list()
-  all_hashes <- character(0)
-  
-  # Test zonal mean using terra
-  cat("\n[2/4] Testing zonal statistics (terra)...\n")
-  
-  zonal_task <- function() {
-    terra::zonal(raster, as.polygons(raster), fun = "mean", na.rm = TRUE)
-  }
-  
-  bench_result <- run_benchmark(zonal_task, 10, 2)
-  times <- bench_result$times
-  
-  # Create simple zones (e.g., latitudinal bands)
-  zones <- rast(nrows = rows, ncols = cols, 
-                xmin = -180, xmax = 180, ymin = -90, ymax = 90,
-                crs = "EPSG:4326")
-  zone_height <- rows / 10
-  zone_ids <- rep(1:10, each = cols * zone_height)
-  zone_ids <- matrix(zone_ids[1:(rows*cols)], nrow = rows, ncol = cols, byrow = TRUE)
-  values(zones) <- as.vector(zone_ids)
-  
-  zonal_mean_task <- function() {
-    terra::zonal(raster, zones, fun = "mean", na.rm = TRUE)
-  }
-  
-  bench_result <- run_benchmark(zonal_mean_task, 10, 2)
-  times <- bench_result$times
-  zonal_result <- bench_result$result
-  
-  zonal_hash <- generate_hash(as.numeric(zonal_result$mean))
-  all_hashes <- c(all_hashes, zonal_hash)
-  
-  cat(sprintf("  ✓ Min: %.4fs (primary)\n", min(times)))
-  cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", mean(times), sd(times)))
-  cat(sprintf("  ✓ Hash: %s\n", zonal_hash))
-  
-  results$zonal_mean <- list(
-    min_time_s = min(times),
-    mean_time_s = mean(times),
-    std_time_s = sd(times),
-    n_zones = 10,
-    hash = zonal_hash
+  raster_vals <- runif(rows * cols) * 3000
+  raster_matrix <- matrix(raster_vals, nrow = rows, ncol = cols)
+
+  cat(sprintf("\n[1/4] Created synthetic raster: %d x %d cells\n", rows, cols))
+
+  cat("\n[2/4] Creating rectangular polygon zones (consistent with Python/Julia)...\n")
+  zones_sfc <- create_rectangular_zones(n_zones)
+  cat(sprintf("  ✓ Created %d rectangular polygon zones\n", length(zones_sfc)))
+
+  cat("\n[3/4] Running zonal statistics benchmark...\n")
+
+  warmup <- 2
+  runs <- 10
+
+  mask_result <- run_benchmark(
+    function() rasterize_polygons_to_mask(zones_sfc, rows, cols),
+    runs = runs, warmup = warmup
   )
-  
-  # Save results
-  cat("\n", strrep("=", 70), "\n")
-  cat("SAVING RESULTS...\n")
-  cat(strrep("=", 70), "\n")
-  
-  dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
-  dir.create(RESULTS_DIR, showWarnings = FALSE, recursive = TRUE)
-  
+  mask <- mask_result$result
+  cat(sprintf("  ✓ Mask creation: min=%.4fs, mean=%.4fs\n",
+              min(mask_result$times), mean(mask_result$times)))
+
+  stats_result <- run_benchmark(
+    function() vectorized_zonal_stats(raster_matrix, mask),
+    runs = runs, warmup = warmup
+  )
+  stats <- stats_result$result
+
+  cat(sprintf("  ✓ Zonal stats: min=%.4fs, mean=%.4fs\n",
+              min(stats_result$times), mean(stats_result$times)))
+
+  zonal_hash <- generate_hash(stats$means)
+  cat(sprintf("  ✓ Validation hash: %s\n", zonal_hash))
+
   output_data <- list(
     language = "r",
-    scenario = "zonal_statistics",
-    results = results,
-    all_hashes = all_hashes,
-    combined_hash = generate_hash(all_hashes)
+    scenario = "zonal_stats",
+    zone_type = "rectangular_polygons",
+    n_zones = n_zones * n_zones,
+    min_time_s = min(stats_result$times),
+    mean_time_s = mean(stats_result$times),
+    std_time_s = sd(stats_result$times),
+    polygons = length(zones_sfc),
+    hash = zonal_hash,
+    warmup = warmup,
+    runs = runs
   )
-  
-  write_json(output_data, paste0(OUTPUT_DIR, "/zonal_stats_r_results.json"), 
+
+  dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
+  dir.create(RESULTS_DIR, showWarnings = FALSE, recursive = TRUE)
+
+  write_json(output_data, file.path(RESULTS_DIR, "zonal_stats_r.json"),
              pretty = TRUE, auto_unbox = TRUE)
-  
+  write_json(output_data, file.path(OUTPUT_DIR, "zonal_stats_r_results.json"),
+             pretty = TRUE, auto_unbox = TRUE)
+
   cat("✓ Results saved\n")
-  cat(sprintf("✓ Combined validation hash: %s\n", output_data$combined_hash))
-  
+  cat(sprintf("✓ Hash: %s\n", zonal_hash))
+
   cat("\n", strrep("=", 70), "\n")
   cat("Note: Minimum times are primary metrics (Chen & Revels 2016)\n")
   cat(strrep("=", 70), "\n")
-  
+
   return(output_data)
 }
 

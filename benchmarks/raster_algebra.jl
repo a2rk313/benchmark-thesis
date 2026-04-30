@@ -8,7 +8,6 @@ using MAT
 using Statistics
 using LinearAlgebra
 using Random
-using SHA
 using JSON3
 
 const OUTPUT_DIR = "validation"

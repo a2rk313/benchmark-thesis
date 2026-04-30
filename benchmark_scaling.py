@@ -102,37 +102,71 @@ class ScalingBenchmark:
             print(f"    Mean: {self.results[scale_name]['mean']:.4f}s ± {self.results[scale_name]['std']:.4f}s")
     
     def analyze_complexity(self):
-        """Analyze algorithmic complexity from scaling results."""
+        """Analyze algorithmic complexity from scaling results using log-log regression.
+
+        Uses rigorous log-log regression (log(t) = k * log(n) + c) to estimate
+        the scaling exponent, which directly indicates algorithmic complexity.
+        """
         print(f"\n{'='*70}")
         print(f"COMPLEXITY ANALYSIS: {self.name}")
         print(f"{'='*70}")
-        
+
         scale_names = list(self.scales.keys())
-        
+
         # Get min times and scale values
         min_times = [self.results[s]['min'] for s in scale_names]
         scale_values = [self.results[s]['scale_value'] for s in scale_names]
-        
-        # Calculate ratios
-        print("\nScaling ratios (min times):")
+
+        # Log-log regression for scaling exponent estimation
+        # log(t) = k * log(n) + c
+        # k is the scaling exponent, indicating complexity
+        log_times = np.log(min_times)
+        log_sizes = np.log(scale_values)
+
+        # Linear regression using np.polyfit (degree 1 for linear)
+        try:
+            coeffs = np.polyfit(log_sizes, log_times, 1)
+            k = coeffs[0]  # Scaling exponent (slope)
+            c = coeffs[1]  # Intercept
+
+            # Calculate R-squared for goodness of fit
+            y_pred = k * log_sizes + c
+            ss_res = np.sum((log_times - y_pred) ** 2)
+            ss_tot = np.sum((log_times - np.mean(log_times)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+
+            print(f"\nLog-Log Regression Results:")
+            print(f"  Scaling exponent (k): {k:.3f}")
+            print(f"  R²: {r_squared:.4f}")
+
+            # Determine complexity based on scaling exponent
+            if r_squared < 0.5:
+                complexity = "Uncertain (poor fit)"
+            elif k < 1.2:
+                complexity = "O(n) - Linear"
+            elif k < 1.5:
+                complexity = "O(n log n) - Linearithmic"
+            elif k < 2.0:
+                complexity = "O(n²) - Quadratic"
+            elif k < 3.0:
+                complexity = "O(n³) - Cubic"
+            else:
+                complexity = "> O(n³) - Super cubic"
+
+            print(f"  Estimated Complexity: {complexity}")
+
+        except np.linalg.LinAlgError:
+            print("\nWarning: Could not perform log-log regression")
+            k = None
+            r_squared = 0.0
+
+        # Also show pairwise ratios for reference
+        print("\nPairwise scaling ratios (for reference):")
         for i in range(len(scale_names) - 1):
             scale_ratio = scale_values[i+1] / scale_values[i]
             time_ratio = min_times[i+1] / min_times[i]
-            
-            # Estimate complexity
-            if time_ratio < scale_ratio * 1.2:
-                complexity = "O(n) or better"
-            elif time_ratio < scale_ratio**2 * 1.2:
-                complexity = "Between O(n) and O(n²)"
-            elif time_ratio < scale_ratio**3 * 1.2:
-                complexity = "O(n²) or O(n³)"
-            else:
-                complexity = "> O(n³)"
-            
-            print(f"  {scale_names[i]} → {scale_names[i+1]}:")
-            print(f"    Scale ratio: {scale_ratio:.2f}×")
-            print(f"    Time ratio:  {time_ratio:.2f}×")
-            print(f"    Estimated complexity: {complexity}")
+            exp_est = np.log(time_ratio) / np.log(scale_ratio) if scale_ratio > 1 else 0
+            print(f"  {scale_names[i]} → {scale_names[i+1]}: scale={scale_ratio:.2f}×, time={time_ratio:.2f}×, exp~{exp_est:.2f}")
     
     def save_results(self, output_dir='results/scaling'):
         """Save scaling results to JSON."""

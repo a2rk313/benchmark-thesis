@@ -2,6 +2,8 @@
 """
 SCENARIO F: Zonal Statistics - Julia Implementation
 Tests: Polygon-based raster statistics (mean, std, sum over zones)
+
+Uses IDENTICAL rectangular polygon zones as Python and R for valid comparison.
 """
 
 using Statistics
@@ -17,106 +19,170 @@ const RESULTS_DIR = "results"
 
 include(joinpath(@__DIR__, "common_hash.jl"))
 
-function zonal_stats_implementation(raster::Matrix{Float32}, polys::DataFrame)
-    # This implementation mimics the logic of standard GIS zonal stats
-    # For each polygon, we calculate stats on the raster cells it covers
-    # Note: In a real production scenario, we'd use a spatial index
-    
-    means = Float64[]
-    counts = Int[]
-    
-    n_polys = nrow(polys)
-    rows, cols = size(raster)
-    
-    # We'll use a simplified bounding-box approach for fairness with Python's basic loop
-    # but still perform the actual polygon intersection check
-    for geom in polys.geometry
+function create_rectangular_zones_simple(n_zones::Int=10)
+    zones = Geometry[]
+    lat_step = 180.0 / n_zones
+    lon_step = 360.0 / n_zones
+
+    for i in 0:(n_zones-1)
+        for j in 0:(n_zones-1)
+            min_lon = -180.0 + j * lon_step
+            max_lon = min_lon + lon_step
+            min_lat = -90.0 + i * lat_step
+            max_lat = min_lat + lat_step
+            ring = ArchGDAL.createlinearring([(min_lon, min_lat), (max_lon, min_lat),
+                                               (max_lon, max_lat), (min_lon, max_lat), (min_lon, min_lat)])
+            poly = ArchGDAL.createpolygon(ring)
+            push!(zones, poly)
+        end
+    end
+    return zones
+end
+
+
+function rasterize_polygons_to_mask(zones::Vector{T}, rows::Int, cols::Int) where T
+    mask = zeros(Int32, rows, cols)
+    lat_step = 180.0 / rows
+    lon_step = 360.0 / cols
+    n_zones = length(zones)
+
+    for zone_id in 1:n_zones
+        geom = zones[zone_id]
         bbox = ArchGDAL.boundingbox(geom)
-        
-        # boundingbox might return a tuple or namedtuple - handle both
+
         if hasproperty(bbox, :min_x)
             xmin, xmax = bbox.min_x, bbox.max_x
             ymin, ymax = bbox.min_y, bbox.max_y
         else
-            # Plain tuple: (min_x, min_y, max_x, max_y)
             xmin, ymin, xmax, ymax = bbox[1], bbox[2], bbox[3], bbox[4]
         end
-        
-        col_start = max(1, floor(Int, (xmin + 180) / 360 * cols))
-        col_end = min(cols, ceil(Int, (xmax + 180) / 360 * cols))
-        row_start = max(1, floor(Int, (90 - ymax) / 180 * rows))
-        row_end = min(rows, ceil(Int, (90 - ymin) / 180 * rows))
-        
-        zone_values = Float32[]
-        for r in row_start:row_end
-            for c in col_start:col_end
-                # Real polygon-point check using LibGEOS (not ArchGDAL.contains)
-                # Note: This is where Julia's JIT and loops shine
-                point = LibGEOS.createpoint(c/cols*360-180, 90-r/rows*180)
-                if LibGEOS.contains(geom, point)
-                    push!(zone_values, raster[r, c])
+
+        r0 = max(1, floor(Int, (90 - ymax) / lat_step))
+        r1 = min(rows, ceil(Int, (90 - ymin) / lat_step))
+        c0 = max(1, floor(Int, (xmin + 180) / lon_step))
+        c1 = min(cols, ceil(Int, (xmax + 180) / lon_step))
+
+        r0 = max(1, r0)
+        r1 = min(rows, r1)
+        c0 = max(1, c0)
+        c1 = min(cols, c1)
+
+        for r in r0:r1
+            for c in c0:c1
+                lat = 90 - (r - 0.5) * lat_step
+                lon = -180 + (c - 0.5) * lon_step
+                pt = ArchGDAL.createpoint(lon, lat)
+                if ArchGDAL.contains(geom, pt) || ArchGDAL.intersects(geom, pt)
+                    mask[r, c] = zone_id
                 end
             end
         end
-        
-        if !isempty(zone_values)
-            push!(means, mean(zone_values))
-            push!(counts, length(zone_values))
+    end
+
+    return mask
+end
+
+
+function vectorized_zonal_stats(raster::Matrix{Float32}, mask::Matrix{Int32})
+    unique_zones = filter(z -> z > 0, unique(vec(mask)))
+    n_zones = length(unique_zones)
+
+    means = Float64[]
+    stds = Float64[]
+    sums = Float64[]
+    counts = Int[]
+
+    for zone_id in unique_zones
+        zone_mask = mask .== zone_id
+        values = raster[zone_mask]
+        if length(values) > 0
+            push!(means, mean(values))
+            push!(stds, std(values))
+            push!(sums, sum(values))
+            push!(counts, length(values))
         else
             push!(means, 0.0)
+            push!(stds, 0.0)
+            push!(sums, 0.0)
             push!(counts, 0)
         end
     end
-    
-    return (means=means, counts=counts)
+
+    return (means=means, stds=stds, sums=sums, counts=counts, zones=unique_zones)
 end
+
+
+function run_benchmark_zonal(func, runs, warmup)
+    for _ in 1:warmup
+        func()
+    end
+    times = Float64[]
+    for _ in 1:runs
+        t_start = time_ns()
+        result = func()
+        t_end = time_ns()
+        push!(times, (t_end - t_start) / 1e9)
+    end
+    return times, result
+end
+
 
 function main()
     println("=" ^ 70)
     println("JULIA - Scenario F: Zonal Statistics (Bare-Metal)")
     println("=" ^ 70)
-    
-    # 1. Load Data
-    println("\n[1/4] Loading real-world polygons...")
-    polys = GeoDataFrames.read(joinpath(@__DIR__, "..", "data", "natural_earth_countries.gpkg"))
-    println("  ✓ Loaded $(nrow(polys)) country polygons")
-    
-    # 2. Create Raster
-    rows, cols = 500, 500
+
+    rows, cols = 600, 600
+    n_zones = 10
+
     Random.seed!(42)
     raster = rand(Float32, rows, cols) .* 3000f0
-    println("  ✓ Created synthetic raster: $rows x $cols cells")
-    
-    # 3. Benchmark
-    println("\n[2/4] Running zonal statistics benchmark...")
-    
-    # Warmup
-    zonal_stats_implementation(raster, first(polys, 5))
-    
-    t_start = time_ns()
-    results = zonal_stats_implementation(raster, polys)
-    t_end = time_ns()
-    
-    duration = (t_end - t_start) / 1e9
-    println("  ✓ Completed in $(round(duration, digits=4)) seconds")
-    
-    # 4. Hash and Export
-    result_hash = bytes2hex(sha256(JSON3.write(results.means)))[1:16]
+    println("\n[1/4] Created synthetic raster: $rows x $cols cells")
+
+    println("\n[2/4] Creating rectangular polygon zones (consistent with Python/R)...")
+    zones = create_rectangular_zones_simple(n_zones)
+    println("  ✓ Created $(length(zones)) rectangular polygon zones")
+
+    println("\n[3/4] Running zonal statistics benchmark...")
+
+    warmup = 2
+    runs = 10
+
+    mask_times, mask = run_benchmark_zonal(() -> rasterize_polygons_to_mask(zones, rows, cols), runs, warmup)
+    println("  ✓ Mask creation: min=$(minimum(mask_times))s, mean=$(mean(mask_times))s")
+
+    stats_times, results = run_benchmark_zonal(() -> vectorized_zonal_stats(raster, mask), runs, warmup)
+    println("  ✓ Zonal stats: min=$(minimum(stats_times))s, mean=$(mean(stats_times))s")
+
+    result_hash = generate_hash(results.means)
     println("  ✓ Validation hash: $result_hash")
-    
+
     output = Dict(
         "language" => "julia",
         "scenario" => "zonal_stats",
-        "min_time_s" => duration,
-        "polygons" => nrow(polys),
-        "hash" => result_hash
+        "zone_type" => "rectangular_polygons",
+        "n_zones" => n_zones * n_zones,
+        "min_time_s" => minimum(stats_times),
+        "mean_time_s" => mean(stats_times),
+        "std_time_s" => std(stats_times),
+        "polygons" => length(zones),
+        "hash" => result_hash,
+        "warmup" => warmup,
+        "runs" => runs,
     )
-    
+
     mkpath("results")
     open("results/zonal_stats_julia.json", "w") do f
-        JSON3.write(f, output)
+        JSON3.pretty(f, output)
+    end
+    mkpath("validation")
+    open("validation/zonal_stats_julia_results.json", "w") do f
+        JSON3.pretty(f, output)
     end
     println("✓ Results saved to results/zonal_stats_julia.json")
+    println("\n" * "=" ^ 70)
+    println("Note: Minimum times are primary metrics (Chen & Revels 2016)")
+    println("=" ^ 70)
 end
 
 main()

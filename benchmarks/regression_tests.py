@@ -43,8 +43,14 @@ class RegressionResult:
 
 
 class RegressionTestSuite:
-    def __init__(self, baseline_file: str = "containers/versions.json"):
-        self.baseline_file = Path(baseline_file)
+    def __init__(self, baseline_file: str = None):
+        # Use appropriate default path for baseline file
+        if baseline_file is None:
+            # Default to results/baselines/regression_baseline.json
+            default_path = Path(__file__).parent.parent / "results" / "baselines" / "regression_baseline.json"
+            self.baseline_file = default_path
+        else:
+            self.baseline_file = Path(baseline_file)
         self.baselines = self._load_baselines()
         self.results: List[RegressionResult] = []
     
@@ -252,18 +258,30 @@ class RegressionTestSuite:
     def export_baseline(
         self,
         results_file: str,
-        output_file: str = "containers/versions.json",
+        output_file: str = None,
     ):
-        """Export current results as new baseline."""
+        """Export current results as new baseline.
+
+        Args:
+            results_file: Path to results file to export from
+            output_file: Output path for baseline (default: results/baselines/regression_baseline.json)
+        """
+        if output_file is None:
+            output_file = Path(__file__).parent.parent / "results" / "baselines" / "regression_baseline.json"
+        output_file = Path(output_file)
+
+        # Ensure parent directory exists
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
         with open(results_file) as f:
             results_data = json.load(f)
-        
+
         baselines = self.baselines.copy()
         if "regression_hashes" not in baselines:
             baselines["regression_hashes"] = {}
         if "expected_times" not in baselines:
             baselines["expected_times"] = {}
-        
+
         for lang, lang_results in results_data.items():
             if isinstance(lang_results, list):
                 for result in lang_results:
@@ -272,16 +290,17 @@ class RegressionTestSuite:
                         baselines["regression_hashes"][key] = result["output_hash"]
                     if "min_time" in result:
                         baselines["expected_times"][key] = {"min_time": result["min_time"]}
-        
+
         with open(output_file, "w") as f:
             json.dump(baselines, f, indent=2)
-        
+
         print(f"Updated baselines saved to {output_file}")
 
 
 def add_expected_times_to_baseline():
     """Update baseline with expected timing values."""
-    baseline_path = Path("containers/versions.json")
+    baseline_path = Path(__file__).parent.parent / "results" / "baselines" / "regression_baseline.json"
+    baseline_path.parent.mkdir(parents=True, exist_ok=True)
     if baseline_path.exists():
         with open(baseline_path) as f:
             data = json.load(f)

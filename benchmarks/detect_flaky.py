@@ -90,25 +90,48 @@ class FlakyTestDetector:
         )
     
     def _detect_bimodality(self, times: np.ndarray) -> float:
-        """Detect bimodal distribution using Hartigan's dip test approximation."""
-        if len(times) < 10:
+        """Detect bimodal distribution using improved Hartigan's dip test approximation.
+
+        Returns a bimodality coefficient where:
+        - < 0.55: Likely unimodal
+        - 0.55-0.75: Possibly multimodal
+        - > 0.75: Likely bimodal/multimodal
+        """
+        n = len(times)
+        if n < 10:
             return 0.0
-        
+
+        # Calculate bimodality coefficient: (m3^2 + 1) / (m4 + 3 * (n-1)^2 / ((n-2)*(n-3)))
+        # where m3 is skewness^2 and m4 is kurtosis
+        # Simplified: BC = (skewness^2 + 1) / (kurtosis + 3)
+
+        mean = np.mean(times)
+        std = np.std(times, ddof=1)
+
+        if std == 0:
+            return 0.0
+
+        # Standardized moments
+        z_scores = (times - mean) / std
+        skewness = np.mean(z_scores ** 3)
+        kurtosis = np.mean(z_scores ** 4) - 3
+
+        # Bimodality coefficient (BC)
+        # BC > 0.55 suggests multimodality
+        # BC > 0.75 strongly suggests bimodality
+        bc = (skewness ** 2 + 1) / (kurtosis + 3 + 1e-10)
+
+        # Also check if there's clear separation in the sorted data
         sorted_times = np.sort(times)
-        n = len(sorted_times)
-        
-        left = sorted_times[:n//2]
-        right = sorted_times[n//2:]
-        
-        mean_diff = abs(np.mean(left) - np.mean(right))
-        overall_std = np.std(sorted_times)
-        
-        if overall_std == 0:
-            return 0.0
-        
-        bimodal_score = mean_diff / overall_std
-        
-        return min(bimodal_score / 2, 1.0)
+        left_half = sorted_times[:n//2]
+        right_half = sorted_times[n//2:]
+        median_diff = abs(np.median(right_half) - np.median(left_half))
+
+        # Combine BC with separation score
+        separation_score = min(1.0, median_diff / (std + 1e-10) / 2)
+        combined_score = 0.6 * bc + 0.4 * separation_score
+
+        return min(combined_score, 1.0)
     
     def analyze_results_directory(self, results_dir: str) -> List[FlakyTestResult]:
         """Analyze all benchmarks in a directory."""

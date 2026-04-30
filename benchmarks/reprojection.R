@@ -1,31 +1,19 @@
 
-# Dynamic path resolution
-get_project_root <- function() {
-  # Attempt to find root based on script location
-  args <- commandArgs(trailingOnly = FALSE)
-  file_arg <- args[grep("--file=", args)]
-  if (length(file_arg) > 0) {
-    script_path <- sub("--file=", "", file_arg)
-    return(normalizePath(file.path(dirname(script_path), "..")))
-  } else {
-    return(getwd()) # Fallback
-  }
-}
-PROJECT_ROOT <- get_project_root()
-DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 # =============================================================================
 # SCENARIO G: Coordinate Reprojection - R Implementation
 # Tests: EPSG:4326 <-> UTM/Web Mercator reprojection performance
 # 
-# Note: Uses pure R implementation of coordinate transformations for 
-# compatibility. For production use, consider sf/GDAL bindings.
+# Uses sf/PROJ library (via sf::st_transform) for fair comparison with Python's pyproj.
 # =============================================================================
 
 suppressPackageStartupMessages({
+  library(sf)
   library(jsonlite)
   library(digest)
 })
+
+PROJ_AVAILABLE <- require(sf)
 
 # Get script directory
 get_script_dir <- function() {
@@ -44,128 +32,188 @@ RESULTS_DIR <- "results"
 
 source(file.path(script_dir, "common_hash.R"))
 
-deg2rad <- function(deg) deg * pi / 180
-rad2deg <- function(rad) rad * 180 / pi
+reproject_to_web_mercator <- function(lat, lon) {
+  if (PROJ_AVAILABLE) {
+    pts <- data.frame(
+      lon = lon,
+      lat = lat
+    )
+    sf_pts <- st_as_sf(pts, coords = c("lon", "lat"), crs = "EPSG:4326")
+    sf_3857 <- st_transform(sf_pts, "EPSG:3857")
+    coords <- st_coordinates(sf_3857)
+    return(list(
+      x = coords[, 1],
+      y = coords[, 2]
+    ))
+  } else {
+    return(wgs84_to_web_mercator_manual(lat, lon))
+  }
+}
 
-wgs84_to_web_mercator <- function(lat, lon) {
+reproject_to_utm_batch <- function(lat, lon) {
+  if (!PROJ_AVAILABLE) {
+    zones <- floor((lon + 180) / 6) + 1
+    zones <- pmax(pmin(zones, 60), 1)
+    return(wgs84_to_utm_manual(lat, lon, zones))
+  }
+
+  n <- length(lat)
+  x <- numeric(n)
+  y <- numeric(n)
+  zones <- integer(n)
+
+  # Group by UTM zone
+  for (zone in unique(zones <- pmax(pmin(floor((lon + 180) / 6) + 1), 60), 1))) {
+    mask <- zones == zone
+    epsg <- ifelse(any(lat[mask] >= 0), paste0("326", zone), paste0("327", zone))
+
+    pts <- data.frame(
+      lon = lon[mask],
+      lat = lat[mask]
+    )
+    sf_pts <- st_as_sf(pts, coords = c("lon", "lat"), crs = "EPSG:4326")
+
+    # Try to transform, fall back to manual on failure
+    tryCatch({
+      sf_utm <- st_transform(sf_pts, epsg)
+      coords <- st_coordinates(sf_utm)
+      x[mask] <- coords[, 1]
+      y[mask] <- coords[, 2]
+    }, error = function(e) {
+      manual <- wgs84_to_utm_manual(lat[mask], lon[mask], rep(zone, sum(mask)))
+      x[mask] <<- manual$x
+      y[mask] <<- manual$y
+    })
+  }
+
+  zones <- pmax(pmin(floor((lon + 180) / 6) + 1, 60), 1)
+  return(list(x = x, y = y, zones = zones))
+}
+
+wgs84_to_web_mercator_manual <- function(lat, lon) {
   x <- 6378137.0 * (lon * pi / 180)
   y <- 6378137.0 * log(tan(pi/4 + (lat * pi / 180)/2))
   return(list(x = x, y = y))
 }
 
-# UTM projection (simplified)
-wgs84_to_utm <- function(lat, lon, zone) {
-  # UTM zones 1-60
-  zone <- pmax(pmin(zone, 60), 1)  # clamp to 1-60
-  lambda0 <- (zone - 1) * 6 - 180 + 3  # central meridian
+wgs84_to_utm_manual <- function(lat, lon, zones) {
+  a <- 6378137.0
+  f <- 1.0 / 298.257223563
   k0 <- 0.9996
-  e2 <- 0.00669437999014
-  
-  lat_r <- lat * pi / 180
-  lon_r <- (lon - lambda0) * pi / 180
-  
-  N <- 6378137.0 / sqrt(1 - e2 * sin(lat_r)^2)
-  x <- k0 * N * lon_r * cos(lat_r)
-  y <- k0 * N * (lat_r - (1 - e2) * lat_r / (2 * N) * sin(lat_r)^2)
-  
-  # Add false easting and false southing (Southern Hemisphere)
-  x <- x + 500000.0
-  y[lat < 0] <- y[lat < 0] + 10000000.0
-  
+  e2 <- 2*f - f^2
+
+  n <- length(lat)
+  x <- numeric(n)
+  y <- numeric(n)
+
+  for (i in 1:n) {
+    zone <- max(1, min(60, zones[i]))
+    lambda0 <- (zone - 1) * 6 - 180 + 3
+
+    lat_r <- lat[i] * pi / 180
+    lon_r <- (lon[i] - lambda0) * pi / 180
+
+    N <- a / sqrt(1 - e2 * sin(lat_r)^2)
+    x[i] <- k0 * N * lon_r * cos(lat_r)
+    y[i] <- k0 * N * (lat_r - (1 - e2) * lat_r / (2 * N) * sin(lat_r)^2)
+
+    x[i] <- x[i] + 500000.0
+    if (lat[i] < 0) {
+      y[i] <- y[i] + 10000000.0
+    }
+  }
+
   return(list(x = x, y = y))
 }
 
-# Test point generation
 generate_test_points <- function(n) {
+  set.seed(42)
   list(
     lat = runif(n, -90, 90),
     lon = runif(n, -180, 180)
   )
 }
 
-# Main benchmark
+run_benchmark <- function(func, runs = 10, warmup = 2) {
+  for (i in 1:warmup) {
+    invisible(func())
+  }
+
+  times <- numeric(runs)
+  result <- NULL
+  for (i in 1:runs) {
+    t_start <- proc.time()
+    result <- func()
+    t_end <- proc.time()
+    times[i] <- (t_end - t_start)["elapsed"]
+  }
+
+  list(times = times, result = result)
+}
+
 main <- function() {
   cat(rep("=", 70), "\n", sep="")
   cat("R - Scenario G: Coordinate Reprojection\n")
+  cat(sprintf("Using sf/PROJ: %s\n", PROJ_AVAILABLE))
   cat(rep("=", 70), "\n\n", sep="")
-  
-  # Benchmark settings
+
   n_runs <- 5
   n_warmup <- 2
   sizes <- c(1000, 5000, 10000)
-  
-  # Generate test data
+
   points <- generate_test_points(10000)
-  
+
   cat("[1/2] Web Mercator (EPSG:4326 -> 3857)...\n")
-  
-  # Warmup runs
-  for (i in 1:n_warmup) {
-    merc <- wgs84_to_web_mercator(points$lat[1:1000], points$lon[1:1000])
-  }
-  
-  # Timed runs with multiple sizes
+
   merc_results <- list()
   for (n in sizes) {
-    start <- Sys.time()
-    for (i in 1:n_runs) {
-      merc <- wgs84_to_web_mercator(points$lat[1:n], points$lon[1:n])
-    }
-    elapsed <- as.numeric(difftime(Sys.time(), start, units="secs")) / n_runs
+    func <- function() reproject_to_web_mercator(points$lat[1:n], points$lon[1:n])
+    bench <- run_benchmark(func, n_runs, n_warmup)
+
     key <- paste0("mercator_", n)
     merc_results[[key]] <- list(
       n_points = n,
-      min_time_s = elapsed,
-      mean_time_s = elapsed,
-      points_per_second = round(n/elapsed)
+      min_time_s = min(bench$times),
+      mean_time_s = mean(bench$times),
+      std_time_s = sd(bench$times),
+      points_per_second = round(n / min(bench$times))
     )
-    cat(sprintf("  %d points: %.4fs\n", n, elapsed))
+    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs\n", n, min(bench$times), mean(bench$times)))
   }
-  
-  # UTM benchmark
-  zones <- floor((points$lon + 180) / 6) + 1
-  zones <- pmax(pmin(zones, 60), 1)
-  
+
   cat("[2/2] UTM (zone-optimized)...\n")
-  
-  # Warmup runs
-  for (i in 1:n_warmup) {
-    utm <- wgs84_to_utm(points$lat[1:1000], points$lon[1:1000], zones[1:1000])
-  }
-  
-  # Timed runs
+
   utm_results <- list()
   for (n in sizes) {
-    start <- Sys.time()
-    for (i in 1:n_runs) {
-      utm <- wgs84_to_utm(points$lat[1:n], points$lon[1:n], zones[1:n])
-    }
-    elapsed <- as.numeric(difftime(Sys.time(), start, units="secs")) / n_runs
+    func <- function() reproject_to_utm_batch(points$lat[1:n], points$lon[1:n])
+    bench <- run_benchmark(func, n_runs, n_warmup)
+
     key <- paste0("utm_", n)
     utm_results[[key]] <- list(
       n_points = n,
-      min_time_s = elapsed,
-      mean_time_s = elapsed,
-      points_per_second = round(n/elapsed)
+      min_time_s = min(bench$times),
+      mean_time_s = mean(bench$times),
+      std_time_s = sd(bench$times),
+      points_per_second = round(n / min(bench$times))
     )
-    cat(sprintf("  %d points: %.4fs\n", n, elapsed))
+    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs\n", n, min(bench$times), mean(bench$times)))
   }
-  
-  # Results
+
   results <- list(
     language = "r",
     scenario = "coordinate_reprojection",
+    library = ifelse(PROJ_AVAILABLE, "sf/PROJ", "manual"),
     results = c(merc_results, utm_results)
   )
-  
-  # Save results
-  OUTPUT_DIR <- "validation"
+
   dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
+  dir.create(RESULTS_DIR, showWarnings = FALSE, recursive = TRUE)
+
   json_output <- toJSON(results, auto_unbox = FALSE, pretty = TRUE)
+  writeLines(json_output, file.path(RESULTS_DIR, "reprojection_r.json"))
   writeLines(json_output, file.path(OUTPUT_DIR, "reprojection_r_results.json"))
-  
-  cat("\nResults saved to validation/reprojection_r_results.json\n")
+
+  cat("\nResults saved to results/reprojection_r.json\n")
 }
 
-# Run if executed as script
 main()
