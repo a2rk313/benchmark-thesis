@@ -87,6 +87,9 @@ def normalize_single_result(result_path: Path) -> Dict[str, Any]:
     elif "raster" in filename:
         normalized["benchmark"] = "raster_algebra"
         normalized["scenario"] = "raster_algebra"
+    elif "scaling" in filename:
+        normalized["benchmark"] = "scaling"
+        normalized["scenario"] = "scaling_analysis"
     
     # Try to extract timing data from various formats
     if isinstance(data, dict):
@@ -144,22 +147,33 @@ def scan_and_normalize_results(input_dir: Path) -> List[Dict[str, Any]]:
         List of normalized results
     """
     normalized_results = []
-    
-    # Look for result files in various locations
-    patterns = [
-        "results/*.json",
-        "results/native/*.json",
-        "results/container/*.json",
-        "results/warm_start/*.json",
-        "results/cold_start/*.json",
-        "validation/*results.json",
-        "*_results.json"
-    ]
-    
     found_files = set()
+    
+    # Determine if input_dir IS the results directory or the project root
+    # Check if we're already inside a results dir by looking for json files directly
+    direct_jsons = list(input_dir.glob("*.json"))
+    has_direct_results = any(f.stem.endswith(("python", "julia", "r", "_results")) for f in direct_jsons if f.is_file())
+    
+    if has_direct_results:
+        # input_dir IS the results directory — scan it directly
+        patterns = ["*.json", "*/*.json", "*/*/*.json"]
+    else:
+        # input_dir is project root — scan subdirectories
+        patterns = [
+            "results/*.json",
+            "results/*/*.json",
+            "validation/*results.json",
+            "*_results.json"
+        ]
+    
     for pattern in patterns:
         for file_path in input_dir.glob(pattern):
             if file_path.is_file() and file_path not in found_files:
+                # Skip non-result files (hardware info, normalized output, etc.)
+                stem = file_path.stem
+                if stem in ("hardware_info", "container_hashes", "errors", "summary", "normalized_results"):
+                    continue
+                    
                 found_files.add(file_path)
                 normalized = normalize_single_result(file_path)
                 if normalized:
