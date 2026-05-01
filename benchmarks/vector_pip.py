@@ -87,19 +87,26 @@ def main():
     # =========================================================================
     print("\n[2/4] Performing spatial join...")
 
+    import time
+    start_time = time.perf_counter()
+
     # Create spatial index for efficiency
     polys_sindex = polys.sindex
 
     # Spatial join using GEOS topology engine
     joined = gpd.sjoin(points, polys, how="inner", predicate="within")
 
+    join_time = time.perf_counter() - start_time
     print(f"  ✓ Matched {len(joined)} points to polygons")
     print(f"  ✓ Match rate: {100 * len(joined) / len(points):.2f}%")
+    print(f"  ✓ Spatial join time: {join_time:.4f}s")
 
     # =========================================================================
     # 3. Distance Calculation
     # =========================================================================
     print("\n[3/4] Calculating Haversine distances...")
+
+    start_time = time.perf_counter()
 
     # Extract point coordinates
     point_coords = np.array([(p.y, p.x) for p in joined.geometry])
@@ -116,6 +123,9 @@ def main():
         centroid_coords[:, 0],  # centroid latitudes
         centroid_coords[:, 1],  # centroid longitudes
     )
+
+    distance_time = time.perf_counter() - start_time
+    print(f"  ✓ Distance calculation time: {distance_time:.4f}s")
 
     # =========================================================================
     # 4. Results & Validation
@@ -149,6 +159,9 @@ def main():
         "mean_distance_m": mean_distance,
         "median_distance_m": median_distance,
         "max_distance_m": max_distance,
+        "spatial_join_time_s": join_time,
+        "distance_calc_time_s": distance_time,
+        "total_processing_time_s": join_time + distance_time,
         "validation_hash": result_hash,
     }
 

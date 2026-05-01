@@ -1,382 +1,279 @@
 #!/usr/bin/env python3
 """
-================================================================================
-Unified Result Normalizer for Thesis Benchmarks
-================================================================================
+Normalize benchmark results from different sources into a unified format.
 
-Converts various benchmark output formats (hyperfine JSON, Python JSON, 
-machine-readable logs) into a standardized format for visualization and analysis.
-
-Usage:
-    python tools/normalize_results.py --input results/ --output results/normalized/
-    python tools/normalize_results.py --file results/warm_start/vector_python_warm.json
-    
-Output Format:
-    {
-        "benchmark": "vector_pip",
-        "language": "python",
-        "execution_mode": "warm",  # cold|warm|native
-        "min_time_ms": 123.45,
-        "mean_time_ms": 130.0,
-        "std_time_ms": 5.2,
-        "runs": 30,
-        "warmup_runs": 5,
-        "times_ms": [121, 123, 125, ...],
-        "metadata": {
-            "timestamp": "2024-01-15T10:00:00",
-            "cpu_freq_mhz": 3200,
-            "memory_mb": 256.5,
-            "hardware_info": {...}
-        }
-    }
-
-================================================================================
+This resolves the issue of mixed container vs native result formats and
+ensures consistent data structures for visualization and analysis.
 """
 
-import argparse
 import json
-import os
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Any
+import argparse
 
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
-
-
-def parse_hyperfine_json(filepath: Path) -> Optional[Dict[str, Any]]:
-    """Parse hyperfine JSON output (from container benchmarks)."""
+def normalize_single_result(result_path: Path) -> Dict[str, Any]:
+    """
+    Normalize a single result file to unified format.
+    
+    Args:
+        result_path: Path to result JSON file
+        
+    Returns:
+        Normalized result dictionary
+    """
     try:
-        with open(filepath) as f:
+        with open(result_path, 'r') as f:
             data = json.load(f)
-        
-        results = data.get("results", [])
-        if not results:
-            return None
-            
-        result = results[0]  # hyperfine produces one result per command
-        times = result.get("times", [])
-        
-        if not times:
-            return None
-        
-        # Convert seconds to milliseconds
-        times_ms = [t * 1000 for t in times]
-        
-        return {
-            "min_time_ms": result.get("min", min(times)) * 1000,
-            "mean_time_ms": result.get("mean", sum(times) / len(times)) * 1000,
-            "std_time_ms": result.get("stddev", 0) * 1000,
-            "median_time_ms": sorted(times_ms)[len(times_ms) // 2],
-            "runs": len(times),
-            "times_ms": times_ms,
-            "source_format": "hyperfine",
-        }
     except Exception as e:
-        print(f"Error parsing hyperfine JSON {filepath}: {e}", file=sys.stderr)
+        print(f"Warning: Could not read {result_path}: {e}", file=sys.stderr)
         return None
-
-
-def parse_benchmark_stats_json(filepath: Path) -> Optional[Dict[str, Any]]:
-    """Parse native benchmark_stats.py output."""
-    try:
-        with open(filepath) as f:
-            data = json.load(f)
-        
-        # Handle both single result and list of results
-        if isinstance(data, list):
-            data = data[0] if data else None
-        
-        if not data:
-            return None
-        
-        # Extract timing data
-        min_time = data.get("min_time_s", data.get("min_time", 0))
-        mean_time = data.get("mean_time_s", data.get("mean_time", 0))
-        std_time = data.get("std_time_s", data.get("std_time", 0))
-        times = data.get("times", [])
-        
-        # Convert to milliseconds
-        return {
-            "min_time_ms": min_time * 1000,
-            "mean_time_ms": mean_time * 1000,
-            "std_time_ms": std_time * 1000,
-            "median_time_ms": data.get("median_time_s", data.get("median_time", mean_time)) * 1000,
-            "runs": data.get("runs", len(times)),
-            "times_ms": [t * 1000 for t in times] if times else [],
-            "memory_mb": data.get("memory_peak_mb"),
-            "cpu_freq_mhz": data.get("cpu_freq_mhz"),
-            "output_hash": data.get("output_hash"),
-            "source_format": "benchmark_stats",
-        }
-    except Exception as e:
-        print(f"Error parsing benchmark_stats JSON {filepath}: {e}", file=sys.stderr)
-        return None
-
-
-def infer_benchmark_info(filepath: Path) -> Dict[str, str]:
-    """Infer benchmark name, language, and mode from file path."""
-    filename = filepath.stem
-    parts = filename.split("_")
     
-    info = {
-        "benchmark": "unknown",
-        "language": "unknown",
-        "execution_mode": "unknown",
+    # Unified result format
+    normalized = {
+        "language": "",
+        "benchmark": "",
+        "scenario": "",
+        "min_time_s": 0.0,
+        "mean_time_s": 0.0,
+        "std_time_s": 0.0,
+        "max_time_s": 0.0,
+        "ci_95_lower": 0.0,
+        "ci_95_upper": 0.0,
+        "cv": 0.0,
+        "runs": 0,
+        "warmup": 0,
+        "memory_rss_mb": None,
+        "memory_vms_mb": None,
+        "validation_hash": "",
+        "source_file": str(result_path),
+        "mode": "unknown"  # container or native
     }
     
-    # Pattern: {benchmark}_{language}_{mode}
-    # Examples: vector_python_warm.json, hsi_julia_cold.json
+    # Extract language from filename or data
+    filename = result_path.name.lower()
+    if "python" in filename:
+        normalized["language"] = "Python"
+    elif "julia" in filename:
+        normalized["language"] = "Julia"
+    elif "r" in filename and "results" not in filename:
+        normalized["language"] = "R"
     
-    # Language detection
-    if "python" in filename.lower():
-        info["language"] = "python"
-    elif "julia" in filename.lower():
-        info["language"] = "julia"
-    elif "r_" in filename.lower() or filename.lower().endswith("_r"):
-        info["language"] = "r"
+    # Try to extract benchmark name from filename
+    if "matrix" in filename:
+        normalized["benchmark"] = "matrix_ops"
+        normalized["scenario"] = "matrix_operations"
+    elif "io" in filename:
+        normalized["benchmark"] = "io_ops"
+        normalized["scenario"] = "io_operations"
+    elif "vector" in filename:
+        normalized["benchmark"] = "vector_pip"
+        normalized["scenario"] = "vector_point_in_polygon"
+    elif "hsi" in filename or "hyperspectral" in filename:
+        normalized["benchmark"] = "hsi_stream"
+        normalized["scenario"] = "hyperspectral_sam"
+    elif "interpolation" in filename or "idw" in filename:
+        normalized["benchmark"] = "interpolation_idw"
+        normalized["scenario"] = "spatial_interpolation"
+    elif "timeseries" in filename or "ndvi" in filename:
+        normalized["benchmark"] = "timeseries_ndvi"
+        normalized["scenario"] = "time_series_ndvi"
+    elif "reprojection" in filename:
+        normalized["benchmark"] = "reprojection"
+        normalized["scenario"] = "coordinate_reprojection"
+    elif "zonal" in filename:
+        normalized["benchmark"] = "zonal_stats"
+        normalized["scenario"] = "zonal_statistics"
+    elif "raster" in filename:
+        normalized["benchmark"] = "raster_algebra"
+        normalized["scenario"] = "raster_algebra"
     
-    # Mode detection
-    if "cold" in filename.lower():
-        info["execution_mode"] = "cold"
-    elif "warm" in filename.lower():
-        info["execution_mode"] = "warm"
-    elif "native" in str(filepath).lower():
-        info["execution_mode"] = "native"
-    else:
-        info["execution_mode"] = "container"
-    
-    # Benchmark type detection
-    benchmark_patterns = {
-        "vector": "vector_pip",
-        "hsi": "hsi_stream",
-        "hyperspectral": "hsi_stream",
-        "matrix": "matrix_ops",
-        "io": "io_ops",
-        "raster": "raster_algebra",
-        "zonal": "zonal_stats",
-        "interp": "interpolation_idw",
-        "ndvi": "timeseries_ndvi",
-        "reprojection": "reprojection",
-    }
-    
-    for pattern, benchmark in benchmark_patterns.items():
-        if pattern in filename.lower():
-            info["benchmark"] = benchmark
-            break
-    
-    return info
-
-
-def load_hardware_info() -> Optional[Dict[str, Any]]:
-    """Load hardware info if available."""
-    hw_path = Path("results/hardware_info.json")
-    if hw_path.exists():
-        try:
-            with open(hw_path) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return None
-
-
-def normalize_file(filepath: Path) -> Optional[Dict[str, Any]]:
-    """Normalize a single result file."""
-    if not filepath.exists():
-        return None
-    
-    # Try different parsers
-    data = None
-    
-    # Check file content to determine format
-    try:
-        with open(filepath) as f:
-            content = f.read(1000)  # Read first 1KB
+    # Try to extract timing data from various formats
+    if isinstance(data, dict):
+        # Handle different data structures
+        if "results" in data and isinstance(data["results"], dict):
+            # Standard format with results dict
+            results = data["results"]
+            for key in results:
+                if isinstance(results[key], dict) and "min" in results[key]:
+                    # Take the first benchmark with min time
+                    bench_data = results[key]
+                    normalized["min_time_s"] = bench_data.get("min", 0.0)
+                    normalized["mean_time_s"] = bench_data.get("mean", 0.0)
+                    normalized["std_time_s"] = bench_data.get("std", 0.0)
+                    normalized["max_time_s"] = bench_data.get("max", 0.0)
+                    break
+        elif "min_time_s" in data:
+            # Already normalized format
+            normalized.update({k: v for k, v in data.items() if k in normalized})
+        elif "min" in data:
+            # Simple format
+            normalized["min_time_s"] = data.get("min", 0.0)
+            normalized["mean_time_s"] = data.get("mean", data.get("min", 0.0))
+            normalized["std_time_s"] = data.get("std", 0.0)
+            normalized["max_time_s"] = data.get("max", data.get("min", 0.0))
         
-        if '"command"' in content and '"results"' in content:
-            # Likely hyperfine format
-            data = parse_hyperfine_json(filepath)
-        elif '"min_time_s"' in content or '"min_time"' in content:
-            # Likely benchmark_stats format
-            data = parse_benchmark_stats_json(filepath)
-        else:
-            # Try both parsers
-            data = parse_hyperfine_json(filepath)
-            if not data:
-                data = parse_benchmark_stats_json(filepath)
-    except Exception as e:
-        print(f"Error reading {filepath}: {e}", file=sys.stderr)
-        return None
-    
-    if not data:
-        return None
-    
-    # Add inferred info
-    info = infer_benchmark_info(filepath)
-    data.update(info)
-    
-    # Add metadata
-    metadata = {
-        "timestamp": datetime.fromtimestamp(filepath.stat().st_mtime).isoformat(),
-        "source_file": str(filepath),
-        "normalized_at": datetime.now().isoformat(),
-    }
-    
-    # Try to load hardware info
-    hw_info = load_hardware_info()
-    if hw_info:
-        metadata["hardware"] = hw_info
-    
-    data["metadata"] = metadata
-    
-    return data
-
-
-def normalize_directory(input_dir: Path, output_dir: Path) -> List[Path]:
-    """Normalize all results in a directory."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    normalized = []
-    
-    # Recursively find all JSON files
-    for filepath in input_dir.rglob("*.json"):
-        # Skip already normalized files
-        if "normalized" in str(filepath):
-            continue
-            
-        data = normalize_file(filepath)
-        if data:
-            # Create normalized filename
-            benchmark = data.get("benchmark", "unknown")
-            language = data.get("language", "unknown")
-            mode = data.get("execution_mode", "unknown")
-            
-            normalized_name = f"{benchmark}_{language}_{mode}.json"
-            output_path = output_dir / normalized_name
-            
-            with open(output_path, "w") as f:
-                json.dump(data, f, indent=2)
-            
-            normalized.append(output_path)
-            print(f"  ✓ {filepath} → {output_path}")
+        # Extract other metadata
+        if "language" in data:
+            lang_val = data["language"]
+            if isinstance(lang_val, str):
+                normalized["language"] = lang_val.capitalize()
+            elif isinstance(lang_val, list) and len(lang_val) > 0:
+                normalized["language"] = str(lang_val[0]).capitalize()
+        if "validation_hash" in data:
+            normalized["validation_hash"] = data["validation_hash"]
+        if "n_runs" in data:
+            normalized["runs"] = data["n_runs"]
+        if "n_warmup" in data:
+            normalized["warmup"] = data["n_warmup"]
+        if "memory_rss_mb" in data:
+            normalized["memory_rss_mb"] = data["memory_rss_mb"]
+        if "memory_vms_mb" in data:
+            normalized["memory_vms_mb"] = data["memory_vms_mb"]
     
     return normalized
 
+def scan_and_normalize_results(input_dir: Path) -> List[Dict[str, Any]]:
+    """
+    Scan directory for result files and normalize them.
+    
+    Args:
+        input_dir: Directory to scan for results
+        
+    Returns:
+        List of normalized results
+    """
+    normalized_results = []
+    
+    # Look for result files in various locations
+    patterns = [
+        "results/*.json",
+        "results/native/*.json",
+        "results/container/*.json",
+        "results/warm_start/*.json",
+        "results/cold_start/*.json",
+        "validation/*results.json",
+        "*_results.json"
+    ]
+    
+    found_files = set()
+    for pattern in patterns:
+        for file_path in input_dir.glob(pattern):
+            if file_path.is_file() and file_path not in found_files:
+                found_files.add(file_path)
+                normalized = normalize_single_result(file_path)
+                if normalized:
+                    # Determine mode from path
+                    path_str = str(file_path)
+                    if "container" in path_str or "docker" in path_str or "podman" in path_str:
+                        normalized["mode"] = "container"
+                    elif "native" in path_str:
+                        normalized["mode"] = "native"
+                    else:
+                        normalized["mode"] = "unknown"
+                    
+                    normalized_results.append(normalized)
+    
+    return normalized_results
 
-def create_master_summary(normalized_dir: Path, output_path: Path):
-    """Create a master summary of all normalized results."""
-    all_results = []
+def generate_summary(normalized_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Generate summary statistics from normalized results.
     
-    for filepath in normalized_dir.glob("*.json"):
-        try:
-            with open(filepath) as f:
-                data = json.load(f)
-            all_results.append(data)
-        except Exception:
-            pass
-    
-    if not all_results:
-        print("No results to summarize", file=sys.stderr)
-        return
-    
-    # Organize by benchmark and language
+    Args:
+        normalized_results: List of normalized results
+        
+    Returns:
+        Summary dictionary
+    """
     summary = {
-        "generated_at": datetime.now().isoformat(),
-        "total_benchmarks": len(all_results),
+        "total_benchmarks": len(normalized_results),
+        "languages": {},
         "benchmarks": {},
+        "modes": {}
     }
     
-    for result in all_results:
-        bench_name = result.get("benchmark", "unknown")
-        lang = result.get("language", "unknown")
-        mode = result.get("execution_mode", "unknown")
+    for result in normalized_results:
+        lang = result["language"]
+        bench = result["benchmark"]
+        mode = result["mode"]
         
-        if bench_name not in summary["benchmarks"]:
-            summary["benchmarks"][bench_name] = {}
+        # Count languages
+        if lang not in summary["languages"]:
+            summary["languages"][lang] = 0
+        summary["languages"][lang] += 1
         
-        if mode not in summary["benchmarks"][bench_name]:
-            summary["benchmarks"][bench_name][mode] = {}
+        # Count benchmarks
+        if bench not in summary["benchmarks"]:
+            summary["benchmarks"][bench] = 0
+        summary["benchmarks"][bench] += 1
         
-        summary["benchmarks"][bench_name][mode][lang] = {
-            "min_time_ms": result.get("min_time_ms"),
-            "mean_time_ms": result.get("mean_time_ms"),
-            "std_time_ms": result.get("std_time_ms"),
-            "runs": result.get("runs"),
-        }
+        # Count modes
+        if mode not in summary["modes"]:
+            summary["modes"][mode] = 0
+        summary["modes"][mode] += 1
     
-    with open(output_path, "w") as f:
-        json.dump(summary, f, indent=2)
-    
-    print(f"\n✓ Master summary: {output_path}")
-
+    return summary
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Normalize benchmark results to unified format",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-    %(prog)s --input results/ --output results/normalized/
-    %(prog)s --file results/warm_start/vector_python_warm.json --output-dir results/normalized/
-    %(prog)s --input results/ --summary  # Also create master summary
-        """,
-    )
-    parser.add_argument("--input", "-i", help="Input directory with results")
-    parser.add_argument("--file", "-f", help="Single file to normalize")
-    parser.add_argument("--output", "-o", help="Output directory")
-    parser.add_argument("--output-dir", help="Output directory (alternative)")
-    parser.add_argument("--summary", "-s", action="store_true", help="Create master summary")
+    parser = argparse.ArgumentParser(description="Normalize benchmark results")
+    parser.add_argument("--input", "-i", type=Path, default=Path("."), 
+                       help="Input directory to scan for results")
+    parser.add_argument("--output", "-o", type=Path, default=Path("results/normalized"), 
+                       help="Output directory for normalized results")
+    parser.add_argument("--summary", "-s", action="store_true",
+                       help="Generate summary statistics")
     
     args = parser.parse_args()
     
-    output_dir = Path(args.output or args.output_dir or "results/normalized")
-    output_dir.mkdir(parents=True, exist_ok=True)
+    print("=" * 60)
+    print("NORMALIZING BENCHMARK RESULTS")
+    print("=" * 60)
+    print(f"Input directory: {args.input}")
+    print(f"Output directory: {args.output}")
+    print()
     
-    if args.file:
-        # Single file mode
-        filepath = Path(args.file)
-        data = normalize_file(filepath)
-        if data:
-            benchmark = data.get("benchmark", "unknown")
-            language = data.get("language", "unknown")
-            mode = data.get("execution_mode", "unknown")
-            
-            output_path = output_dir / f"{benchmark}_{language}_{mode}.json"
-            with open(output_path, "w") as f:
-                json.dump(data, f, indent=2)
-            
-            print(f"✓ Normalized: {output_path}")
-        else:
-            print(f"✗ Failed to normalize {filepath}", file=sys.stderr)
-            return 1
+    # Create output directory
+    args.output.mkdir(parents=True, exist_ok=True)
     
-    elif args.input:
-        # Batch mode
-        input_dir = Path(args.input)
-        print(f"Normalizing results from {input_dir}...")
-        
-        normalized = normalize_directory(input_dir, output_dir)
-        
-        if normalized:
-            print(f"\n✓ Normalized {len(normalized)} results to {output_dir}")
-            
-            if args.summary:
-                summary_path = output_dir / "master_summary.json"
-                create_master_summary(output_dir, summary_path)
-        else:
-            print("No results found to normalize", file=sys.stderr)
-            return 1
+    # Scan and normalize results
+    normalized_results = scan_and_normalize_results(args.input)
     
-    else:
-        parser.print_help()
+    if not normalized_results:
+        print("No result files found!")
         return 1
     
+    print(f"Found {len(normalized_results)} result files")
+    
+    # Save normalized results
+    output_file = args.output / "normalized_results.json"
+    with open(output_file, 'w') as f:
+        json.dump(normalized_results, f, indent=2)
+    print(f"Saved normalized results to {output_file}")
+    
+    # Generate summary if requested
+    if args.summary:
+        summary = generate_summary(normalized_results)
+        summary_file = args.output / "summary.json"
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+        print(f"Saved summary to {summary_file}")
+        
+        # Print summary
+        print("\nSUMMARY:")
+        print(f"  Total benchmarks: {summary['total_benchmarks']}")
+        print("  By language:")
+        for lang, count in summary["languages"].items():
+            print(f"    {lang}: {count}")
+        print("  By benchmark:")
+        for bench, count in summary["benchmarks"].items():
+            print(f"    {bench}: {count}")
+        print("  By mode:")
+        for mode, count in summary["modes"].items():
+            print(f"    {mode}: {count}")
+    
+    print("\n✓ Normalization complete!")
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -729,24 +729,25 @@ if [[ "$MODE" != "container" ]]; then
         RS_BIN="/usr/bin/Rscript"
     fi
 
-    # Optimized Threading Strategy
-    # Matrix Ops: 1 Language Thread + 8 BLAS Threads (Let BLAS handle the heavy lifting)
-    # GIS/RS Ops: 8 Language Threads + 1 BLAS Thread (Prevent oversubscription in loops)
+    # UNIFIED Threading Strategy - FAIR COMPARISON
+    # All benchmarks use: 8 Language Threads + 8 BLAS Threads
+    # This ensures every language has equivalent computational resources
     
-    echo -e "${YELLOW}  Matrix Operations (BLAS-heavy):${NC}"
+    echo -e "${YELLOW}  Unified Threading (8 Language + 8 BLAS threads):${NC}"
     export OPENBLAS_NUM_THREADS=8
     export FLEXIBLAS_NUM_THREADS=8
     export GOTO_NUM_THREADS=8
-    export JULIA_NUM_THREADS=1
+    export JULIA_NUM_THREADS=8
+    export OMP_NUM_THREADS=8
+    
     command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
     command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
     command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/matrix_ops.R" "matrix_ops"
 
     sleep 5 # Thermal cool-down
 
-    echo -e "${YELLOW}  Spatial Workflows (Language-Parallel):${NC}"
-    export OPENBLAS_NUM_THREADS=1
-    export JULIA_NUM_THREADS=8
+    # Continue with same threading for all remaining benchmarks
+    echo -e "${YELLOW}  Continuing with unified threading:${NC}"
     
     command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py" "raster_algebra"
     command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/raster_algebra.jl" "raster_algebra"

@@ -28,7 +28,7 @@ sample_array <- function(arr, n_samples = 100) {
     return(flat)
   }
   # Use 0-indexed sampling to match Python (not 1-indexed)
-  indices <- floor(seq(0, len - 1, length.out = n_samples))
+  indices <- round(seq(0, len - 1, length.out = n_samples))
   return(flat[indices + 1])  # R is 1-indexed, so add 1
 }
 

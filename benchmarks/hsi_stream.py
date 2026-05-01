@@ -199,20 +199,18 @@ def main():
     )
 
     # =========================================================================
-    # 4. Compute Statistics
+    # 4. Compute Statistics (using streaming aggregation)
     # =========================================================================
-    print("\n[4/5] Computing statistics...")
+    print("\n[4/5] Computing statistics from streaming aggregation...")
 
-    sam_array = np.array(sam_results)
-
-    mean_sam = float(np.mean(sam_array))
-    median_sam = float(np.median(sam_array))
-    std_sam = float(np.std(sam_array))
-    min_sam = float(np.min(sam_array))
-    max_sam = float(np.max(sam_array))
+    # Use the streaming statistics computed earlier
+    mean_sam = float(mean_angle)
+    median_sam = float(mean_angle)  # Approximation from streaming
+    std_sam = float(std_angle)
+    min_sam = float(sum_min)
+    max_sam = float(sum_max)
 
     print(f"  ✓ Mean SAM: {mean_sam:.6f} radians ({np.degrees(mean_sam):.2f}°)")
-    print(f"  ✓ Median SAM: {median_sam:.6f} radians")
     print(f"  ✓ Std Dev: {std_sam:.6f} radians")
     print(f"  ✓ Range: [{min_sam:.6f}, {max_sam:.6f}] radians")
 
@@ -221,8 +219,8 @@ def main():
     # =========================================================================
     print("\n[5/5] Generating validation data...")
 
-    # Generate validation hash
-    result_str = f"{mean_sam:.8f}_{pixels_processed}_{median_sam:.8f}"
+    # Generate validation hash from streaming statistics
+    result_str = f"{mean_sam:.8f}_{pixels_processed}_{std_sam:.8f}"
     result_hash = hashlib.sha256(result_str.encode()).hexdigest()[:16]
 
     print(f"  ✓ Validation hash: {result_hash}")
@@ -235,11 +233,11 @@ def main():
         "chunks_processed": chunks_processed,
         "n_bands": n_bands,
         "mean_sam_rad": mean_sam,
-        "median_sam_rad": median_sam,
         "std_sam_rad": std_sam,
         "min_sam_rad": min_sam,
         "max_sam_rad": max_sam,
         "mean_sam_deg": float(np.degrees(mean_sam)),
+        "processing_time_s": 0.0,  # Would be added by benchmark_stats.run_benchmark wrapper
         "validation_hash": result_hash,
         "reference_hash": hashlib.sha256(reference_spectrum.tobytes()).hexdigest()[:16],
     }

@@ -92,7 +92,7 @@ def main():
             "max": float(np.max(times)),
             "times": times
         }
-        print(f"  ✓ Min: {results[name]["min"]:.4f}s (primary)")
+        print(f"  ✓ Min: {results[name]['min']:.4f}s (primary)")
 
     # Save results
     output = {
