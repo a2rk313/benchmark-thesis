@@ -123,6 +123,8 @@ def main():
     except ImportError:
         pass
 
+    available_ram = psutil.virtual_memory().available / (1024**3)
+    print(f"  ✓ Available RAM: {available_ram:.2f} GB")
     if file_size_gb > available_ram * 0.8:
         print(
             f"  ⚠ Dataset size exceeds 80% of available RAM - using chunked processing"

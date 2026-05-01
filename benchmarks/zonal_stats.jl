@@ -20,7 +20,7 @@ const RESULTS_DIR = "results"
 include(joinpath(@__DIR__, "common_hash.jl"))
 
 function create_rectangular_zones_simple(n_zones::Int=10)
-    zones = Geometry[]
+    zones = Tuple{Float64,Float64,Float64,Float64}[]  # (min_lon, min_lat, max_lon, max_lat)
     lat_step = 180.0 / n_zones
     lon_step = 360.0 / n_zones
 
@@ -30,49 +30,29 @@ function create_rectangular_zones_simple(n_zones::Int=10)
             max_lon = min_lon + lon_step
             min_lat = -90.0 + i * lat_step
             max_lat = min_lat + lat_step
-            ring = ArchGDAL.createlinearring([(min_lon, min_lat), (max_lon, min_lat),
-                                               (max_lon, max_lat), (min_lon, max_lat), (min_lon, min_lat)])
-            poly = ArchGDAL.createpolygon(ring)
-            push!(zones, poly)
+            push!(zones, (min_lon, min_lat, max_lon, max_lat))
         end
     end
     return zones
 end
 
 
-function rasterize_polygons_to_mask(zones::Vector{T}, rows::Int, cols::Int) where T
+function rasterize_polygons_to_mask(zones::Vector{Tuple{Float64,Float64,Float64,Float64}}, rows::Int, cols::Int)
     mask = zeros(Int32, rows, cols)
     lat_step = 180.0 / rows
     lon_step = 360.0 / cols
-    n_zones = length(zones)
 
-    for zone_id in 1:n_zones
-        geom = zones[zone_id]
-        bbox = ArchGDAL.boundingbox(geom)
-
-        if hasproperty(bbox, :min_x)
-            xmin, xmax = bbox.min_x, bbox.max_x
-            ymin, ymax = bbox.min_y, bbox.max_y
-        else
-            xmin, ymin, xmax, ymax = bbox[1], bbox[2], bbox[3], bbox[4]
-        end
-
-        r0 = max(1, floor(Int, (90 - ymax) / lat_step))
-        r1 = min(rows, ceil(Int, (90 - ymin) / lat_step))
-        c0 = max(1, floor(Int, (xmin + 180) / lon_step))
-        c1 = min(cols, ceil(Int, (xmax + 180) / lon_step))
-
-        r0 = max(1, r0)
-        r1 = min(rows, r1)
-        c0 = max(1, c0)
-        c1 = min(cols, c1)
+    for (zone_id, (xmin, ymin, xmax, ymax)) in enumerate(zones)
+        r0 = max(1, floor(Int, (90.0 - ymax) / lat_step) + 1)
+        r1 = min(rows, ceil(Int, (90.0 - ymin) / lat_step))
+        c0 = max(1, floor(Int, (xmin + 180.0) / lon_step) + 1)
+        c1 = min(cols, ceil(Int, (xmax + 180.0) / lon_step))
 
         for r in r0:r1
             for c in c0:c1
-                lat = 90 - (r - 0.5) * lat_step
-                lon = -180 + (c - 0.5) * lon_step
-                pt = ArchGDAL.createpoint(lon, lat)
-                if ArchGDAL.contains(geom, pt) || ArchGDAL.intersects(geom, pt)
+                lat = 90.0 - (r - 0.5) * lat_step
+                lon = -180.0 + (c - 0.5) * lon_step
+                if lon >= xmin && lon <= xmax && lat >= ymin && lat <= ymax
                     mask[r, c] = zone_id
                 end
             end
@@ -117,6 +97,7 @@ function run_benchmark_zonal(func, runs, warmup)
         func()
     end
     times = Float64[]
+    result = nothing
     for _ in 1:runs
         t_start = time_ns()
         result = func()

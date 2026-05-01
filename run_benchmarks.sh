@@ -685,8 +685,9 @@ if [[ "$MODE" != "container" ]]; then
         progress
         echo -e "  ${GREEN}$lang${NC}: $name"
         
-        # Always use relative .julia depot (works on bootc + host system)
+        # Always use builtin depot (works on bootc + host system)
         export JULIA_DEPOT_PATH="/usr/share/julia/depot:/var/lib/julia:$PWD/.julia"
+        source /etc/environment
 
 
         local freq_before=""
