@@ -159,7 +159,7 @@ class BenchmarkDiffer:
             baseline_time=baseline.get("min_time", 0),
             current_time=0.0,
             change_pct=-100.0,
-            is_regression=True,
+            is_regression=False,  # Removed benchmarks are not regressions
             is_improvement=False,
             status="REMOVED",
         )

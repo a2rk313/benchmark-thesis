@@ -96,3 +96,25 @@ def generate_hash(data: Union[np.ndarray, Dict, List], n_samples: int = 100) -> 
         content = json.dumps(round_val(data), separators=(',', ':')) if JSON_AVAILABLE else str(round_val(data))
     
     return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+
+# Re-export functions from benchmark_stats.py for backwards compatibility
+# These were missing and causing ImportError in multiple files
+try:
+    from benchmark_stats import (
+        shapiro_wilk_test,
+        bootstrap_ci,
+        run_benchmark,
+        dagostino_pearson_test,
+        jarque_bera_test,
+        cohen_d,
+        glass_delta,
+        bonferroni_correction,
+        benjamini_hochberg_correction,
+        power_analysis_required_runs,
+        estimate_ci_width_required_runs,
+        detect_outliers_iqr,
+    )
+except ImportError:
+    # If benchmark_stats not available, functions won't be re-exported
+    pass

@@ -76,7 +76,15 @@ def shapiro_wilk_test(times: List[float]) -> Dict[str, Any]:
     Returns:
         Dict with 'statistic', 'p_value', 'is_normal' (alpha=0.05)
     """
-    from scipy import stats
+    try:
+        from scipy import stats
+    except ImportError:
+        return {
+            "statistic": None,
+            "p_value": None,
+            "is_normal": None,
+            "note": "scipy not available",
+        }
 
     if len(times) < 3:
         return {

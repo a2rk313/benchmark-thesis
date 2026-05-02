@@ -66,25 +66,22 @@ function reproject_wgs84_to_utm_batch(lat::AbstractVector{Float64}, lon::Abstrac
     y = Vector{Float64}(undef, n)
     zones = Vector{Int}(undef, n)
     
-    # Cache for different UTM zone transformations
-    zone_cache = Dict{Int, ArchGDAL.SpatialRef}()
+    # Cache for different UTM zone transformations (including transform objects)
+    transform_cache = Dict{Int, ArchGDAL.CoordinateTransform}()
+    src_ref = ArchGDAL.SpatialRef()
+    ArchGDAL.importEPSG!(src_ref, 4326)
     
     @inbounds for i in 1:n
         zone = clamp(Int(floor((lon[i] + 180) / 6)) + 1, 1, 60)
         epsg = lat[i] >= 0 ? 32600 + zone : 32700 + zone
         
-        if !haskey(zone_cache, epsg)
-            sp = ArchGDAL.SpatialRef()
-            ArchGDAL.importEPSG!(sp, epsg)
-            zone_cache[epsg] = sp
+        if !haskey(transform_cache, epsg)
+            dst = ArchGDAL.SpatialRef()
+            ArchGDAL.importEPSG!(dst, epsg)
+            transform_cache[epsg] = ArchGDAL.CoordinateTransform(src_ref, dst, false)
         end
         
-        src = ArchGDAL.SpatialRef()
-        ArchGDAL.importEPSG!(src, 4326)
-        dst = zone_cache[epsg]
-        transform = ArchGDAL.CoordinateTransform(src, dst, false)
-        
-        x[i], y[i] = ArchGDAL.transform!(transform, lon[i], lat[i])
+        x[i], y[i] = ArchGDAL.transform!(transform_cache[epsg], lon[i], lat[i])
         zones[i] = zone
     end
     return (x=x, y=y, zones=zones)

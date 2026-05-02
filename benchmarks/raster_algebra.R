@@ -38,13 +38,13 @@ load_cuprite_bands <- function(data_mode = "auto") {
   if (data_mode == "synthetic") {
     set.seed(42)
     shape <- c(512, 614)
-    return(list(
+    return(list(list(
       green = matrix(runif(prod(shape)) * 1000, nrow = shape[1], ncol = shape[2]),
       red = matrix(runif(prod(shape)) * 800, nrow = shape[1], ncol = shape[2]),
       nir = matrix(runif(prod(shape)) * 2000, nrow = shape[1], ncol = shape[2]),
       swir = matrix(runif(prod(shape)) * 1500, nrow = shape[1], ncol = shape[2]),
       shape = c(4, shape)
-    ), "synthetic")
+    ), "synthetic"))
   }
 
   result <- tryCatch({
@@ -56,9 +56,9 @@ load_cuprite_bands <- function(data_mode = "auto") {
       nir <- data[, , 71]
       swir <- data[, , 91]
       cat(sprintf("  ✓ Loaded real Cuprite data: %s\n", paste(dim(data), collapse = " x ")))
-      return(list(
+      return(list(list(
         green = green, red = red, nir = nir, swir = swir, shape = dim(data)
-      ), "real")
+      ), "real"))
     } else if (data_mode == "real") {
       cat("  x Cuprite.mat not found\n")
       quit(status = 1)
@@ -73,13 +73,13 @@ load_cuprite_bands <- function(data_mode = "auto") {
     cat("  → Using synthetic data instead...\n")
     set.seed(42)
     shape <- c(512, 614)
-    return(list(
+    return(list(list(
       green = matrix(runif(prod(shape)) * 1000, nrow = shape[1], ncol = shape[2]),
       red = matrix(runif(prod(shape)) * 800, nrow = shape[1], ncol = shape[2]),
       nir = matrix(runif(prod(shape)) * 2000, nrow = shape[1], ncol = shape[2]),
       swir = matrix(runif(prod(shape)) * 1500, nrow = shape[1], ncol = shape[2]),
       shape = c(4, shape)
-    ), "synthetic")
+    ), "synthetic"))
   })
 }
 

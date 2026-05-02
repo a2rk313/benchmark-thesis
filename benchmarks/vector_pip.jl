@@ -30,18 +30,21 @@ function vectorized_point_in_polygon(points_lat, points_lon, geos_polys, tree)
     fill!(matched, false)
     matched_poly = zeros(Int, n_pts)  # Store indices, not polygons
     
+    # Build reverse index: geometry -> index for O(1) lookup
+    geom_to_idx = Dict{LibGEOS.AbstractGeometry, Int}()
+    for (idx, geom) in enumerate(geos_polys)
+        geom_to_idx[geom] = idx
+    end
+    
     @inbounds for i in 1:n_pts
         pt = LibGEOS.Point(points_lon[i], points_lat[i])
         candidate_geoms = LibGEOS.query(tree, pt)
         for geom in candidate_geoms
             if LibGEOS.within(pt, geom)
                 matched[i] = true
-                # Find the index of this geometry in geos_polys
-                for idx in 1:length(geos_polys)
-                    if geos_polys[idx] === geom
-                        matched_poly[i] = idx
-                        break
-                    end
+                # Look up index from reverse index (O(1) instead of O(n))
+                if haskey(geom_to_idx, geom)
+                    matched_poly[i] = geom_to_idx[geom]
                 end
                 break
             end

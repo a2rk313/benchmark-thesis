@@ -135,7 +135,14 @@ def main():
         joined = gpd.sjoin(points, polys, how="inner", predicate="within",
                           lsuffix='_point', rsuffix='_poly')
         point_coords = np.array([(p.y, p.x) for p in joined.geometry])
-        poly_indices = joined["index_right"].values
+        
+        # Handle both old (index_right) and new GeoPandas API
+        if 'index_right' in joined.columns:
+            poly_indices = joined['index_right'].values
+        else:
+            # Newer GeoPandas may not include index_right, use index instead
+            poly_indices = joined.index.values if 'index' in joined.columns else np.arange(len(joined))
+        
         centroids = polys.iloc[poly_indices].geometry.centroid
         centroid_coords = np.array([(c.y, c.x) for c in centroids])
         distances = haversine_vectorized(

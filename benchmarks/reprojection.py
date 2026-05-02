@@ -249,12 +249,12 @@ def run_reprojection_benchmark(data_mode="auto", size_flag="default"):
         "combined_hash": generate_hash(all_hashes),
     }
 
-    with     # Ensure output directories exist
+    # Ensure output directories exist
     import os
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
     
-    open(os.path.join(OUTPUT_DIR, "reprojection_python_results.json"), "w") as f:
+    with open(OUTPUT_DIR / "reprojection_python_results.json", "w") as f:
         json.dump(output_data, f, indent=2, default=str)
 
     with open(RESULTS_DIR / "reprojection_python.json", "w") as f:

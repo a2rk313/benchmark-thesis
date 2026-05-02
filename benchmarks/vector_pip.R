@@ -46,10 +46,11 @@ haversine_vectorized <- function(lat1, lon1, lat2, lon2) {
 }
 
 run_pip_and_distances <- function(points, polys) {
-  # Use terra::intersect which uses internal spatial indexing
-  matches <- intersect(points, polys)
-  n_matched <- nrow(matches)
-
+  # Use terra::relate() to get containment matrix (fixes @data S4 slot issue)
+  relation <- relate(points, polys, relation = "within")
+  matched_rows <- which(rowSums(relation) > 0)
+  n_matched <- length(matched_rows)
+  
   if (n_matched == 0) {
     return(list(
       n_matched = 0,
@@ -60,10 +61,15 @@ run_pip_and_distances <- function(points, polys) {
       distances = numeric(0)
     ))
   }
-
-  # Get matched coordinates
-  matched_coords <- crds(points)[matches@data[[1]], ]
-  matched_centroids <- crds(centroids(polys))[matches@data[[2]], ]
+  
+  # Get matched point coordinates
+  matched_coords <- crds(points)[matched_rows, ]
+  
+  # Get poly indices for each matched point (first matching poly)
+  poly_indices <- apply(relation[matched_rows, , drop = FALSE], 1, function(row) which(row)[1])
+  
+  # Get centroids of matched polygons
+  matched_centroids <- crds(centroids(polys))[poly_indices, ]
   
   point_lats <- matched_coords[, "y"]
   point_lons <- matched_coords[, "x"]
@@ -71,7 +77,7 @@ run_pip_and_distances <- function(points, polys) {
   centroid_lons <- matched_centroids[, "x"]
   
   distances <- haversine_vectorized(point_lats, point_lons, centroid_lats, centroid_lons)
-
+  
   list(
     n_matched = n_matched,
     total_distance = sum(distances),
