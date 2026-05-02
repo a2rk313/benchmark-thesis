@@ -241,6 +241,9 @@ function main()
     println("✓ Cleanup complete")
     
     println("\nNote: Minimum times are primary metrics (Chen & Revels 2016)")
-end
+end # end of main function
 
-main()
+# Entry point
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end

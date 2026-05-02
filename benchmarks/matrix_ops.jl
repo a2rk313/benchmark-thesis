@@ -12,6 +12,7 @@ using LinearAlgebra
 using Statistics
 using JSON3
 using Printf
+using Random
 
 function make_rng(data_mode)
     return Random.default_rng(42)

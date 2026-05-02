@@ -143,31 +143,21 @@ function main()
     println("  ✓ Reference spectrum hash: $ref_hash")
     
     println("\n[2/5] Opening hyperspectral dataset...")
-    hsi_path = joinpath(@__DIR__, "..", "data", "Cuprite.mat")
-    if !isfile(hsi_path)
-        println("ERROR: data file not found: $hsi_path")
-        return 1
-    end
+    data, data_source = load_hsi_data(data_mode)
     
-    println("  ✓ Loading MAT file: $hsi_path")
-    mat_file = matopen(hsi_path, "r")
-    data_keys = keys(mat_file)
-    data_key = first(data_keys)
-    data = read(mat_file, data_key)
-    close(mat_file)
-    
-    dims = size(data)
-    if length(dims) == 3 && dims[3] == 224
-        data = permutedims(data, (3, 1, 2))
-    end
     n_bands = size(data, 1)
     n_rows = size(data, 2)
     n_cols = size(data, 3)
     println("  ✓ Dataset shape: $n_bands bands × $n_rows × $n_cols pixels")
     
-    file_size_gb = filesize(hsi_path) / (1024^3)
+    file_size_gb = 0.0
+    try
+        file_size_gb = filesize(joinpath(@__DIR__, "..", "data", "Cuprite.mat")) / (1024^3)
+    catch
+        file_size_gb = 0.0
+    end
     mem_info = Sys.free_memory() / (1024^3)
-    println("  ✓ File size: $(round(file_size_gb, digits=2)) GB, Available RAM: $(round(mem_info, digits=2)) GB")
+    println("  ✓ Available RAM: $(round(mem_info, digits=2)) GB")
     
     println("\n[3/5] Running SAM classification ($RUNS runs, $WARMUP warmup)...")
     
@@ -238,18 +228,9 @@ function main()
     
     println("✓ Results saved")
     println("=" ^ 70)
-    println("JULIA - Scenario A.2: Hyperspectral SAM")
-    println("=" ^ 70)
+end  # end of main function
 
-    println("\n[1/5] Initializing...")
-    n_bands = 224
-    reference_spectrum = collect(LinRange{Float32}(0.1, 0.9, n_bands))
-    reference_spectrum ./= norm(reference_spectrum)
-    println("  ✓ Reference spectrum: $n_bands bands")
-    ref_hash = bytes2hex(sha256(reinterpret(UInt8, reference_spectrum)))[1:16]
-    println("  ✓ Reference spectrum hash: $ref_hash")
-
-    println("\n[2/5] Opening hyperspectral dataset...")
-    data, data_source = load_hsi_data(data_mode)
-
-exit(main())
+# Entry point
+if abspath(PROGRAM_FILE) == @__FILE__
+    main()
+end

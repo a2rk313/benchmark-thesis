@@ -7,7 +7,7 @@ Uses vectorized spatial indexing for fair comparison with Python/R.
 Methodology: Chen & Revels (2016) - min time as primary estimator
 """
 
-using GeoDataFrames, DataFrames, CSV, ArchGDAL, LibGEOS, Statistics, JSON3, SHA
+using GeoDataFrames, DataFrames, CSV, ArchGDAL, LibGEOS, Statistics, JSON3, SHA, Random
 
 include(joinpath(@__DIR__, "common_hash.jl"))
 
@@ -28,20 +28,26 @@ function vectorized_point_in_polygon(points_lat, points_lon, geos_polys, tree)
     n_pts = length(points_lat)
     matched = BitVector(undef, n_pts)
     fill!(matched, false)
-    matched_poly = zeros(Int, n_pts)
-
+    matched_poly = zeros(Int, n_pts)  # Store indices, not polygons
+    
     @inbounds for i in 1:n_pts
         pt = LibGEOS.Point(points_lon[i], points_lat[i])
-        candidate_idx = LibGEOS.query(tree, pt)
-        for idx in candidate_idx
-            if LibGEOS.within(pt, geos_polys[idx])
+        candidate_geoms = LibGEOS.query(tree, pt)
+        for geom in candidate_geoms
+            if LibGEOS.within(pt, geom)
                 matched[i] = true
-                matched_poly[i] = idx
+                # Find the index of this geometry in geos_polys
+                for idx in 1:length(geos_polys)
+                    if geos_polys[idx] === geom
+                        matched_poly[i] = idx
+                        break
+                    end
+                end
                 break
             end
         end
     end
-
+    
     return matched, matched_poly
 end
 
@@ -57,9 +63,16 @@ function run_pip_and_distances(points_lat, points_lon, geos_polys, polys, tree)
     matched_indices = findall(matched)
     point_lats = points_lat[matched_indices]
     point_lons = points_lon[matched_indices]
-
+    
     poly_indices = matched_poly[matched_indices]
-    centroid_coords = [(LibGEOS.centroid(geos_polys[i]).y, LibGEOS.centroid(geos_polys[i]).x) for i in poly_indices]
+    # Get centroid coordinates using LibGEOS functions
+    centroid_coords = [
+        begin
+            centroid = LibGEOS.centroid(geos_polys[i])
+            (LibGEOS.getY(centroid.ptr, 1), LibGEOS.getX(centroid.ptr, 1))
+        end
+        for i in poly_indices if i > 0
+    ]
     centroid_lats = [c[1] for c in centroid_coords]
     centroid_lons = [c[2] for c in centroid_coords]
 
@@ -87,10 +100,13 @@ function generate_synthetic_polygons(n_polys=50)
             min_lat = max(-90.0, min(min_lat, 90.0))
             max_lat = max(-90.0, min(max_lat, 90.0))
             if max_lon > min_lon && max_lat > min_lat
-                ring = LibGEOS.Polygon([
-                    (min_lon, min_lat), (max_lon, min_lat),
-                    (max_lon, max_lat), (min_lon, max_lat), (min_lon, min_lat)
-                ])
+                # Create polygon with correct coordinate format (vector of rings)
+                exterior_ring = [
+                    [min_lon, min_lat], [max_lon, min_lat],
+                    [max_lon, max_lat], [min_lon, max_lat], [min_lon, min_lat]
+                ]
+                coords = [exterior_ring]  # Vector of rings (first is exterior)
+                ring = LibGEOS.Polygon(coords)
                 push!(polys, (name="Country_$(idx+1)", geometry=ring))
                 idx += 1
             end
@@ -165,7 +181,8 @@ function main()
 
     println("\n[2/4] Building spatial index...")
     t_build = time_ns()
-    geos_polys = [LibGEOS.readgeom(ArchGDAL.toWKT(g)) for g in polys.geometry]
+    # Use LibGEOS geometries directly (no need to convert to WKT and back)
+    geos_polys = [g for g in polys.geometry]
     tree = LibGEOS.STRtree(geos_polys)
     t_build = (time_ns() - t_build) / 1e9
     println("  ✓ STRtree built in $(round(t_build, digits=4))s")

@@ -9,7 +9,7 @@ using Statistics
 using LinearAlgebra
 using Random
 using JSON3
-using Images
+#using Images
 
 const OUTPUT_DIR = "validation"
 const RESULTS_DIR = "results"
@@ -170,8 +170,19 @@ function run_raster_algebra_benchmark(data_mode="auto")
 
     function conv_task()
         nir = bands.nir
-        kernel = ones(Float32, 3, 3) ./ 9.0f0
-        imfilter(nir, kernel, Pad(:constant, 0.0f0))
+        # Manual 3x3 mean filter (matches scipy.ndimage.uniform_filter and terra::focal)
+        rows, cols = size(nir)
+        result = zeros(Float32, rows, cols)
+        for j in 2:cols-1
+            for i in 2:rows-1
+                @inbounds result[i,j] = (
+                    nir[i-1,j-1] + nir[i-1,j] + nir[i-1,j+1] +
+                    nir[i,j-1] + nir[i,j] + nir[i,j+1] +
+                    nir[i+1,j-1] + nir[i+1,j] + nir[i+1,j+1]
+                ) / 9.0f0
+            end
+        end
+        result
     end
     
     GC.gc()
