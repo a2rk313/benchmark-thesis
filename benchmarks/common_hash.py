@@ -126,6 +126,14 @@ def array_hash(arr, precision: int = 6) -> str:
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
+def generate_hash(data: Union[np.ndarray, Dict, List], n_samples: int = 100) -> str:
+    """
+    Generate consistent hash across languages using SHA256 + sampling.
+    Alias for compute_hash for backward compatibility.
+    """
+    return compute_hash(data, algorithm="sha256", n_samples=n_samples)
+
+
 if __name__ == "__main__":
     import numpy as np
 

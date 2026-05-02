@@ -151,8 +151,13 @@ def create_polygon_zones(n_zones: int = 10):
 
 
 def rasterize_polygons_to_mask(gdf, rows, cols):
-    """Rasterize polygons to a grid mask matching the raster extent."""
-    from shapely.geometry import box
+    """Rasterize polygons to a grid mask matching the raster extent.
+    
+    Uses prepared geometries and bbox-first filtering - only checks pixels
+    within each polygon's bounding box, not the entire grid.
+    """
+    from shapely.geometry import Point
+    from shapely.prepared import prep
 
     mask = np.zeros((rows, cols), dtype=np.int32)
     lats = np.linspace(90, -90, rows)
@@ -163,19 +168,22 @@ def rasterize_polygons_to_mask(gdf, rows, cols):
 
     unique_zones = list(range(1, len(gdf) + 1))
     for zone_id, geom in zip(unique_zones, gdf.geometry):
+        prepared = prep(geom)
         min_lon, min_lat, max_lon, max_lat = geom.bounds
 
-        r0 = int(max(0, (90 - max_lat) / lat_step))
-        r1 = int(min(rows, (90 - min_lat) / lat_step + 1))
-        c0 = int(max(0, (min_lon + 180) / lon_step))
-        c1 = int(min(cols, (max_lon + 180) / lon_step + 1))
+        r0 = max(0, int((90 - max_lat) / lat_step))
+        r1 = min(rows, int((90 - min_lat) / lat_step) + 1)
+        c0 = max(0, int((min_lon + 180) / lon_step))
+        c1 = min(cols, int((max_lon + 180) / lon_step) + 1)
 
-        for r in range(r0, min(r1, rows)):
-            for c in range(c0, min(c1, cols)):
-                lat = lats[r]
+        if r0 >= r1 or c0 >= c1:
+            continue
+
+        for r in range(r0, r1):
+            lat = lats[r]
+            for c in range(c0, c1):
                 lon = lons[c]
-                pt = box(lon - lon_step / 2, lat - lat_step / 2, lon + lon_step / 2, lat + lat_step / 2)
-                if geom.contains(pt) or geom.intersects(pt):
+                if prepared.contains(Point(lon, lat)):
                     mask[r, c] = zone_id
 
     return mask

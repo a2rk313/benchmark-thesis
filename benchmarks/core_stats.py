@@ -3,6 +3,10 @@ Core Statistics Utilities for Cross-Language Benchmarking
 Provides consistent statistical methods matching Julia/R implementations.
 """
 
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+
 import math
 import statistics
 import hashlib
@@ -45,57 +49,8 @@ def round_val(v: Any, precision: int = 6) -> Any:
     return v
 
 
-def sample_array(arr: Union[np.ndarray, List], n_samples: int = 100) -> List:
-    """
-    Sample array consistently to match Julia/Python/R implementations.
-    Uses round() instead of floor() for cross-language sync.
-    """
-    flat = list(arr) if isinstance(arr, np.ndarray) else arr
-    n = len(flat)
-    if n <= n_samples:
-        return flat
-    indices = np.round(np.linspace(0, n-1, n_samples)).astype(int)
-    return [flat[i] for i in indices]
-
-
-def generate_hash(data: Union[np.ndarray, Dict, List], n_samples: int = 100) -> str:
-    """
-    Generate consistent hash across languages using SHA256 + sampling.
-    """
-    if data is None:
-        return "0" * 16
-    
-    try:
-        import json
-        JSON_AVAILABLE = True
-    except ImportError:
-        JSON_AVAILABLE = False
-    
-    content = ""
-    
-    if isinstance(data, dict):
-        keys = sorted(data.keys())
-        items = {}
-        for k in keys:
-            v = data[k]
-            if isinstance(v, (np.ndarray, list)) and len(v) > 1:
-                sampled = sample_array(v, n_samples)
-                items[str(k)] = [round_val(val) for val in sampled]
-            else:
-                items[str(k)] = round_val(v)
-        content = json.dumps(items, separators=(',', ':')) if JSON_AVAILABLE else str(items)
-    elif isinstance(data, (np.ndarray, list)):
-        if len(data) > 1:
-            sampled = sample_array(data, n_samples)
-            values = [round_val(val) for val in sampled]
-            content = json.dumps(values, separators=(',', ':')) if JSON_AVAILABLE else str(values)
-        else:
-            val = round_val(data[0]) if len(data) > 0 else 0
-            content = json.dumps(val, separators=(',', ':')) if JSON_AVAILABLE else str(val)
-    else:
-        content = json.dumps(round_val(data), separators=(',', ':')) if JSON_AVAILABLE else str(round_val(data))
-    
-    return hashlib.sha256(content.encode()).hexdigest()[:16]
+# Re-export generate_hash from common_hash.py (consistent with Julia)
+from common_hash import generate_hash
 
 
 # Re-export functions from benchmark_stats.py for backwards compatibility

@@ -672,9 +672,9 @@ print(json.dumps(output, indent=2))
 
         [ "$ENABLE_VECTOR" = "true" ] && {
             # Try unified Python-based profiling first
-            profile_memory_container "$PYTHON_TAG" "Python" "vector_pip" "benchmarks/vector_pip.py"
-            profile_memory_container "$JULIA_TAG" "Julia" "vector_pip" "benchmarks/vector_pip.jl"
-            profile_memory_container "$R_TAG" "R" "vector_pip" "benchmarks/vector_pip.R"
+            profile_memory_container "Python" "$PYTHON_TAG" "vector_pip" "benchmarks/vector_pip.py"
+            profile_memory_container "Julia" "$JULIA_TAG" "vector_pip" "benchmarks/vector_pip.jl"
+            profile_memory_container "R" "$R_TAG" "vector_pip" "benchmarks/vector_pip.R"
         }
         mark_checkpoint "memory"
     fi

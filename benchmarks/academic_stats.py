@@ -498,7 +498,10 @@ def wilcoxon_signed_rank_test(
 
         if variance > 0:
             z = (W - expected) / np.sqrt(variance)
-            p = 2 * (1 - stats.norm.cdf(abs(z))) if SCIPY_AVAILABLE else 0.05
+            if SCIPY_AVAILABLE:
+                p = 2 * (1 - stats.norm.cdf(abs(z)))
+            else:
+                p = 0.05  # Conservative fallback: assume not significant
         else:
             p = 1.0
 

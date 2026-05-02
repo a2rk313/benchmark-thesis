@@ -27,7 +27,8 @@ from typing import List, Tuple, Dict, Callable, Optional, Any, Union
 from dataclasses import dataclass, field
 import json
 import gc
-import hashlib
+
+from common_hash import generate_hash
 
 # Dynamic path resolution
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -136,71 +137,6 @@ class BenchmarkResult:
             "metadata": self.metadata,
         }
         return {k: v for k, v in result.items() if v is not None}
-
-
-def generate_hash(data: Any, n_samples: int = 100) -> str:
-    """
-    Generate SHA256 hash for result validation using consistent sampling.
-
-    This function ensures the same hashing method is used across Python, R, and Julia
-    scripts for fair cross-language validation.
-
-    Args:
-        data: Input data (numpy array, list, dict, or scalar)
-        n_samples: Number of samples for arrays (for consistency)
-
-    Returns:
-        16-character hex string of hash
-    """
-
-    def sample_values(arr, n):
-        """Sample n values uniformly from array.
-
-        Matches Julia's round.(Int, range(1, len, length=n_samples)) for
-        cross-language consistency.
-        """
-        flat = np.asarray(arr).flatten()
-        n_arr = len(flat)
-        if n_arr <= n:
-            return flat.tolist()
-        # Match Julia's round.(Int, range(1, len, length=n))  (1-based indexing)
-        # Python equivalent: round to nearest int and convert to 0-based
-        indices = np.round(np.linspace(1, n_arr, n)).astype(int) - 1
-        indices = np.clip(indices, 0, n_arr - 1)  # Clamp to valid range
-        return [float(flat[i]) for i in indices]
-
-    def round_val(v, precision=6):
-        """Round numeric values for consistency."""
-        if isinstance(v, (int, float, np.integer, np.floating)):
-            return round(float(v), precision)
-        return v
-
-    if data is None:
-        return "0" * 16
-
-    if isinstance(data, dict):
-        items = []
-        for k in sorted(data.keys()):
-            v = data[k]
-            if isinstance(v, (np.ndarray, list, tuple)):
-                sampled = sample_values(v, n_samples)
-                items.append((str(k), [round_val(x) for x in sampled]))
-            else:
-                items.append((str(k), round_val(v)))
-        content = json.dumps(items, sort_keys=True)
-    elif isinstance(data, (list, tuple)):
-        if len(data) > 0 and isinstance(data[0], (np.ndarray, list, tuple, int, float)):
-            sampled = sample_values(data, n_samples)
-            content = json.dumps([round_val(x) for x in sampled], sort_keys=True)
-        else:
-            content = json.dumps([round_val(x) for x in data], sort_keys=True)
-    elif hasattr(data, "flatten"):
-        sampled = sample_values(data, n_samples)
-        content = json.dumps([round_val(x) for x in sampled], sort_keys=True)
-    else:
-        content = json.dumps(round_val(data), sort_keys=True)
-
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 def median_of_means(times: np.ndarray, n_blocks: Optional[int] = None) -> Tuple[float, int]:

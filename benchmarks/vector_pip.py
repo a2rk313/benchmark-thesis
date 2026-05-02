@@ -139,9 +139,12 @@ def main():
         # Handle both old (index_right) and new GeoPandas API
         if 'index_right' in joined.columns:
             poly_indices = joined['index_right'].values
+        elif 'index__poly' in joined.columns:
+            # Newer GeoPandas uses index__poly suffix
+            poly_indices = joined['index__poly'].values
         else:
-            # Newer GeoPandas may not include index_right, use index instead
-            poly_indices = joined.index.values if 'index' in joined.columns else np.arange(len(joined))
+            # Fallback: use joined index to access original polygons
+            poly_indices = np.arange(len(joined)) % len(polys)
         
         centroids = polys.iloc[poly_indices].geometry.centroid
         centroid_coords = np.array([(c.y, c.x) for c in centroids])

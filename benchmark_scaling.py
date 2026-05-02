@@ -505,11 +505,11 @@ class HyperspectralSAMScaling(ScalingBenchmark):
         ref /= np.linalg.norm(ref)
         return data, ref
 
-    def run_at_scale(self, setup_result):
+def run_at_scale(self, setup_result):
+        import time
         data, ref = setup_result
         n_bands, n_rows, n_cols = data.shape
-        sum_angles = 0.0
-        count = 0
+        start = time.perf_counter()
 
         for row in range(0, n_rows, self.CHUNK_SIZE):
             for col in range(0, n_cols, self.CHUNK_SIZE):
@@ -525,10 +525,7 @@ class HyperspectralSAMScaling(ScalingBenchmark):
                 cos_angle = np.clip(cos_angle, -1.0, 1.0)
                 angles = np.arccos(cos_angle)
 
-                sum_angles += angles.sum()
-                count += len(angles)
-
-        return sum_angles / count if count > 0 else 0
+        return time.perf_counter() - start
 
 
 # =============================================================================
