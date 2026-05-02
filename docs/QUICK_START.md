@@ -46,6 +46,13 @@ cd thesis-benchmarks-IMPROVED
 ./run_benchmarks.sh
 ```
 
+**Optional flags** (v5.1+):
+```bash
+./run_benchmarks.sh --data synthetic   # Use synthetic data only
+./run_benchmarks.sh --data real         # Require real data (fail if missing)
+./run_benchmarks.sh --size large       # Larger data sizes
+```
+
 **Runtime**: ~30-45 minutes  
 **Outputs**: 
 - `results/matrix_ops_*.json` (NEW)

@@ -1,6 +1,6 @@
 # Data Provenance and Justification
 
-**Date**: March 2, 2026  
+**Date**: May 2, 2026  
 **Thesis**: Computational Benchmarking of Julia vs Python vs R for GIS/RS Workflows
 
 ---
@@ -8,6 +8,32 @@
 ## Overview
 
 This document provides complete provenance information for all datasets used in this thesis. Following best practices in computational reproducibility, we document source, acquisition method, processing steps, and justification for each dataset.
+
+---
+
+## Data Loading Modes
+
+All benchmarks support **dual-mode data loading** via CLI flags:
+
+| Flag | Options | Default | Description |
+|------|---------|---------|-------------|
+| `--data` | `auto` \| `real` \| `synthetic` | `auto` | Data source selection |
+| `--size` | `small` \| `large` | `small` | Data size (matrix_ops, io_ops only) |
+
+**Mode Behavior**:
+
+- `--data auto` (default): Try real data first, fall back to synthetic if missing
+- `--data real`: Use only real data, fail if dataset is missing
+- `--data synthetic`: Use only synthetic data (always succeeds)
+
+**Synthetic Data**: All synthetic data uses seed **42** for reproducibility across all languages (Python/Julia/R).
+
+**Usage**:
+```bash
+./run_benchmarks.sh --data synthetic    # Use synthetic only
+./run_benchmarks.sh --data real        # Require real data
+./run_benchmarks.sh --size large       # Larger data sizes
+```
 
 ---
 
