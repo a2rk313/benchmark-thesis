@@ -22,7 +22,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from benchmark_stats import (
+from core_stats import (
     median_of_means,
     dagostino_pearson_test,
     jarque_bera_test,
@@ -34,7 +34,6 @@ from benchmark_stats import (
     estimate_ci_width_required_runs,
     detect_outliers_iqr,
     bootstrap_ci,
-    BenchmarkResult,
     generate_hash,
 )
 
@@ -85,7 +84,7 @@ class TestNormalityTests(unittest.TestCase):
         np.random.seed(42)
         normal_data = np.random.randn(100)
         
-        from benchmark_stats import shapiro_wilk_test
+        from core_stats import shapiro_wilk_test
         p_value, is_normal = shapiro_wilk_test(normal_data)
         
         self.assertGreater(p_value, 0.01)

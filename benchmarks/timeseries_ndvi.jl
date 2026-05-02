@@ -6,6 +6,7 @@ SCENARIO D: Time-Series NDVI Analysis - Julia Implementation
 Task: Calculate NDVI statistics across 12-month time series
 Dataset: Synthetic Landsat-like data (500x500 pixels × 12 dates × 2 bands)
 Metrics: Temporal aggregation, SIMD vectorization, array operations
+Methodology: Chen & Revels (2016) - min time as primary estimator
 ===============================================================================
 """
 
@@ -15,160 +16,187 @@ using LinearAlgebra
 using JSON3
 using SHA
 
-function generate_synthetic_landsat(width=500, height=500, n_dates=12; seed=42)
-    """Generate synthetic Landsat-like time series"""
-    Random.seed!(seed)
-    
-    # Create spatial patterns
-    x = range(0, 4π, length=width)
-    y = range(0, 4π, length=height)
-    X = repeat(x', height, 1)
-    Y = repeat(y, 1, width)
-    
-    # Base vegetation pattern
-    base_vegetation = (sin.(X) .* cos.(Y) .+ 1) ./ 2
-    
-    # Generate time series
-    red_bands = zeros(Float32, n_dates, height, width)
-    nir_bands = zeros(Float32, n_dates, height, width)
-    
-    for t in 1:n_dates
-        # Seasonal variation
-        season_factor = sin(2π * (t-1) / 12)
-        vegetation_level = 0.5 + 0.3 * season_factor
-        
-        # Red band
-        red_bands[t, :, :] = (
-            0.1 .+ 0.2 .* (1 .- base_vegetation .* vegetation_level) .+
-            0.05 .* randn(Float32, height, width)
-        )
-        
-        # NIR band
-        nir_bands[t, :, :] = (
-            0.3 .+ 0.5 .* base_vegetation .* vegetation_level .+
-            0.05 .* randn(Float32, height, width)
-        )
+include(joinpath(@__DIR__, "common_hash.jl"))
+
+const RUNS = 10
+const WARMUP = 2
+
+function load_real_modis_ndvi()
+    modis_dir = joinpath(@__DIR__, "..", "data", "modis")
+    bin_path = joinpath(modis_dir, "modis_ndvi_timeseries.bin")
+    hdr_path = joinpath(modis_dir, "modis_ndvi_timeseries.hdr")
+    if isfile(bin_path) && isfile(hdr_path)
+        try
+            n_rows = n_cols = n_bands = 0
+            for line in eachline(hdr_path)
+                if startswith(line, "samples")
+                    n_cols = parse(Int, strip(split(line, "=")[2]))
+                elseif startswith(line, "lines")
+                    n_rows = parse(Int, strip(split(line, "=")[2]))
+                elseif startswith(line, "bands")
+                    n_bands = parse(Int, strip(split(line, "=")[2]))
+                end
+            end
+            data = reinterpret(Float32, read(bin_path))
+            data = reshape(data, n_cols, n_rows, n_bands)
+            data = permutedims(data, (3, 2, 1))
+            println("  ✓ Loaded real MODIS NDVI: $n_bands × $n_rows × $n_cols")
+            return Float32.(data)
+        catch e
+            println("  ⚠ Failed to load real MODIS data: $e")
+        end
     end
-    
-    # Clip to valid range
-    clamp!(red_bands, 0, 1)
-    clamp!(nir_bands, 0, 1)
-    
-    return red_bands, nir_bands
+    return nothing
 end
 
-function calculate_ndvi(red, nir)
-    """Calculate NDVI = (NIR - Red) / (NIR + Red)"""
-    epsilon = Float32(1e-8)
-    ndvi = (nir .- red) ./ (nir .+ red .+ epsilon)
-    return clamp.(ndvi, -1, 1)
+function generate_synthetic_ndvi_stack(n_dates=46, height=1200, width=1200)
+    Random.seed!(42)
+    x = collect(LinRange(-1.0, 1.0, width))
+    y = collect(LinRange(-1.0, 1.0, height))
+    xx = repeat(x', height, 1)
+    yy = repeat(y, 1, width)
+    base_vegetation = Float32.(0.5 .* (1.0 .- (xx.^2 .+ yy.^2)))
+    ndvi_stack = zeros(Float32, n_dates, height, width)
+    for t in 1:n_dates
+        vegetation_level = Float32(0.5 + 0.3 * sin(2π * (t-1) / n_dates))
+        noise = randn(Float32, height, width) .* Float32(0.05)
+        red = Float32.(0.1 .+ 0.2 .* (1.0 .- base_vegetation .* vegetation_level) .+ noise)
+        nir = Float32.(0.3 .+ 0.5 .* base_vegetation .* vegetation_level .+ noise)
+        epsilon = Float32(1e-6)
+        ndvi = (nir .- red) ./ (nir .+ red .+ epsilon)
+        ndvi_stack[t, :, :] = clamp.(ndvi, Float32(-0.1), Float32(1.0))
+    end
+    ndvi_stack
 end
 
-function main()
-    println("=" ^ 70)
-    println("JULIA - Scenario D: Time-Series NDVI Analysis")
-    println("=" ^ 70)
-    
-    # 1. Generate data
-    println("\n[1/5] Generating synthetic Landsat time series...")
-    width, height = 500, 500
-    n_dates = 12
-    
-    start_time = time()
-    red_bands, nir_bands = generate_synthetic_landsat(width, height, n_dates)
-    gen_time = time() - start_time
-    
-    data_size_mb = (sizeof(red_bands) + sizeof(nir_bands)) / (1024^2)
-    println("  ✓ Generated $n_dates dates of $(width)×$(height) imagery")
-    println("  ✓ Data size: $(round(data_size_mb, digits=1)) MB")
-    
-    # 2. Calculate NDVI
-    println("\n[2/5] Calculating NDVI for each date...")
-    start_time = time()
-    ndvi_stack = similar(red_bands)
-    
-    for t in 1:n_dates
-        ndvi_stack[t, :, :] = calculate_ndvi(red_bands[t, :, :], nir_bands[t, :, :])
+function load_ndvi_data(data_mode)
+    if data_mode == "synthetic"
+        return generate_synthetic_ndvi_stack(), "synthetic"
     end
-    
-    calc_time = time() - start_time
-    println("  ✓ NDVI calculated for all $n_dates dates")
-    println("  ✓ Calculation time: $(round(calc_time, digits=2)) seconds")
-    
-    # 3. Temporal statistics
-    println("\n[3/5] Computing temporal statistics...")
-    start_time = time()
+    data = load_real_modis_ndvi()
+    if data !== nothing
+        return data, "real"
+    end
+    if data_mode == "real"
+        println("  x Real MODIS data not available")
+        exit(1)
+    end
+    println("  → Using synthetic NDVI stack")
+    return generate_synthetic_ndvi_stack(), "synthetic"
+end
+
+function calculate_ndvi_statistics(ndvi_stack)
+    n_dates, height, width = size(ndvi_stack)
     
     mean_ndvi = mean(ndvi_stack, dims=1)[1, :, :]
-    std_ndvi = std(ndvi_stack, dims=1)[1, :, :]
     max_ndvi = maximum(ndvi_stack, dims=1)[1, :, :]
     min_ndvi = minimum(ndvi_stack, dims=1)[1, :, :]
     
-    # Trend detection
     time_index = Float32.(0:n_dates-1)
-    ndvi_trend = zeros(Float32, height, width)
+    mean_time = mean(time_index)
+    denominator = sum((time_index .- mean_time).^2)
     
+    ndvi_trend = zeros(Float32, height, width)
     for i in 1:height, j in 1:width
         pixel_series = ndvi_stack[:, i, j]
-        # Simple linear regression slope
-        ndvi_trend[i, j] = cov(time_index, pixel_series) / var(time_index)
+        numerator = sum((time_index .- mean_time) .* (pixel_series .- mean_ndvi[i, j]))
+        ndvi_trend[i, j] = numerator / denominator
     end
     
-    stats_time = time() - start_time
-    println("  ✓ Temporal statistics computed")
-    println("  ✓ Mean NDVI: $(round(mean(mean_ndvi), digits=3))")
-    
-    # 4. Phenology
-    println("\n[4/5] Extracting phenology metrics...")
-    start_time = time()
-    
-    peak_month = [argmax(ndvi_stack[:, i, j]) for i in 1:height, j in 1:width]
-    
-    threshold = Float32(0.3)
-    growing_season = sum(ndvi_stack .> threshold, dims=1)[1, :, :]
+    growing_season = sum(ndvi_stack .> Float32(0.3), dims=1)[1, :, :]
     amplitude = max_ndvi .- min_ndvi
     
-    pheno_time = time() - start_time
-    println("  ✓ Average peak month: $(round(mean(peak_month), digits=1))")
-    println("  ✓ Average growing season: $(round(mean(growing_season), digits=1)) months")
+    (mean_ndvi=mean_ndvi, ndvi_trend=ndvi_trend, amplitude=amplitude, growing_season=growing_season)
+end
+
+function main()
+    data_mode = "auto"
+    for (i, arg) in enumerate(ARGS)
+        if arg == "--data" && i < length(ARGS)
+            data_mode = ARGS[i+1]
+        end
+    end
+
+    println("=" ^ 70)
+    println("JULIA - Scenario D: Time-Series NDVI Analysis")
+    println("=" ^ 70)
+
+    println("\n[1/4] Loading NDVI stack...")
+    ndvi_stack, data_source = load_ndvi_data(data_mode)
+    n_dates, height, width = size(ndvi_stack)
+    println("  ✓ Stack shape: $n_dates dates × $height × $width pixels")
     
-    # 5. Results
-    println("\n[5/5] Computing final metrics...")
-    total_time = calc_time + stats_time + pheno_time
-    pixels_processed = width * height * n_dates
-    throughput = pixels_processed / total_time
+    println("\n[2/4] Running NDVI time-series analysis ($RUNS runs, $WARMUP warmup)...")
     
-    println("  ✓ Total processing time: $(round(total_time, digits=2)) seconds")
-    println("  ✓ Throughput: $(round(Int, throughput)) pixel-dates/second")
+    task = () -> calculate_ndvi_statistics(ndvi_stack)
     
-    # Validation
-    result_str = "$(round(mean(mean_ndvi), digits=6))_$(round(mean(ndvi_trend), digits=6))_$(round(mean(amplitude), digits=6))"
-    result_hash = bytes2hex(sha256(result_str))[1:16]
+    for _ in 1:WARMUP
+        task()
+    end
+    
+    GC.gc()
+    times = Float64[]
+    result = nothing
+    for _ in 1:RUNS
+        t_start = time_ns()
+        result = task()
+        t_end = time_ns()
+        push!(times, (t_end - t_start) / 1e9)
+    end
+    
+    println("  ✓ Min: $(minimum(times))s (primary)")
+    println("  ✓ Mean: $(mean(times))s ± $(std(times))s")
+    
+    println("\n[3/4] Computing domain statistics...")
+    mean_ndvi_val = mean(result.mean_ndvi)
+    trend_val = mean(result.ndvi_trend)
+    amplitude_val = mean(result.amplitude)
+    growing_days = mean(result.growing_season)
+    println("  ✓ Mean NDVI: $(round(mean_ndvi_val, digits=4))")
+    println("  ✓ Mean trend: $(round(trend_val, digits=6))")
+    println("  ✓ Mean amplitude: $(round(amplitude_val, digits=4))")
+    println("  ✓ Avg growing season: $(round(growing_days, digits=1)) dates")
+    
+    println("\n[4/4] Validation and export...")
+    hash_arrays = [vec(result.mean_ndvi), vec(result.ndvi_trend), vec(result.amplitude)]
+    result_hash = generate_hash(hash_arrays)
     println("  ✓ Validation hash: $result_hash")
     
-    # Export
     results = Dict(
         "language" => "julia",
         "scenario" => "timeseries_ndvi",
-        "image_size" => "$(width)x$(height)",
+        "data_source" => data_source,
+        "data_description" => data_source == "real" ? "MODIS HDF" : "synthetic $n_dates×$height×$width",
         "n_dates" => n_dates,
-        "total_pixels_processed" => pixels_processed,
-        "execution_time_s" => total_time,
-        "throughput_pixels_per_sec" => throughput,
-        "mean_ndvi" => mean(mean_ndvi),
-        "mean_trend" => mean(ndvi_trend),
-        "mean_amplitude" => mean(amplitude),
-        "avg_growing_season" => mean(growing_season),
+        "min_time_s" => minimum(times),
+        "mean_time_s" => mean(times),
+        "std_time_s" => std(times),
+        "max_time_s" => maximum(times),
+        "times" => times,
+        "mean_ndvi" => mean_ndvi_val,
+        "mean_trend" => trend_val,
+        "mean_amplitude" => amplitude_val,
+        "avg_growing_season" => growing_days,
         "validation_hash" => result_hash
     )
     
-    mkpath("validation")
-    open("validation/timeseries_julia_results.json", "w") do f
-        JSON3.write(f, results)
+    OUTPUT_DIR = joinpath(@__DIR__, "..", "results")
+    VALIDATION_DIR = joinpath(@__DIR__, "..", "validation")
+    mkpath(OUTPUT_DIR)
+    mkpath(VALIDATION_DIR)
+    
+    open(joinpath(OUTPUT_DIR, "timeseries_ndvi_julia.json"), "w") do f
+        JSON3.pretty(f, results)
+    end
+    open(joinpath(VALIDATION_DIR, "timeseries_julia_results.json"), "w") do f
+        JSON3.pretty(f, results)
     end
     
-    println("\n  ✓ Results saved")
+    println("✓ Results saved")
     println("=" ^ 70)
+    println("Note: Minimum times are primary metrics (Chen & Revels 2016)")
+    println("=" ^ 70)
+    
     return 0
 end
 

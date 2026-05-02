@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from benchmark_stats import (
+from core_stats import (
 
     median_of_means, dagostino_pearson_test, jarque_bera_test,
     cohen_d, glass_delta, bootstrap_ci

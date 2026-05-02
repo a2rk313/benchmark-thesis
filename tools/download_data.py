@@ -352,7 +352,7 @@ map info = {{Geographic Lat/Lon, 1, 1, -117.0001389, 38.0001389, 0.0002778, 0.00
     return True
 
 
-def generate_timeseries(output_dir: Path) -> bool:
+def generate_timeseries(output_dir: Path, n_bands: int = 46, n_lat: int = 100, n_lon: int = 100) -> bool:
     """Generate synthetic MODIS-like NDVI time series."""
     if not NUMPY_AVAILABLE:
         print("  ✗ numpy not available")
@@ -361,23 +361,22 @@ def generate_timeseries(output_dir: Path) -> bool:
     modis_dir = output_dir / "modis"
     modis_dir.mkdir(exist_ok=True)
 
-    print("  Generating synthetic MODIS NDVI (46 dates × 100×100)")
+    print(f"  Generating synthetic MODIS NDVI ({n_bands} dates × {n_lat}×{n_lon})")
     np.random.seed(42)
 
-    n_timesteps, n_lat, n_lon = 46, 100, 100
     x = np.linspace(-1, 1, n_lon)
     y = np.linspace(-1, 1, n_lat)
     xx, yy = np.meshgrid(x, y)
 
-    # Base vegetation pattern
     vegetation_base = np.exp(-(xx**2 + yy**2) / 0.5)
+    vegetation_base += 0.3 * np.sin(xx * 3) * np.cos(yy * 2)
+    vegetation_base = np.clip(vegetation_base, 0, 1)
 
-    # Seasonal cycle
-    t = np.linspace(0, 4 * np.pi, n_timesteps)
+    t = np.linspace(0, 4 * np.pi, n_bands)
     seasonal = (np.sin(t) + 1) / 2
 
-    ndvi_data = np.zeros((n_timesteps, n_lat, n_lon), dtype=np.float32)
-    for i in range(n_timesteps):
+    ndvi_data = np.zeros((n_bands, n_lat, n_lon), dtype=np.float32)
+    for i in range(n_bands):
         vegetation = vegetation_base * (0.3 + 0.5 * seasonal[i])
         noise = np.random.randn(n_lat, n_lon) * 0.05
         ndvi_data[i] = np.clip(vegetation + noise, -0.1, 1.0)
@@ -388,7 +387,7 @@ def generate_timeseries(output_dir: Path) -> bool:
     header = f"""ENVI
 samples = {n_lon}
 lines = {n_lat}
-bands = {n_timesteps}
+bands = {n_bands}
 header offset = 0
 file type = ENVI Standard
 data type = 4
@@ -403,7 +402,18 @@ description = MODIS NDVI 16-day composite time series
     return True
 
 
-def generate_landcover(output_dir: Path) -> bool:
+def generate_timeseries_large(output_dir: Path, size: str = "large") -> bool:
+    """Generate large synthetic MODIS-like NDVI time series."""
+    sizes = {
+        "small": (46, 100, 100),
+        "large": (46, 500, 500),
+        "xlarge": (46, 1200, 1200),
+    }
+    n_bands, n_lat, n_lon = sizes[size]
+    return generate_timeseries(output_dir, n_bands, n_lat, n_lon)
+
+
+def generate_landcover(output_dir: Path, n_rows: int = 600, n_cols: int = 600) -> bool:
     """Generate synthetic NLCD-like land cover."""
     if not NUMPY_AVAILABLE:
         print("  ✗ numpy not available")
@@ -412,16 +422,14 @@ def generate_landcover(output_dir: Path) -> bool:
     nlcd_dir = output_dir / "nlcd"
     nlcd_dir.mkdir(exist_ok=True)
 
-    print("  Generating synthetic NLCD land cover (600×600)")
+    print(f"  Generating synthetic NLCD land cover ({n_rows}×{n_cols})")
     np.random.seed(42)
 
-    n_rows, n_cols = 600, 600
     x = np.linspace(-2, 2, n_cols)
     y = np.linspace(-2, 2, n_rows)
     xx, yy = np.meshgrid(x, y)
     distance = np.sqrt(xx**2 + yy**2)
 
-    # Create zones
     landcover = np.where(
         distance < 0.5, 41 + np.random.randint(0, 3, (n_rows, n_cols)), 0
     )
@@ -445,6 +453,180 @@ def generate_landcover(output_dir: Path) -> bool:
 
     size_mb = output_path.stat().st_size / 1024 / 1024
     print(f"  ✓ Saved: {output_path} ({size_mb:.1f} MB)")
+
+    return True
+
+
+def generate_landcover_large(output_dir: Path, size: str = "large") -> bool:
+    """Generate realistic NLCD-like land cover with urban/forest/water/agricultural zones."""
+    if not NUMPY_AVAILABLE:
+        print("  ✗ numpy not available")
+        return False
+
+    nlcd_dir = output_dir / "nlcd"
+    nlcd_dir.mkdir(exist_ok=True)
+
+    dimensions = {
+        "small": (600, 600),
+        "large": (10000, 10000),
+    }
+    n_rows, n_cols = dimensions[size]
+
+    print(f"  Generating realistic NLCD land cover ({n_rows}×{n_cols})")
+    np.random.seed(42)
+
+    landcover = np.zeros((n_rows, n_cols), dtype=np.uint8)
+
+    x = np.linspace(0, n_cols, n_cols)
+    y = np.linspace(0, n_rows, n_rows)
+    xx, yy = np.meshgrid(x, y)
+
+    water_mask = np.sin(xx * 0.001 + 2) * np.cos(yy * 0.0015) > 0.6
+    urban_mask = np.exp(-((xx - n_cols // 2) ** 2 + (yy - n_rows // 2) ** 2) / (2 * (n_cols // 8) ** 2)) > 0.5
+    forest_mask = np.sin(xx * 0.002) * np.cos(yy * 0.003) > 0.3
+    ag_mask = ~water_mask & ~urban_mask & ~forest_mask
+
+    landcover[water_mask] = 11
+    landcover[urban_mask] = np.random.choice([21, 22, 23, 24], size=urban_mask.sum())
+    landcover[forest_mask] = np.random.choice([41, 42, 43], size=forest_mask.sum())
+    landcover[ag_mask] = np.random.choice([81, 82, 51, 52, 71, 72, 73], size=ag_mask.sum())
+
+    output_path = nlcd_dir / "nlcd_landcover_large.bin"
+    landcover.tofile(output_path)
+
+    header = f"""ENVI
+samples = {n_cols}
+lines = {n_rows}
+bands = 1
+header offset = 0
+file type = ENVI Standard
+data type = 1
+interleave = bsq
+byte order = 0
+description = NLCD-like land cover classification (synthetic, realistic patterns, seed=42)
+class lookup = {{0,0,0; 0,0,255; 217,186,81; 190,190,190; 255,0,0; 171,0,0; 230,171,0; 147,204,127; 63,166,51; 24,24,192; 85,107,47; 204,190,127; 255,255,170}}
+classes = 13
+class names = {{Background, Water, Developed Open, Developed Low, Developed Medium, Developed High, Forest Deciduous, Forest Evergreen, Forest Mixed, Shrub, Grassland, Cropland, Pasture}}
+"""
+    (nlcd_dir / "nlcd_landcover_large.hdr").write_text(header)
+
+    size_mb = output_path.stat().st_size / 1024 / 1024
+    print(f"  ✓ Saved: {output_path} ({size_mb:.1f} MB)")
+    print(f"  ✓ Header: {nlcd_dir / 'nlcd_landcover_large.hdr'}")
+
+    return True
+
+
+def generate_idw_points_from_gps(output_dir: Path, n_points: int = 50000) -> bool:
+    """Create IDW interpolation points from existing GPS data with synthetic z-values."""
+    if not NUMPY_AVAILABLE:
+        print("  ✗ numpy not available")
+        return False
+
+    gps_path = output_dir / "gps_points_1m.csv"
+    csv_output = output_dir / "synthetic" / "idw_points_real.csv"
+
+    if not gps_path.exists():
+        print(f"  ✗ GPS file not found: {gps_path}")
+        return False
+
+    print(f"  Creating IDW points from GPS data ({n_points:,} points)")
+    np.random.seed(42)
+
+    df = pd.read_csv(gps_path)
+    if len(df) > n_points:
+        df = df.sample(n=n_points, random_state=42)
+
+    lons = df["lon"].values
+    lats = df["lat"].values
+    values = (
+        100 * np.sin(lats / 200 + 10) * np.cos(lons / 200)
+        + 50 * np.sin(lats / 50)
+        + 20 * np.random.randn(len(lats))
+    )
+
+    csv_output.parent.mkdir(exist_ok=True)
+    out_df = pd.DataFrame({"x": lons, "y": lats, "value": values})
+    out_df.to_csv(csv_output, index=False)
+
+    size_mb = csv_output.stat().st_size / 1024 / 1024
+    print(f"  ✓ Saved: {csv_output} ({size_mb:.1f} MB)")
+
+    return True
+
+
+def generate_synthetic_vector_points(output_dir: Path, n_points: int = 1_000_000) -> bool:
+    """Generate synthetic GPS-like points for vector_pip fallback."""
+    if not NUMPY_AVAILABLE:
+        print("  ✗ numpy not available")
+        return False
+
+    csv_path = output_dir / "synthetic" / "gps_points_1m.csv"
+    csv_path.parent.mkdir(exist_ok=True)
+
+    print(f"  Generating {n_points:,} synthetic GPS points")
+    np.random.seed(42)
+
+    lats = np.random.uniform(-90, 90, n_points)
+    lons = np.random.uniform(-180, 180, n_points)
+    device_ids = np.random.randint(1, 10000, n_points)
+    accuracies = np.random.exponential(10, n_points).clip(1, 100)
+
+    df = pd.DataFrame({
+        "lat": lats,
+        "lon": lons,
+        "device_id": device_ids,
+        "accuracy_m": accuracies,
+    })
+    df.to_csv(csv_path, index=False)
+
+    size_mb = csv_path.stat().st_size / 1024 / 1024
+    print(f"  ✓ Saved: {csv_path} ({size_mb:.1f} MB)")
+
+    return True
+
+
+def generate_country_polygons_json(output_dir: Path) -> bool:
+    """Generate synthetic country polygons as GeoJSON for cross-language fallback."""
+    if not GEOPANDAS_AVAILABLE:
+        print("  ✗ geopandas not available")
+        return False
+
+    json_path = output_dir / "synthetic" / "country_polygons.json"
+    json_path.parent.mkdir(exist_ok=True)
+
+    print("  Generating synthetic country polygons (GeoJSON)")
+    np.random.seed(42)
+
+    geometries = []
+    names = []
+
+    n_countries = 50
+    lat_step = 180 / (n_countries // 2 + 1)
+    lon_step = 360 / (n_countries // 2 + 1)
+
+    idx = 0
+    for i in range(n_countries // 2 + 1):
+        for j in range(n_countries // 2 + 1):
+            if idx >= n_countries:
+                break
+            min_lon = -180 + j * lon_step + np.random.uniform(-2, 2)
+            max_lon = min_lon + lon_step + np.random.uniform(-2, 2)
+            min_lat = -90 + i * lat_step + np.random.uniform(-2, 2)
+            max_lat = min_lat + lat_step + np.random.uniform(-2, 2)
+            min_lon, max_lon = max(-180, min_lon), min(180, max_lon)
+            min_lat, max_lat = max(-90, min_lat), min(90, max_lat)
+            if max_lon > min_lon and max_lat > min_lat:
+                geom = box(min_lon, min_lat, max_lon, max_lat)
+                geometries.append(geom)
+                names.append(f"Country_{idx + 1}")
+                idx += 1
+
+    gdf = gpd.GeoDataFrame({"name": names}, geometry=geometries, crs="EPSG:4326")
+    gdf.to_file(json_path, driver="GeoJSON")
+
+    size_mb = json_path.stat().st_size / 1024 / 1024
+    print(f"  ✓ Saved: {json_path} ({size_mb:.1f} MB)")
 
     return True
 

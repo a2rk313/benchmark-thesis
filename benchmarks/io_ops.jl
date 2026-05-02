@@ -13,21 +13,17 @@ using DataFrames
 using Statistics
 using JSON3
 using Printf
+using Random
 
-function benchmark_csv_write(n_rows=1_000_000)
-    """
-    Task 1: Write CSV File
-    """
-    # Pre-generate data (not timed)
+function benchmark_csv_write(n_rows=1_000_000, rng=Random.default_rng())
     df = DataFrame(
-        lat = rand(Float64, n_rows) .* 180 .- 90,
-        lon = rand(Float64, n_rows) .* 360 .- 180,
-        device_id = rand(1:10000, n_rows)
+        lat = rand(rng, Float64, n_rows) .* 180 .- 90,
+        lon = rand(rng, Float64, n_rows) .* 360 .- 180,
+        device_id = rand(rng, 1:10000, n_rows)
     )
     
     output_path = joinpath(@__DIR__, "..", "data", "io_test_julia.csv")
     
-    # Timed operation
     start_time = time()
     CSV.write(output_path, df)
     elapsed = time() - start_time
@@ -38,12 +34,8 @@ function benchmark_csv_write(n_rows=1_000_000)
 end
 
 function benchmark_csv_read()
-    """
-    Task 2: Read CSV File
-    """
     input_path = joinpath(@__DIR__, "..", "data", "io_test_julia.csv")
     
-    # Timed operation
     start_time = time()
     df = CSV.read(input_path, DataFrame)
     elapsed = time() - start_time
@@ -51,16 +43,11 @@ function benchmark_csv_read()
     return elapsed, nrow(df)
 end
 
-function benchmark_binary_write(n_values=1_000_000)
-    """
-    Task 3: Write Binary File
-    """
-    # Pre-generate data (not timed)
-    arr = randn(Float64, n_values)
+function benchmark_binary_write(n_values=1_000_000, rng=Random.default_rng())
+    arr = randn(rng, Float64, n_values)
     
     output_path = joinpath(@__DIR__, "..", "data", "io_test_julia.bin")
     
-    # Timed operation
     start_time = time()
     open(output_path, "w") do io
         write(io, arr)
@@ -73,13 +60,8 @@ function benchmark_binary_write(n_values=1_000_000)
 end
 
 function benchmark_binary_read()
-    """
-    Task 4: Read Binary File
-    """
     input_path = joinpath(@__DIR__, "..", "data", "io_test_julia.bin")
-    n = 1_000_000
     
-    # Timed operation
     start_time = time()
     arr = open(input_path, "r") do io
         bytes = read(io)
@@ -91,38 +73,58 @@ function benchmark_binary_read()
 end
 
 function format_number(n::Int)
-    """Helper function for number formatting"""
     str = string(n)
     return replace(str, r"(?<=[0-9])(?=(?:[0-9]{3})+(?![0-9]))" => ",")
 end
 
 function main()
-    println("=" ^ 70)
-    println("JULIA - I/O Operations Benchmark")
-    println("=" ^ 70)
-    
-    # Configuration
-    n_csv_rows = 1_000_000
-    n_binary_values = 1_000_000
+    data_mode = "auto"
+    size_mode = "small"
+    i = 1
+    while i <= length(ARGS)
+        if ARGS[i] == "--data" && i < length(ARGS)
+            data_mode = ARGS[i+1]
+            i += 2
+        elseif ARGS[i] == "--size" && i < length(ARGS)
+            size_mode = ARGS[i+1]
+            i += 2
+        else
+            i += 1
+        end
+    end
+
+    data_source = "synthetic"
+    data_description = "random CSV/binary data (seed 42)"
+
+    size_map = Dict("small" => 1_000_000, "large" => 10_000_000)
+    n_csv_rows = size_map[size_mode]
+    n_binary_values = size_map[size_mode]
     n_runs = 30
     n_warmup = 5
+
+    rng = Random.default_rng(42)
     
-    # Create data directory
+    rng = Random.default_rng(42)
+
+    println("=" ^ 70)
+    println("JULIA - I/O Operations Benchmark ($size_mode size)")
+    println("=" ^ 70)
+
     mkpath("data")
-    
+
     results = Dict()
-    
-    # Warmup runs
+
     for _ in 1:n_warmup
-        benchmark_csv_write(n_csv_rows)
+        benchmark_csv_write(n_csv_rows, rng)
     end
-    
+
     # Task 1: CSV Write
     println("\n[1/4] CSV Write ($(format_number(n_csv_rows)) rows)...")
     times = Float64[]
     file_size = 0
     for _ in 1:n_runs
-        t, size = benchmark_csv_write(n_csv_rows)
+        GC.gc()
+        t, size = benchmark_csv_write(n_csv_rows, rng)
         push!(times, t)
         file_size = size
     end
@@ -131,7 +133,9 @@ function main()
         "std" => std(times),
         "min" => minimum(times),
         "max" => maximum(times),
-        "file_size_mb" => file_size / (1024^2)
+        "median" => median(times),
+        "file_size_mb" => file_size / (1024^2),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["csv_write"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["csv_write"]["mean"], results["csv_write"]["std"])
@@ -142,6 +146,7 @@ function main()
     times = Float64[]
     n_rows = 0
     for _ in 1:n_runs
+        GC.gc()
         t, rows = benchmark_csv_read()
         push!(times, t)
         n_rows = rows
@@ -151,7 +156,9 @@ function main()
         "std" => std(times),
         "min" => minimum(times),
         "max" => maximum(times),
-        "rows_read" => n_rows
+        "median" => median(times),
+        "rows_read" => n_rows,
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["csv_read"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["csv_read"]["mean"], results["csv_read"]["std"])
@@ -161,7 +168,8 @@ function main()
     times = Float64[]
     file_size = 0
     for _ in 1:n_runs
-        t, size = benchmark_binary_write(n_binary_values)
+        GC.gc()
+        t, size = benchmark_binary_write(n_binary_values, rng)
         push!(times, t)
         file_size = size
     end
@@ -170,7 +178,9 @@ function main()
         "std" => std(times),
         "min" => minimum(times),
         "max" => maximum(times),
-        "file_size_mb" => file_size / (1024^2)
+        "median" => median(times),
+        "file_size_mb" => file_size / (1024^2),
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["binary_write"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["binary_write"]["mean"], results["binary_write"]["std"])
@@ -181,6 +191,7 @@ function main()
     times = Float64[]
     n_values = 0
     for _ in 1:n_runs
+        GC.gc()
         t, values = benchmark_binary_read()
         push!(times, t)
         n_values = values
@@ -190,12 +201,13 @@ function main()
         "std" => std(times),
         "min" => minimum(times),
         "max" => maximum(times),
-        "values_read" => n_values
+        "median" => median(times),
+        "values_read" => n_values,
+        "times" => times
     )
     @printf("  ✓ Min: %.4fs (primary)\n", results["binary_read"]["min"])
     @printf("  ✓ Mean: %.4fs ± %.4fs\n", results["binary_read"]["mean"], results["binary_read"]["std"])
     
-    # Save results
     println("\n" * "=" ^ 70)
     println("SAVING RESULTS...")
     println("=" ^ 70)
@@ -207,6 +219,8 @@ function main()
         "n_csv_rows" => n_csv_rows,
         "n_binary_values" => n_binary_values,
         "n_runs" => n_runs,
+        "data_source" => data_source,
+        "data_description" => data_description,
         "methodology" => "Minimum time as primary estimator (Chen & Revels 2016)",
         "results" => results
     )
@@ -218,7 +232,6 @@ function main()
     
     println("✓ Results saved to: results/io_ops_julia.json")
     
-    # Cleanup
     println("\nCleaning up test files...")
     for path in [joinpath(@__DIR__, "..", "data", "io_test_julia.csv"), joinpath(@__DIR__, "..", "data", "io_test_julia.bin")]
         if isfile(path)
@@ -228,7 +241,6 @@ function main()
     println("✓ Cleanup complete")
     
     println("\nNote: Minimum times are primary metrics (Chen & Revels 2016)")
-    println("      Mean/median provided for context only")
 end
 
 main()

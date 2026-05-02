@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN julia -e 'using Pkg; \
     Pkg.add(["BenchmarkTools", "CSV", "DataFrames", "SHA", "JSON3", \
              "MAT", "NearestNeighbors", "LibGEOS", "Shapefile", \
-             "ArchGDAL", "GeoDataFrames"]); \
+             "ArchGDAL", "GeoDataFrames", "Proj"]); \
     Pkg.precompile()'
 
 # Clean Julia depot

@@ -10,17 +10,19 @@ Academic rationale:
 """
 from pathlib import Path
 
+import argparse
 import os
 import sys
 import time
 import json
+import pandas as pd
 
 import numpy as np
 import tracemalloc
 from pyproj import Transformer, CRS
 
 sys.path.insert(0, str(Path(__file__).parent))
-from benchmark_stats import (
+from core_stats import (
 
     generate_hash,
     shapiro_wilk_test,
@@ -45,6 +47,17 @@ def generate_test_points(n_points):
     return lats, lons
 
 
+def load_gps_points(max_points=None):
+    """Load lat/lon from real GPS points CSV."""
+    csv_path = DATA_DIR / "gps_points_1m.csv"
+    if not csv_path.exists():
+        return None, None
+    df = pd.read_csv(csv_path, usecols=["lat", "lon"])
+    if max_points and len(df) > max_points:
+        df = df.head(max_points)
+    return df["lat"].values, df["lon"].values
+
+
 def reproject_wgs84_to_utm_batch(lats, lons):
     """Reproject WGS84 to UTM zones."""
     results = {"x": [], "y": [], "zones": []}
@@ -60,7 +73,7 @@ def reproject_wgs84_to_utm_batch(lats, lons):
         epsg = f"326{zone:02d}" if hemisphere == "north" else f"327{zone:02d}"
 
         transformer = Transformer.from_crs("EPSG:4326", epsg, always_xy=True)
-        x, y = transformer.transform(lat, lon)
+        x, y = transformer.transform(lon, lat)
 
         results["x"].append(x)
         results["y"].append(y)
@@ -72,7 +85,7 @@ def reproject_wgs84_to_utm_batch(lats, lons):
 def reproject_wgs84_to_web_mercator(lats, lons):
     """Reproject to Web Mercator (EPSG:3857)."""
     transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-    x, y = transformer.transform(lats, lons)
+    x, y = transformer.transform(lons, lats)
     return {"x": x, "y": y}
 
 
@@ -102,7 +115,7 @@ def reproject_with_zone_optimization(lats, lons):
             )
 
         transformer = transformer_cache[epsg]
-        x, y = transformer.transform(lat, lon)
+        x, y = transformer.transform(lon, lat)
 
         results["x"].append(x)
         results["y"].append(y)
@@ -111,22 +124,41 @@ def reproject_with_zone_optimization(lats, lons):
     return results
 
 
-def run_reprojection_benchmark():
+def run_reprojection_benchmark(data_mode="auto", size_flag="default"):
     print("=" * 70)
     print("PYTHON - Scenario G: Coordinate Reprojection")
     print("=" * 70)
 
-    # Test sizes
-    sizes = [1000, 5000, 10000]  # Match R and Julia for fair comparison
+    sizes = [1000, 5000, 10000, 50000, 100000, 500000]
+
+    if data_mode != "synthetic":
+        gps_lats, gps_lons = load_gps_points()
+        has_real = gps_lats is not None
+        if has_real:
+            print(f"  + Real GPS points loaded: {len(gps_lats):,} points")
+        if not has_real and data_mode == "real":
+            print("  x Real GPS data not found")
+            sys.exit(1)
+        if not has_real:
+            print("  - Real GPS data not found, using synthetic")
+            data_mode = "synthetic"
+    else:
+        has_real = False
 
     results = {}
     all_hashes = []
+    data_source = "real" if has_real and data_mode != "synthetic" else "synthetic"
 
     for size in sizes:
         print(f"\n[Testing with {size:,} points]")
         print("-" * 40)
 
-        lats, lons = generate_test_points(size)
+        if has_real and data_mode != "synthetic" and size <= len(gps_lats):
+            lats = gps_lats[:size]
+            lons = gps_lons[:size]
+        else:
+            lats, lons = generate_test_points(size)
+
         lats_np = np.array(lats)
         lons_np = np.array(lons)
 
@@ -150,7 +182,7 @@ def run_reprojection_benchmark():
         ci_lower, ci_upper = bootstrap_ci(np.array(times))
 
         print(f"    ✓ Min: {min(times):.4f}s (primary)")
-        print(f"    ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
+        print(f"    ✓ Mean: {np.mean(times):.4f}s ± {np.std(times, ddof=1):.4f}s")
         print(f"    ✓ Rate: {size / min(times):,.0f} points/sec")
         print(f"    ✓ Hash: {merc_hash}")
 
@@ -158,12 +190,15 @@ def run_reprojection_benchmark():
             "n_points": size,
             "min_time_s": min(times),
             "mean_time_s": np.mean(times),
-            "std_time_s": np.std(times),
+            "std_time_s": np.std(times, ddof=1),
+            "median_time_s": float(np.median(times)),
+            "max_time_s": max(times),
+            "times": times,
             "points_per_second": int(size / min(times)),
             "normality_p": p_val,
             "is_normal": is_norm,
             "ci_95": [ci_lower, ci_upper],
-            "hash": merc_hash,
+            "validation_hash": merc_hash,
         }
 
         # UTM reprojection (zone-optimized)
@@ -179,16 +214,19 @@ def run_reprojection_benchmark():
         times, peak, _ = run_benchmark(utm_task, runs=5, warmup=2)
 
         print(f"    ✓ Min: {min(times):.4f}s (primary)")
-        print(f"    ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
+        print(f"    ✓ Mean: {np.mean(times):.4f}s ± {np.std(times, ddof=1):.4f}s")
         print(f"    ✓ Rate: {size / min(times):,.0f} points/sec")
 
         results[f"utm_{size}"] = {
             "n_points": size,
             "min_time_s": min(times),
             "mean_time_s": np.mean(times),
-            "std_time_s": np.std(times),
+            "std_time_s": np.std(times, ddof=1),
+            "median_time_s": float(np.median(times)),
+            "max_time_s": max(times),
+            "times": times,
             "points_per_second": int(size / min(times)),
-            "hash": utm_hash,
+            "validation_hash": utm_hash,
         }
 
         all_hashes.extend([merc_hash, utm_hash])
@@ -204,6 +242,8 @@ def run_reprojection_benchmark():
     output_data = {
         "language": "python",
         "scenario": "coordinate_reprojection",
+        "data_source": data_source,
+        "data_description": "gps_points_1m.csv" if data_source == "real" else "synthetic random",
         "results": results,
         "all_hashes": all_hashes,
         "combined_hash": generate_hash(all_hashes),
@@ -235,4 +275,10 @@ def run_reprojection_benchmark():
 
 
 if __name__ == "__main__":
-    run_reprojection_benchmark()
+    parser = argparse.ArgumentParser(description="Coordinate Reprojection Benchmark")
+    parser.add_argument("--data", choices=["auto", "real", "synthetic"],
+                       default="auto", help="Data source: auto=real→synthetic, real, synthetic")
+    parser.add_argument("--size", choices=["default", "large"],
+                       default="default", help="Size flag for future scaling")
+    args = parser.parse_args()
+    run_reprojection_benchmark(data_mode=args.data, size_flag=args.size)

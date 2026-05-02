@@ -10,9 +10,6 @@ using Statistics
 using Random
 using SHA
 using JSON3
-using ArchGDAL
-using GeoDataFrames
-using DataFrames
 
 const OUTPUT_DIR = "validation"
 const RESULTS_DIR = "results"
@@ -20,7 +17,7 @@ const RESULTS_DIR = "results"
 include(joinpath(@__DIR__, "common_hash.jl"))
 
 function create_rectangular_zones_simple(n_zones::Int=10)
-    zones = Tuple{Float64,Float64,Float64,Float64}[]  # (min_lon, min_lat, max_lon, max_lat)
+    zones = Tuple{Float64,Float64,Float64,Float64}[]
     lat_step = 180.0 / n_zones
     lon_step = 360.0 / n_zones
 
@@ -113,12 +110,63 @@ function main()
     println("JULIA - Scenario F: Zonal Statistics (Bare-Metal)")
     println("=" ^ 70)
 
+    data_mode = "auto"
+    if "--data" in ARGS
+        idx = findfirst(isequal("--data"), ARGS)
+        if idx !== nothing && idx < length(ARGS)
+            data_mode = ARGS[idx + 1]
+        end
+    end
+
     rows, cols = 600, 600
     n_zones = 10
+    raster = nothing
+    data_source = "synthetic"
 
-    Random.seed!(42)
-    raster = rand(Float32, rows, cols) .* 3000f0
-    println("\n[1/4] Created synthetic raster: $rows x $cols cells")
+    if data_mode != "synthetic"
+        nlcd_paths = [
+            joinpath(@__DIR__, "..", "data", "nlcd", "nlcd_landcover_large.bin"),
+            joinpath(@__DIR__, "..", "data", "nlcd", "nlcd_landcover.bin"),
+        ]
+        for p in nlcd_paths
+            if isfile(p)
+                try
+                    hdr_path = replace(p, ".bin" => ".hdr")
+                    if isfile(hdr_path)
+                        local r, c
+                        for line in eachline(hdr_path)
+                            if startswith(line, "samples")
+                                c = parse(Int, split(line, "=")[2])
+                            elseif startswith(line, "lines")
+                                r = parse(Int, split(line, "=")[2])
+                            end
+                        end
+                        data = Matrix{UInt8}(undef, r, c)
+                        open(p, "r") do io
+                            read!(io, data)
+                        end
+                        raster = Float32.(data)
+                        rows, cols = r, c
+                        data_source = "real"
+                        println("\n[1/4] Loaded real NLCD land cover: $p ($(rows)x$(cols))")
+                        break
+                    end
+                catch e
+                    println("  - Could not load $p: $e")
+                end
+            end
+        end
+        if raster === nothing && data_mode == "real"
+            println("  x Real NLCD data not found")
+            exit(1)
+        end
+    end
+
+    if raster === nothing
+        Random.seed!(42)
+        raster = rand(Float32, rows, cols) .* 3000f0
+        println("\n[1/4] Created synthetic raster: $rows x $cols cells")
+    end
 
     println("\n[2/4] Creating rectangular polygon zones (consistent with Python/R)...")
     zones = create_rectangular_zones_simple(n_zones)
@@ -129,9 +177,12 @@ function main()
     warmup = 2
     runs = 10
 
+    GC.gc()
     mask_times, mask = run_benchmark_zonal(() -> rasterize_polygons_to_mask(zones, rows, cols), runs, warmup)
     println("  ✓ Mask creation: min=$(minimum(mask_times))s, mean=$(mean(mask_times))s")
+    mask_hash = generate_hash(mask)
 
+    GC.gc()
     stats_times, results = run_benchmark_zonal(() -> vectorized_zonal_stats(raster, mask), runs, warmup)
     println("  ✓ Zonal stats: min=$(minimum(stats_times))s, mean=$(mean(stats_times))s")
 
@@ -140,16 +191,36 @@ function main()
 
     output = Dict(
         "language" => "julia",
-        "scenario" => "zonal_stats",
+        "scenario" => "zonal_statistics",
+        "data_source" => data_source,
+        "data_description" => data_source == "real" ? "NLCD land cover" : "synthetic uniform",
         "zone_type" => "rectangular_polygons",
         "n_zones" => n_zones * n_zones,
-        "min_time_s" => minimum(stats_times),
-        "mean_time_s" => mean(stats_times),
-        "std_time_s" => std(stats_times),
-        "polygons" => length(zones),
-        "hash" => result_hash,
-        "warmup" => warmup,
-        "runs" => runs,
+        "data_shape" => [rows, cols],
+        "results" => Dict(
+            "mask_creation" => Dict(
+                "min_time_s" => minimum(mask_times),
+                "mean_time_s" => mean(mask_times),
+                "std_time_s" => std(mask_times),
+                "median_time_s" => median(mask_times),
+                "max_time_s" => maximum(mask_times),
+                "times" => mask_times,
+                "n_zones" => n_zones * n_zones,
+                "validation_hash" => mask_hash
+            ),
+            "zonal_stats" => Dict(
+                "min_time_s" => minimum(stats_times),
+                "mean_time_s" => mean(stats_times),
+                "std_time_s" => std(stats_times),
+                "median_time_s" => median(stats_times),
+                "max_time_s" => maximum(stats_times),
+                "times" => stats_times,
+                "n_zones" => length(results.means),
+                "validation_hash" => result_hash
+            )
+        ),
+        "all_hashes" => [mask_hash, result_hash],
+        "combined_hash" => generate_hash([mask_hash, result_hash])
     )
 
     mkpath("results")
@@ -160,7 +231,8 @@ function main()
     open("validation/zonal_stats_julia_results.json", "w") do f
         JSON3.pretty(f, output)
     end
-    println("✓ Results saved to results/zonal_stats_julia.json")
+    println("✓ Results saved")
+    println("✓ Combined validation hash: $(output["combined_hash"])")
     println("\n" * "=" ^ 70)
     println("Note: Minimum times are primary metrics (Chen & Revels 2016)")
     println("=" ^ 70)

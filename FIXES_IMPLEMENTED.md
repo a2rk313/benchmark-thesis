@@ -82,12 +82,19 @@ print(f"  ✓ Min: {results[name]['min']:.4f}s (primary)")
 - Used streaming statistics (`mean_angle`, `std_angle`, `sum_min`, `sum_max`)
 - Updated validation hash to use streaming data
 
-### 3.4 Julia Raster Algebra Band Extraction
-**File:** `benchmarks/raster_algebra.jl`
+### 3.4 R Raster Algebra Band Transposition
+**File:** `benchmarks/raster_algebra.R`
 
-**Problem:** Data not permuted to consistent `(bands, rows, cols)` format before indexing, extracting wrong data compared to Python/R versions.
+**Problem:** R applied `aperm(data[, , band], c(2, 1))` to transpose each 2D band from `(rows, cols)` to `(cols, rows)`, while Python and Julia extracted bands directly without transposition. This meant R's spatial layout was flipped relative to the other two languages, producing different hash values and potentially different numerical results.
 
-**Status:** Documented for manual fix (requires permutedims call).
+**Fix:** Removed `aperm` calls so all three languages extract bands directly as `(rows, cols)` 2D slices from the 3D array.
+
+### 3.5 R Reprojection Serialization Format
+**File:** `benchmarks/reprojection.R`
+
+**Problem:** Used `auto_unbox = FALSE` in `toJSON()`, causing single values to serialize as arrays: `"language": ["r"]`, `"min_time_s": [0.006]`. This broke downstream parsing and caused validation warnings.
+
+**Fix:** Changed to `auto_unbox = TRUE` so values serialize as scalars.
 
 ---
 
@@ -111,6 +118,23 @@ print(f"  ✓ Min: {results[name]['min']:.4f}s (primary)")
 
 New `--check-data` flag validates that synthetic data files exist and are consistent before running validation.
 
+### 4.3 Result Normalization Bug Fixes
+**File:** `tools/normalize_results.py`
+
+**Problems found after initial implementation:**
+- `_make_entry` crashed on R's list-wrapped values (`float([0.006])` → `TypeError`)
+- R reprojection results (`results/reprojection_r.json`) produced `min_time_s: 0.0` because `auto_unbox = FALSE` serialized values as single-element lists
+- R IO ops results were silently dropped when the file had no `"results"` key
+- Python reprojection results (`results/reprojection_python.json`) were completely missing from output (Format 4 not detected)
+- `source_file` field was incorrect for some entries
+
+**Fixes:**
+- Added `_unwrap()` helper to extract scalar from single-element lists
+- Added `_safe_float()` and `_safe_int()` for robust type conversion
+- Added `_has_timing()` to properly detect sub-benchmark dicts
+- Fixed timing extraction to handle both `"min"` and `"min_time_s"` key styles with unwrapping
+- Now correctly parses all 4 result formats including R's list-serialized values
+
 ---
 
 ## Testing Results
@@ -124,20 +148,12 @@ All fixes have been tested and verified:
 | Vector pip timing | ✅ Added | Timing fields in output JSON |
 | Hyperspectral streaming | ✅ Fixed | Unified streaming implementation |
 | Hash synchronization (R) | ✅ Fixed | Changed floor to round |
-| Normalization script | ✅ Working | Processed 35 result files |
+| R raster algebra aperm | ✅ Fixed | Removed transposition, aligns with Python/Julia |
+| R reprojection auto_unbox | ✅ Fixed | Changed to TRUE, values serialize as scalars |
+| Normalization script | ✅ Working | 59 entries parsed correctly from all 4 formats |
 | Visualization script | ✅ Working | Summary report generated |
 | Validation script | ✅ Working | 9 scenarios validated |
 | Threading unification | ✅ Applied | All benchmarks use 8+8 threads |
-
----
-
-## Remaining Manual Fixes
-
-These require code changes that depend on specific implementation details:
-
-1. **Julia Raster Algebra** - Add `permutedims(data, (3, 1, 2))` to ensure consistent band extraction
-2. **R Reprojection** - Fix data format issues causing validation warnings
-3. **Visualization Dependencies** - Install matplotlib/seaborn for full chart generation
 
 ---
 
@@ -151,6 +167,9 @@ These fixes transform the benchmarking framework from a **flawed prototype** to 
 | Different random data per language | Identical synthetic data |
 | Broken validation for R | Cross-language hash sync |
 | Missing timing for Python vector | Complete timing metrics |
+| R band transposition mismatch | Aligned spatial layout across all 3 languages |
+| R JSON serialization as lists | Scalar values compatible with downstream tools |
+| Normalization crashes on R data | Robust unwrapping handles all 4 formats |
 | Duplicate stats engines | Single authoritative module |
 | Incomplete pipeline | Full pipeline with validation |
 | Syntax errors crash suite | All scripts verified |

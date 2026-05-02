@@ -13,88 +13,67 @@ using Statistics
 using JSON3
 using Printf
 
-function benchmark_matrix_creation_transpose_reshape(n=2500)
+function make_rng(data_mode)
+    return Random.default_rng(42)
+end
+
+function benchmark_matrix_creation_transpose_reshape(n=2500, rng=Random.default_rng())
     """
     Task 1.1: Matrix Creation + Transpose + Reshape
     """
     start_time = time()
-    
-    # Create
-    A = randn(n, n)
-    
-    # Transpose
+    A = randn(rng, n, n)
     A = transpose(A)
-    
-    # Reshape
     new_rows = Int(n * 2 / 5)
     new_cols = Int(n * n / new_rows)
     A = reshape(A, new_rows, new_cols)
-    
-    # Transpose again
     A = transpose(A)
-    
     elapsed = time() - start_time
     return elapsed
 end
 
-function benchmark_matrix_power(n=2500)
+function benchmark_matrix_power(n=2500, rng=Random.default_rng())
     """
     Task 1.2: Element-wise Matrix Exponentiation
     """
-    # Pre-generate data (not timed)
-    A = randn(n, n)
+    A = randn(rng, n, n)
     A = abs.(A) ./ 2.0
-    
-    # Timed operation
     start_time = time()
     A_pow = A .^ 10
     elapsed = time() - start_time
-    
     return elapsed
 end
 
-function benchmark_sorting(n=1_000_000)
+function benchmark_sorting(n=1_000_000, rng=Random.default_rng())
     """
     Task 1.3: Sorting Random Values
     """
-    # Pre-generate data (not timed)
-    arr = randn(n)
-    
-    # Timed operation
+    arr = randn(rng, n)
     start_time = time()
     sort!(copy(arr))
     elapsed = time() - start_time
-    
     return elapsed
 end
 
-function benchmark_crossproduct(n=2500)
+function benchmark_crossproduct(n=2500, rng=Random.default_rng())
     """
     Task 1.4: Matrix Cross-Product (A'A)
     """
-    # Pre-generate data (not timed)
-    A = randn(n, n)
-    
-    # Timed operation
+    A = randn(rng, n, n)
     start_time = time()
     B = A' * A
     elapsed = time() - start_time
-    
     return elapsed
 end
 
-function benchmark_determinant(n=2500)
+function benchmark_determinant(n=2500, rng=Random.default_rng())
     """
     Task 1.5: Matrix Determinant
     """
-    # Pre-generate data (not timed)
-    A = randn(n, n)
-    
-    # Timed operation
+    A = randn(rng, n, n)
     start_time = time()
     det_val = det(A)
     elapsed = time() - start_time
-    
     return elapsed
 end
 
@@ -105,28 +84,49 @@ function format_number(n::Int)
 end
 
 function main()
+    data_mode = "auto"
+    size_mode = "small"
+    i = 1
+    while i <= length(ARGS)
+        if ARGS[i] == "--data" && i < length(ARGS)
+            data_mode = ARGS[i+1]
+            i += 2
+        elseif ARGS[i] == "--size" && i < length(ARGS)
+            size_mode = ARGS[i+1]
+            i += 2
+        else
+            i += 1
+        end
+    end
+
+    data_source = "synthetic"
+    data_description = "random normal matrices (seed 42)"
+
     println("=" ^ 70)
     println("JULIA - Matrix Operations Benchmark")
     println("=" ^ 70)
-    
-    # Configuration
-    n_matrix = 2500  # Matrix size
-    n_sort = 1_000_000  # Sorting size
-    n_runs = 30  # CLT threshold for stable bootstrap CIs  # Number of runs for statistical power
-    n_warmup = 5  # Warmup runs (excluded from measurement)
+
+    size_map = Dict("small" => 2500, "large" => 5000)
+    n_matrix = size_map[size_mode]
+    n_sort = 1_000_000
+    n_runs = 30
+    n_warmup = 5
+
+    rng = make_rng(data_mode)
     
     results = Dict()
     
     # Warmup phase (Chen & Revels 2016: exclude startup/JIT overhead)
     println("\n  Warming up ($n_warmup runs + JIT compilation)...")
     for _ in 1:n_warmup
-        benchmark_matrix_creation_transpose_reshape(n_matrix)
+        benchmark_matrix_creation_transpose_reshape(n_matrix, rng)
     end
     println("  ✓ Warmup complete")
-    
+
     # Task 1: Creation/Transpose/Reshape
     println("\n[1/5] Matrix Creation + Transpose + Reshape ($n_matrix×$n_matrix)...")
-    times = [benchmark_matrix_creation_transpose_reshape(n_matrix) for _ in 1:n_runs]
+    GC.gc()
+    times = [benchmark_matrix_creation_transpose_reshape(n_matrix, rng) for _ in 1:n_runs]
     results["matrix_creation"] = Dict(
         "mean" => mean(times),
         "std" => std(times),
@@ -141,9 +141,10 @@ function main()
     # Task 2: Matrix Power
     println("\n[2/5] Matrix Exponentiation ^10 ($n_matrix×$n_matrix)...")
     for _ in 1:n_warmup
-        benchmark_matrix_power(n_matrix)
+        benchmark_matrix_power(n_matrix, rng)
     end
-    times = [benchmark_matrix_power(n_matrix) for _ in 1:n_runs]
+    GC.gc()
+    times = [benchmark_matrix_power(n_matrix, rng) for _ in 1:n_runs]
     results["matrix_power"] = Dict(
         "mean" => mean(times),
         "std" => std(times),
@@ -158,9 +159,10 @@ function main()
     # Task 3: Sorting
     println("\n[3/5] Sorting $(format_number(n_sort)) Random Values...")
     for _ in 1:n_warmup
-        benchmark_sorting(n_sort)
+        benchmark_sorting(n_sort, rng)
     end
-    times = [benchmark_sorting(n_sort) for _ in 1:n_runs]
+    GC.gc()
+    times = [benchmark_sorting(n_sort, rng) for _ in 1:n_runs]
     results["sorting"] = Dict(
         "mean" => mean(times),
         "std" => std(times),
@@ -175,9 +177,10 @@ function main()
     # Task 4: Cross-product
     println("\n[4/5] Cross-Product A'A ($n_matrix×$n_matrix)...")
     for _ in 1:n_warmup
-        benchmark_crossproduct(n_matrix)
+        benchmark_crossproduct(n_matrix, rng)
     end
-    times = [benchmark_crossproduct(n_matrix) for _ in 1:n_runs]
+    GC.gc()
+    times = [benchmark_crossproduct(n_matrix, rng) for _ in 1:n_runs]
     results["crossproduct"] = Dict(
         "mean" => mean(times),
         "std" => std(times),
@@ -192,9 +195,10 @@ function main()
     # Task 5: Determinant
     println("\n[5/5] Matrix Determinant ($n_matrix×$n_matrix)...")
     for _ in 1:n_warmup
-        benchmark_determinant(n_matrix)
+        benchmark_determinant(n_matrix, rng)
     end
-    times = [benchmark_determinant(n_matrix) for _ in 1:n_runs]
+    GC.gc()
+    times = [benchmark_determinant(n_matrix, rng) for _ in 1:n_runs]
     results["determinant"] = Dict(
         "mean" => mean(times),
         "std" => std(times),
@@ -219,6 +223,8 @@ function main()
         "sorting_size" => n_sort,
         "n_runs" => n_runs,
         "n_warmup" => n_warmup,
+        "data_source" => data_source,
+        "data_description" => data_description,
         "methodology" => "Minimum time as primary estimator (Chen & Revels 2016)",
         "enhanced_stats" => true,
         "results" => results

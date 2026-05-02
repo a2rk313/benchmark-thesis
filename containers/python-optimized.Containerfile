@@ -4,9 +4,9 @@
 # Build time: ~10-15 min
 # =============================================================================
 
-FROM python:3.13-slim-bookworm
+FROM python:3.14-slim-bookworm
 
-ENV PYTHON_VERSION=3.13.12
+ENV PYTHON_VERSION=3.14.4
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdal-dev \

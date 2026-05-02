@@ -841,7 +841,7 @@ def analyze_benchmark(
 
     min_time = times_arr.min()
     mean_time = times_arr.mean()
-    std_time = times_arr.std()
+    std_time = times_arr.std(ddof=1)
     median_time = np.median(times_arr)
     total_time = times_arr.sum()
 
@@ -1083,7 +1083,7 @@ def generate_latex_table(comparison: Dict[str, Any], output_path: str = None) ->
 
             min_time = stats.get("min_time_s", 0)
             mean_time = stats.get("mean_time_s", 0)
-            std_time = stats.get("min_time_s", 0) * (stats.get("cv", 0) or 0.01)
+            std_time = stats.get("mean_time_s", 0) * (stats.get("cv", 0) or 0.01)
 
             bench_label = bench_name if first_row else ""
             lines.append(

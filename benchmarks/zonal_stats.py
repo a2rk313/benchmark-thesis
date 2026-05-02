@@ -11,6 +11,7 @@ Academic rationale:
 """
 from pathlib import Path
 
+import argparse
 import os
 import sys
 import time
@@ -21,7 +22,7 @@ import geopandas as gpd
 import tracemalloc
 
 sys.path.insert(0, str(Path(__file__).parent))
-from benchmark_stats import (
+from core_stats import (
 
     generate_hash,
     shapiro_wilk_test,
@@ -38,56 +39,51 @@ OUTPUT_DIR = Path("validation")
 RESULTS_DIR = Path("results")
 
 
-def load_or_create_data():
-    """Load or create test data for zonal statistics."""
-    try:
-        # Load polygons
-        polys = gpd.read_file(str(DATA_DIR / "natural_earth_countries.gpkg"))
+def load_or_create_data(data_mode="auto"):
+    """Load or create test data for zonal statistics.
 
-        # Try to load real NLCD land cover data
-        raster, rows, cols = load_nlcd_data()
+    Uses IDENTICAL synthetic data as Julia/R: 600x600 uniform random [0, 3000).
+    This ensures fair cross-language comparison.
+    """
+    data_source = "synthetic"
 
-        if raster is None:
-            # Fallback: Create realistic land cover-like data
-            print("  → Using synthetic land cover data (realistic patterns)")
-            np.random.seed(42)
-            rows, cols = 600, 600
+    # Try real NLCD + polygons
+    if data_mode in ("auto", "real"):
+        try:
+            # Try real polygons first
+            poly_path = str(DATA_DIR / "natural_earth_countries.gpkg")
+            if os.path.exists(poly_path):
+                polys = gpd.read_file(poly_path)
+                raster, rows, cols = load_nlcd_data()
+                if raster is not None:
+                    lats = np.linspace(90, -90, rows)
+                    lons = np.linspace(-180, 180, cols)
+                    print(f"  ✓ Using real data: {len(polys)} polygons + NLCD {rows}×{cols}")
+                    return polys, raster, lats, lons, "real"
+                elif data_mode == "real":
+                    print("  x Real NLCD data required but unavailable")
+                    sys.exit(1)
 
-            # Create realistic land cover classes
-            x = np.linspace(-2, 2, cols)
-            y = np.linspace(-2, 2, rows)
-            xx, yy = np.meshgrid(x, y)
-            distance = np.sqrt(xx**2 + yy**2)
+            if data_mode == "real":
+                print("  x Real polygon data required but unavailable")
+                sys.exit(1)
+        except Exception as e:
+            print(f"  ⚠ Real data load failed: {e}")
+            if data_mode == "real":
+                sys.exit(1)
 
-            # Create landscape zones
-            raster = np.zeros((rows, cols), dtype=np.float32)
-            raster = np.where(distance < 0.5, 41.0, raster)  # Forest center
-            raster = np.where(
-                (distance >= 0.5) & (distance < 1.0), 21.0, raster
-            )  # Developed
-            raster = np.where(
-                (distance >= 1.0) & (distance < 1.5), 82.0, raster
-            )  # Agriculture
-            raster = np.where(distance >= 1.5, 71.0, raster)  # Grassland
+    # Synthetic fallback: identical to Julia/R
+    print("  → Using synthetic data (uniform random, 600x600)")
+    np.random.seed(42)
+    rows, cols = 600, 600
+    raster = (np.random.rand(rows, cols) * 3000).astype(np.float32)
+    lats = np.linspace(90, -90, rows)
+    lons = np.linspace(-180, 180, cols)
 
-            # Add water bodies
-            for _ in range(5):
-                cx, cy = np.random.uniform(-2, 2), np.random.uniform(-2, 2)
-                r = np.random.uniform(0.1, 0.3)
-                water_mask = ((xx - cx) ** 2 + (yy - cy) ** 2) < r**2
-                raster = np.where(water_mask, 11.0, raster)
+    # Create synthetic polygons
+    polys = create_polygon_zones(10)
 
-            raster = raster.astype(np.float32)
-
-        # Create lat/lon coordinates for raster
-        lats = np.linspace(90, -90, rows)
-        lons = np.linspace(-180, 180, cols)
-
-        return polys, raster, lats, lons
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        sys.exit(1)
-
+    return polys, raster, lats, lons, data_source
 
 def load_nlcd_data():
     """Load real NLCD land cover data if available."""
@@ -124,7 +120,7 @@ def load_nlcd_data():
             except Exception as e:
                 print(f"  ⚠ Could not load {path}: {e}")
 
-    print("  ⚠ NLCD not available, using synthetic land cover")
+    print("  ⚠ NLCD not available, using uniform synthetic data")
     return None, 0, 0
 
 
@@ -207,13 +203,13 @@ def zonal_statistics_with_polygons(raster, mask, zone_ids):
     return results
 
 
-def run_zonal_stats_benchmark():
+def run_zonal_stats_benchmark(data_mode="auto"):
     print("=" * 70)
     print("PYTHON - Scenario F: Zonal Statistics")
     print("=" * 70)
 
     print("\n[1/4] Loading data...")
-    polys, raster, lats, lons = load_or_create_data()
+    polys, raster, lats, lons, data_source = load_or_create_data(data_mode)
     rows, cols = raster.shape
     print(f"  ✓ Loaded {len(polys)} polygons")
     print(f"  ✓ Raster shape: {raster.shape} ({raster.size:,} cells)")
@@ -240,16 +236,19 @@ def run_zonal_stats_benchmark():
 
     print(f"  ✓ Mask created: {np.unique(mask).max()} zones")
     print(f"  ✓ Min: {min(times):.4f}s (primary)")
-    print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
+    print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times, ddof=1):.4f}s")
 
     current, peak = tracemalloc.get_traced_memory()
     results["mask_creation"] = {
         "min_time_s": min(times),
         "mean_time_s": np.mean(times),
-        "std_time_s": np.std(times),
+        "std_time_s": np.std(times, ddof=1),
+        "median_time_s": float(np.median(times)),
+        "max_time_s": max(times),
+        "times": times,
         "peak_memory_mb": peak / 1024 / 1024,
         "n_zones": n_zones * n_zones,
-        "hash": mask_hash,
+        "validation_hash": mask_hash,
     }
 
     # Full zonal statistics using polygon-based mask
@@ -271,7 +270,7 @@ def run_zonal_stats_benchmark():
     ci_lower, ci_upper = bootstrap_ci(np.array(times))
 
     print(f"  ✓ Min: {min(times):.4f}s (primary)")
-    print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times):.4f}s")
+    print(f"  ✓ Mean: {np.mean(times):.4f}s ± {np.std(times, ddof=1):.4f}s")
     print(f"  ✓ 95% CI: [{ci_lower:.4f}, {ci_upper:.4f}]")
     print(f"  ✓ Normality: p={p_val:.4f} ({'normal' if is_norm else 'non-normal'})")
     print(f"  ✓ Hash: {stats_hash}")
@@ -279,12 +278,15 @@ def run_zonal_stats_benchmark():
     results["zonal_stats"] = {
         "min_time_s": min(times),
         "mean_time_s": np.mean(times),
-        "std_time_s": np.std(times),
+        "std_time_s": np.std(times, ddof=1),
+        "median_time_s": float(np.median(times)),
+        "max_time_s": max(times),
+        "times": times,
         "normality_p": p_val,
         "is_normal": is_norm,
         "ci_95": [ci_lower, ci_upper],
         "n_zones": len(stats_result),
-        "hash": stats_hash,
+        "validation_hash": stats_hash,
     }
 
     # Save results
@@ -298,6 +300,8 @@ def run_zonal_stats_benchmark():
     output_data = {
         "language": "python",
         "scenario": "zonal_statistics",
+        "data_source": data_source,
+        "data_description": "Natural Earth + NLCD" if data_source == "real" else "synthetic 600x600 + 100 rectangular zones",
         "zone_type": "rectangular_polygons",
         "n_zones": n_zones * n_zones,
         "results": results,
@@ -322,4 +326,8 @@ def run_zonal_stats_benchmark():
 
 
 if __name__ == "__main__":
-    run_zonal_stats_benchmark()
+    parser = argparse.ArgumentParser(description="Zonal Statistics Benchmark")
+    parser.add_argument("--data", choices=["auto", "real", "synthetic"],
+                       default="auto", help="Data source: auto=real→synthetic, real, synthetic")
+    args = parser.parse_args()
+    run_zonal_stats_benchmark(data_mode=args.data)

@@ -1,18 +1,3 @@
-
-# Dynamic path resolution
-get_project_root <- function() {
-  # Attempt to find root based on script location
-  args <- commandArgs(trailingOnly = FALSE)
-  file_arg <- args[grep("--file=", args)]
-  if (length(file_arg) > 0) {
-    script_path <- sub("--file=", "", file_arg)
-    return(normalizePath(file.path(dirname(script_path), "..")))
-  } else {
-    return(getwd()) # Fallback
-  }
-}
-PROJECT_ROOT <- get_project_root()
-DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 #===============================================================================
 # Matrix Operations Benchmark - R Implementation
@@ -23,96 +8,117 @@ DATA_DIR <- file.path(PROJECT_ROOT, "data")
 
 library(jsonlite)
 
+make_rng <- function(data_mode) {
+  set.seed(42)
+}
+
 benchmark_matrix_creation_transpose_reshape <- function(n = 2500) {
   # Task 1.1: Matrix Creation + Transpose + Reshape
-  
+
   start_time <- Sys.time()
-  
+
   # Create
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
-  
+
   # Transpose
   A <- t(A)
-  
+
   # Reshape
   new_rows <- as.integer(n * 2 / 5)
   new_cols <- as.integer(n * n / new_rows)
   dim(A) <- c(new_rows, new_cols)
-  
+
   # Transpose again
   A <- t(A)
-  
+
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
   return(elapsed)
 }
 
 benchmark_matrix_power <- function(n = 2500) {
   # Task 1.2: Element-wise Matrix Exponentiation
-  
+
   # Pre-generate data (not timed)
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
   A <- abs(A) / 2.0
-  
+
   # Timed operation
   start_time <- Sys.time()
   A_pow <- A ^ 10
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-  
+
   return(elapsed)
 }
 
 benchmark_sorting <- function(n = 1000000) {
   # Task 1.3: Sorting Random Values
-  
+
   # Pre-generate data (not timed)
   arr <- rnorm(n)
-  
+
   # Timed operation (quicksort)
   start_time <- Sys.time()
   arr_sorted <- sort(arr, method = "quick")
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-  
+
   return(elapsed)
 }
 
 benchmark_crossproduct <- function(n = 2500) {
   # Task 1.4: Matrix Cross-Product (A'A)
-  
+
   # Pre-generate data (not timed)
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
-  
+
   # Timed operation
   start_time <- Sys.time()
-  B <- crossprod(A)  # Equivalent to t(A) %*% A but faster
+  B <- t(A) %*% A  # Generic matrix multiply (matches Python/Julia)
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-  
+
   return(elapsed)
 }
 
 benchmark_determinant <- function(n = 2500) {
   # Task 1.5: Matrix Determinant
-  
+
   # Pre-generate data (not timed)
   A <- matrix(rnorm(n * n), nrow = n, ncol = n)
-  
+
   # Timed operation
   start_time <- Sys.time()
   det_val <- det(A)
   elapsed <- as.numeric(difftime(Sys.time(), start_time, units = "secs"))
-  
+
   return(elapsed)
 }
 
 main <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  data_mode <- "auto"
+  size_mode <- "small"
+  for (i in seq_along(args)) {
+    if (args[i] == "--data" && i < length(args)) {
+      data_mode <- args[i + 1]
+    } else if (args[i] == "--size" && i < length(args)) {
+      size_mode <- args[i + 1]
+    }
+  }
+
+  data_source <- "synthetic"
+  data_description <- "random normal matrices (seed 42)"
+
+  set.seed(42)
+
   cat(strrep("=", 70), "\n")
   cat("R - Matrix Operations Benchmark\n")
   cat(strrep("=", 70), "\n")
-  
+
   # Configuration
-  n_matrix <- 2500  # Matrix size
-  n_sort <- 1000000  # Sorting size
-  n_runs <- 30  # CLT threshold for stable bootstrap CIs  # Number of runs for statistical power
-  n_warmup <- 5  # Warmup runs (excluded from measurement)
+  size_map <- c(small = 2500, large = 5000)
+  n_matrix <- size_map[size_mode]
+  n_sort <- 1000000
+  n_runs <- 30
+  n_warmup <- 5
   
   results <- list()
   
@@ -212,6 +218,8 @@ main <- function() {
     sorting_size = n_sort,
     n_runs = n_runs,
     n_warmup = n_warmup,
+    data_source = data_source,
+    data_description = data_description,
     methodology = "Minimum time as primary estimator (Chen & Revels 2016)",
     enhanced_stats = TRUE,
     results = results

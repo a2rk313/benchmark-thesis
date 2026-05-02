@@ -43,6 +43,10 @@ USE_GHCR=false
 RESUME=false
 CLEAN=false
 DRY_RUN=false
+SCALING=false
+SCALING_QUICK=false
+DATA_MODE="auto"
+SIZE_MODE="small"
 ERRORS=()
 BENCHMARK_COUNT=0
 TOTAL_BENCHMARKS=0
@@ -56,6 +60,10 @@ while [[ $# -gt 0 ]]; do
         --resume)         RESUME=true; shift ;;
         --clean)          CLEAN=true; shift ;;
         --dry-run)        DRY_RUN=true; shift ;;
+        --scaling)        SCALING=true; shift ;;
+        --scaling-quick)  SCALING=true; SCALING_QUICK=true; shift ;;
+        --data)           DATA_MODE="$2"; shift 2 ;;
+        --size)           SIZE_MODE="$2"; shift 2 ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo "  --container-only   Run container benchmarks only"
@@ -64,6 +72,10 @@ while [[ $# -gt 0 ]]; do
             echo "  --resume           Resume from last checkpoint"
             echo "  --clean            Clear old results before running"
             echo "  --dry-run          Preview execution plan"
+            echo "  --scaling          Run data scaling benchmarks (all scenarios)"
+            echo "  --scaling-quick    Run data scaling benchmarks (smaller scales)"
+            echo "  --data MODE        Data source: auto|real|synthetic (default: auto)"
+            echo "  --size SIZE        Data size: small|large (default: small)"
             echo "  -h, --help         Show this help"
             echo ""
             echo "Container behavior: Uses GHCR by default, falls back to local build"
@@ -192,6 +204,7 @@ TOTAL_BENCHMARKS=0
 [[ "$MODE" != "native" ]] && TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 15))
 [[ "$MODE" != "container" ]] && TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 12))
 TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 5))
+[[ "$SCALING" == "true" ]] && TOTAL_BENCHMARKS=$((TOTAL_BENCHMARKS + 13))
 
 # ── Banner ────────────────────────────────────────────────────────────────────
 echo -e "${BOLD}${BLUE}"
@@ -221,6 +234,15 @@ fi
 [[ "$RESUME" == "true" ]] && echo -e "  ${CYAN}RESUME: Skipping completed benchmarks${NC}"
 [[ "$CLEAN" == "true" ]] && echo -e "  ${YELLOW}CLEAN: Clearing old results${NC}"
 [[ "$DRY_RUN" == "true" ]] && echo -e "  ${YELLOW}DRY RUN: Preview mode (no execution)${NC}"
+[[ "$SCALING" == "true" ]] && {
+    if [[ "$SCALING_QUICK" == "true" ]]; then
+        echo -e "  ${MAGENTA}SCALING: Quick mode (smaller scales, faster)${NC}"
+    else
+        echo -e "  ${MAGENTA}SCALING: Full mode (all scales, complexity analysis)${NC}"
+    fi
+}
+[[ "$DATA_MODE" != "auto" ]] && echo -e "  ${CYAN}DATA MODE: $DATA_MODE${NC}"
+[[ "$SIZE_MODE" != "small" ]] && echo -e "  ${CYAN}SIZE MODE: $SIZE_MODE${NC}"
 
 echo ""
 echo "  Container images:"
@@ -260,8 +282,10 @@ if [[ "$DRY_RUN" == "true" ]]; then
     fi
     if [[ "$MODE" != "container" ]]; then
         echo "  10. Native system benchmarks"
+        echo "  11. Julia JIT overhead analysis"
     fi
-    echo "  11. Generate academic report"
+    [[ "$SCALING" == "true" ]] && echo "  12. Data scaling benchmarks (complexity analysis)"
+    echo "  13. Generate academic report"
     echo ""
     echo -e "${GREEN}Dry run complete. Remove --dry-run to execute.${NC}"
     exit 0
@@ -740,53 +764,56 @@ if [[ "$MODE" != "container" ]]; then
     export JULIA_NUM_THREADS=8
     export OMP_NUM_THREADS=8
     
-    command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py" "matrix_ops"; }
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl" "matrix_ops"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/matrix_ops.R" "matrix_ops"
+    CLI_FLAGS="--data $DATA_MODE"
+    SIZE_FLAGS="--size $SIZE_MODE"
+
+    command -v $PY_BIN &>/dev/null && { [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true; run_native "Python" "$PY_BIN benchmarks/matrix_ops.py $CLI_FLAGS $SIZE_FLAGS" "matrix_ops"; }
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/matrix_ops.jl $CLI_FLAGS $SIZE_FLAGS" "matrix_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/matrix_ops.R $CLI_FLAGS $SIZE_FLAGS" "matrix_ops"
 
     sleep 5 # Thermal cool-down
 
     # Continue with same threading for all remaining benchmarks
     echo -e "${YELLOW}  Continuing with unified threading:${NC}"
-    
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py" "raster_algebra"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/raster_algebra.jl" "raster_algebra"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/raster_algebra.R" "raster_algebra"
+
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/raster_algebra.py $CLI_FLAGS" "raster_algebra"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/raster_algebra.jl $CLI_FLAGS" "raster_algebra"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/raster_algebra.R $CLI_FLAGS" "raster_algebra"
 
     echo -e "${YELLOW}  I/O Operations:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/io_ops.py" "io_ops"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/io_ops.jl" "io_ops"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/io_ops.R" "io_ops"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/io_ops.py $CLI_FLAGS $SIZE_FLAGS" "io_ops"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/io_ops.jl $CLI_FLAGS $SIZE_FLAGS" "io_ops"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/io_ops.R $CLI_FLAGS $SIZE_FLAGS" "io_ops"
 
     echo -e "${YELLOW}  Reprojection:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/reprojection.py" "reprojection"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/reprojection.jl" "reprojection"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/reprojection.R" "reprojection"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/reprojection.py $CLI_FLAGS" "reprojection"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/reprojection.jl $CLI_FLAGS" "reprojection"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/reprojection.R $CLI_FLAGS" "reprojection"
 
     echo -e "${YELLOW}  Zonal Stats:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/zonal_stats.py" "zonal_stats"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/zonal_stats.jl" "zonal_stats"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/zonal_stats.R" "zonal_stats"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/zonal_stats.py $CLI_FLAGS" "zonal_stats"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/zonal_stats.jl $CLI_FLAGS" "zonal_stats"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/zonal_stats.R $CLI_FLAGS" "zonal_stats"
 
     echo -e "${YELLOW}  Interpolation:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/interpolation_idw.py" "interpolation"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/interpolation_idw.jl" "interpolation"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/interpolation_idw.R" "interpolation"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/interpolation_idw.py $CLI_FLAGS" "interpolation"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/interpolation_idw.jl $CLI_FLAGS" "interpolation"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/interpolation_idw.R $CLI_FLAGS" "interpolation"
 
     echo -e "${YELLOW}  Time-Series:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/timeseries_ndvi.py" "timeseries"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/timeseries_ndvi.jl" "timeseries"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/timeseries_ndvi.R" "timeseries"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/timeseries_ndvi.py $CLI_FLAGS" "timeseries"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/timeseries_ndvi.jl $CLI_FLAGS" "timeseries"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/timeseries_ndvi.R $CLI_FLAGS" "timeseries"
 
     echo -e "${YELLOW}  Hyperspectral:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/hsi_stream.py" "hsi_stream"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/hsi_stream.jl" "hsi_stream"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/hsi_stream.R" "hsi_stream"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/hsi_stream.py $CLI_FLAGS" "hsi_stream"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/hsi_stream.jl $CLI_FLAGS" "hsi_stream"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/hsi_stream.R $CLI_FLAGS" "hsi_stream"
 
     echo -e "${YELLOW}  Vector PiP:${NC}"
-    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/vector_pip.py" "vector_pip"
-    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/vector_pip.jl" "vector_pip"
-    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/vector_pip.R" "vector_pip"
+    command -v $PY_BIN &>/dev/null && run_native "Python" "$PY_BIN benchmarks/vector_pip.py $CLI_FLAGS" "vector_pip"
+    command -v $JL_BIN &>/dev/null && run_native "Julia" "$JL_BIN benchmarks/vector_pip.jl $CLI_FLAGS" "vector_pip"
+    command -v $RS_BIN &>/dev/null && run_native "R" "$RS_BIN benchmarks/vector_pip.R $CLI_FLAGS" "vector_pip"
 
     echo -e "${GREEN}  ✓ Native benchmarks complete${NC}"
 fi
@@ -803,6 +830,35 @@ if [[ "$MODE" != "container" ]]; then
         $PY_BIN benchmarks/jit_tracking.py || log_error "JIT tracking failed"
     else
         log_error "Python not found, skipping JIT analysis"
+    fi
+fi
+
+# ── [12/12] Data Scaling Benchmarks ─────────────────────────────────────────
+if [[ "$SCALING" == "true" ]]; then
+    echo ""
+    echo -e "${BLUE}[12/12] Data Scaling Benchmarks (Complexity Analysis)...${NC}"
+    if [[ "$SCALING_QUICK" == "true" ]]; then
+        echo -e "${YELLOW}  Quick mode — smaller scales for faster execution${NC}"
+    fi
+    echo ""
+
+    if check_resume "scaling"; then
+        :
+    else
+        if command -v $PY_BIN &>/dev/null; then
+            export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
+            [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
+
+            SCALING_ARGS="--runs 10"
+            [[ "$SCALING_QUICK" == "true" ]] && SCALING_ARGS="--quick --runs 5"
+
+            echo -e "${CYAN}  Running scaling benchmarks (all 9 scenarios)...${NC}"
+            echo ""
+            $PY_BIN benchmark_scaling.py $SCALING_ARGS || log_error "Scaling benchmarks failed"
+        else
+            log_error "Python not found, skipping scaling benchmarks"
+        fi
+        mark_checkpoint "scaling"
     fi
 fi
 
@@ -858,6 +914,10 @@ echo "    - results/matrix_ops_{python,julia,r}.json"
 echo "    - results/io_ops_{python,julia,r}.json"
 echo "    - results/thesis_validation_report.md"
 echo "    - results/figures/summary_chart.png"
+[[ "$SCALING" == "true" ]] && {
+    echo "    - results/scaling/combined_scaling_summary.json"
+    echo "    - results/scaling/*_scaling.json (per-scenario complexity)"
+}
 echo ""
 echo "  Usage:"
 echo "    ./run_benchmarks.sh                # Full suite (auto: GHCR→build)"

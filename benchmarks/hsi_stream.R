@@ -1,18 +1,3 @@
-
-# Dynamic path resolution
-get_project_root <- function() {
-  # Attempt to find root based on script location
-  args <- commandArgs(trailingOnly = FALSE)
-  file_arg <- args[grep("--file=", args)]
-  if (length(file_arg) > 0) {
-    script_path <- sub("--file=", "", file_arg)
-    return(normalizePath(file.path(dirname(script_path), "..")))
-  } else {
-    return(getwd()) # Fallback
-  }
-}
-PROJECT_ROOT <- get_project_root()
-DATA_DIR <- file.path(PROJECT_ROOT, "data")
 #!/usr/bin/env Rscript
 ################################################################################
 # SCENARIO A.2: Hyperspectral Spectral Angle Mapper - R Implementation
@@ -20,7 +5,26 @@ DATA_DIR <- file.path(PROJECT_ROOT, "data")
 # Task: SAM classification on 224-band hyperspectral imagery
 # Dataset: NASA AVIRIS Cuprite (224 bands, freely available)
 # Metrics: terra C++ efficiency, chunked processing, memory management
+# Methodology: Chen & Revels (2016) - min time as primary estimator
 ################################################################################
+
+# Dynamic path resolution
+get_project_root <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd())
+  }
+}
+PROJECT_ROOT <- get_project_root()
+DATA_DIR <- file.path(PROJECT_ROOT, "data")
+OUTPUT_DIR <- file.path(PROJECT_ROOT, "results")
+VALIDATION_DIR <- file.path(PROJECT_ROOT, "validation")
+
+source(file.path(PROJECT_ROOT, "benchmarks", "common_hash.R"))
 
 suppressPackageStartupMessages({
   library(terra)
@@ -29,100 +33,30 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
-#' Calculate Spectral Angle Mapper (SAM) for a matrix of pixels
-#' 
-#' @param pixel_matrix Matrix of shape (n_pixels, n_bands)
-#' @param reference_spectrum Vector of length n_bands
-#' @return SAM angles in radians (numeric vector)
+RUNS <- 5
+WARMUP <- 2
+
 spectral_angle_mapper <- function(pixel_matrix, reference_spectrum) {
   epsilon <- 1e-8
-  
-  # Dot product: pixel %*% reference
   dot_products <- pixel_matrix %*% reference_spectrum
-  
-  # Norms
   pixel_norms <- sqrt(rowSums(pixel_matrix^2))
   ref_norm <- sqrt(sum(reference_spectrum^2))
-  
-  # Cosine of angle
   cos_angles <- dot_products / (pixel_norms * ref_norm + epsilon)
-  
-  # Clip to valid range [-1, 1]
   cos_angles <- pmin(pmax(cos_angles, -1), 1)
-  
-  # SAM angle (radians)
   angles <- acos(cos_angles)
-  
   return(as.vector(angles))
 }
 
-main <- function() {
-  cat(strrep("=", 70), "\n")
-  cat("R - Scenario A.2: Hyperspectral SAM\n")
-  cat(strrep("=", 70), "\n")
-  
-  # ===========================================================================
-  # 1. Initialize
-  # ===========================================================================
-  cat("\n[1/5] Initializing...\n")
-  
-  # Deterministic reference spectrum (same across all languages)
-  # Using seq ensures identical values regardless of RNG
-  n_bands <- 224
-  reference_spectrum <- seq(0.1, 0.9, length.out = n_bands)
-  reference_spectrum <- reference_spectrum / sqrt(sum(reference_spectrum^2))
-  
-  cat(sprintf("  ✓ Reference spectrum: %d bands\n", n_bands))
-  ref_hash <- substr(digest(reference_spectrum, algo = "sha256"), 1, 16)
-  cat(sprintf("  ✓ Reference spectrum hash: %s\n", ref_hash))
-  
-  # ===========================================================================
-  # 2. Open Dataset (MAT file format)
-  # ===========================================================================
-  cat("\n[2/5] Opening hyperspectral dataset...\n")
-  
-  hsi_path <- file.path(DATA_DIR, "Cuprite.mat")
-  
-  cat(sprintf("  ✓ Loading MAT file: %s\n", hsi_path))
-  mat_data <- readMat(hsi_path)
-  data_key <- names(mat_data)[1]
-  raw_data <- mat_data[[data_key]]
-  
-  # Cuprite.mat has shape (512, 614, 224) but AVIRIS Cuprite has 224 bands
-  # Transpose from (bands_wrong, rows, cols) to (bands_correct, rows, cols)
-  if (dim(raw_data)[1] == 512 && dim(raw_data)[3] == 224) {
-    data <- aperm(raw_data, c(3, 1, 2))  # (512, 614, 224) -> (224, 512, 614)
-    data <- data[1:224, , ]  # Take first 224 bands
-    cat("  ✓ Transposed data to (bands, rows, cols)\n")
-  } else {
-    data <- raw_data
-  }
-  
+process_chunked <- function(data, reference_spectrum, chunk_size = 256) {
   n_bands <- dim(data)[1]
   n_rows <- dim(data)[2]
   n_cols <- dim(data)[3]
-  cat(sprintf("  ✓ Dataset shape: %d bands × %d × %d pixels\n", n_bands, n_rows, n_cols))
   
-  # File size
-  file_size_gb <- file.info(hsi_path)$size / (1024^3)
-  cat(sprintf("  ✓ File size: %.2f GB\n", file_size_gb))
-  
-  # Memory info
-  mem_info <- as.numeric(system("awk '/MemAvailable/ {print $2}' /proc/meminfo", intern=TRUE)) / (1024^2)
-  cat(sprintf("  ✓ Available RAM: %.2f GB\n", mem_info))
-  
-  if (file_size_gb > mem_info * 0.8) {
-    cat("  ⚠ Dataset size exceeds 80% of available RAM - using chunked processing\n")
-  }
-  
-  # ===========================================================================
-  # 3. Process in Chunks
-  # ===========================================================================
-  cat("\n[3/5] Processing hyperspectral data (chunked I/O)...\n")
-  
-  chunk_size <- 256
-  
-  sam_results <- c()
+  sum_angles <- 0.0
+  sum_sq_angles <- 0.0
+  sum_min <- Inf
+  sum_max <- -Inf
+  count <- 0
   pixels_processed <- 0
   chunks_processed <- 0
   
@@ -131,99 +65,201 @@ main <- function() {
       row_end <- min(row_start + chunk_size - 1, n_rows)
       col_end <- min(col_start + chunk_size - 1, n_cols)
       
-      # Extract chunk: shape (n_bands, chunk_rows, chunk_cols)
       chunk <- data[, row_start:row_end, col_start:col_end, drop = FALSE]
       chunk_rows <- row_end - row_start + 1
       chunk_cols <- col_end - col_start + 1
       
-      # Convert to matrix: rows = pixels, cols = bands
-      # chunk is (n_bands, chunk_rows, chunk_cols) -> need (pixels, bands)
       dim(chunk) <- c(n_bands, chunk_rows * chunk_cols)
-      pixel_matrix <- t(chunk)  # Transpose to (pixels, bands)
-      
-      # Remove NA values if any
-      pixel_matrix <- pixel_matrix[complete.cases(pixel_matrix), , drop = FALSE]
+      pixel_matrix <- t(chunk)
       
       if (nrow(pixel_matrix) > 0) {
-        # Calculate SAM
         sam_angles <- spectral_angle_mapper(pixel_matrix, reference_spectrum)
-        
-        # Accumulate
-        sam_results <- c(sam_results, sam_angles)
+        chunk_sum <- sum(sam_angles)
+        chunk_sum_sq <- sum(sam_angles^2)
+        sum_angles <- sum_angles + chunk_sum
+        sum_sq_angles <- sum_sq_angles + chunk_sum_sq
+        sum_min <- min(sum_min, min(sam_angles))
+        sum_max <- max(sum_max, max(sam_angles))
+        count <- count + length(sam_angles)
         pixels_processed <- pixels_processed + length(sam_angles)
       }
       
       chunks_processed <- chunks_processed + 1
-      
-      # Progress
-      if (chunks_processed %% 10 == 0) {
-        cat(sprintf("\r    Processed %d chunks (%s pixels)...", 
-                    chunks_processed, format(pixels_processed, big.mark = ",")))
-      }
     }
   }
   
-  cat(sprintf("\r    Processed %d chunks (%s pixels)... Done!\n", 
-              chunks_processed, format(pixels_processed, big.mark = ",")))
+  mean_angle <- if (count > 0) sum_angles / count else 0
+  std_angle <- if (count > 0) sqrt(sum_sq_angles / count - mean_angle^2) else 0
   
-  # ===========================================================================
-  # 4. Compute Statistics
-  # ===========================================================================
-  cat("\n[4/5] Computing statistics...\n")
+  list(
+    mean_sam = mean_angle,
+    std_sam = std_angle,
+    min_sam = sum_min,
+    max_sam = sum_max,
+    pixels_processed = pixels_processed,
+    chunks_processed = chunks_processed
+  )
+}
+
+load_synthetic_hsi <- function(n_bands = 224, n_rows = 512, n_cols = 614) {
+  cat("  Generating synthetic HSI data...\n")
+  set.seed(42)
+  x <- seq(0, 4 * pi, length.out = n_cols)
+  y <- seq(0, 4 * pi, length.out = n_rows)
+  xx <- outer(y, x, function(y, x) matrix(x, nrow = length(y), ncol = length(x), byrow = TRUE))
+  yy <- outer(y, x, function(y, x) matrix(y, nrow = length(y), ncol = length(x)))
+  signal <- 0.3 * sin(xx + yy) + 0.2 * sin(2 * xx - yy)
+  data <- array(0, dim = c(n_bands, n_rows, n_cols))
+  spectral_pattern <- seq(0.8, 1.2, length.out = n_bands)
+  for (b in 1:n_bands) {
+    noise <- matrix(rnorm(n_rows * n_cols) * 100, nrow = n_rows, ncol = n_cols)
+    data[b, , ] <- (signal + noise) * spectral_pattern[b] * 100 + 1000
+  }
+  cat(sprintf("  + Synthetic HSI: %d bands × %d × %d\n", n_bands, n_rows, n_cols))
+  return(data)
+}
+
+load_hsi_data <- function(data_mode) {
+  if (data_mode == "synthetic") {
+    return(list(data = load_synthetic_hsi(), source = "synthetic"))
+  }
+  hsi_path <- file.path(DATA_DIR, "Cuprite.mat")
+  if (file.exists(hsi_path) || data_mode == "real") {
+    result <- tryCatch({
+      cat(sprintf("  Loading MAT file: %s\n", hsi_path))
+      mat_data <- R.matlab::readMat(hsi_path)
+      data_key <- names(mat_data)[1]
+      raw_data <- mat_data[[data_key]]
+      if (dim(raw_data)[1] == 512 && dim(raw_data)[3] == 224) {
+        data <- aperm(raw_data, c(3, 1, 2))
+        data <- data[1:224, , ]
+      } else {
+        data <- raw_data
+      }
+      cat(sprintf("  + Real HSI: %d bands × %d × %d\n", dim(data)[1], dim(data)[2], dim(data)[3]))
+      list(data = data, source = "real")
+    }, error = function(e) {
+      if (data_mode == "real") {
+        cat(sprintf("  x Real data load failed: %s\n", e$message))
+        quit(status = 1)
+      }
+      cat(sprintf("  - Real data unavailable (%s), using synthetic\n", e$message))
+      list(data = NULL, source = NULL)
+    })
+    if (!is.null(result$data)) return(result)
+  }
+  return(list(data = load_synthetic_hsi(), source = "synthetic"))
+}
+
+main <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  data_mode <- "auto"
+  for (i in seq_along(args)) {
+    if (args[i] == "--data" && i < length(args)) {
+      data_mode <- args[i + 1]
+    }
+  }
+
+  cat(strrep("=", 70), "\n")
+  cat("R - Scenario A.2: Hyperspectral SAM\n")
+  cat(strrep("=", 70), "\n")
+
+  cat("\n[1/5] Initializing...\n")
+  n_bands <- 224
+  reference_spectrum <- seq(0.1, 0.9, length.out = n_bands)
+  reference_spectrum <- reference_spectrum / sqrt(sum(reference_spectrum^2))
+  cat(sprintf("  ✓ Reference spectrum: %d bands\n", n_bands))
+  ref_hash <- substr(digest(reference_spectrum, algo = "sha256"), 1, 16)
+  cat(sprintf("  ✓ Reference spectrum hash: %s\n", ref_hash))
+
+  cat("\n[2/5] Opening hyperspectral dataset...\n")
+  hsi_result <- load_hsi_data(data_mode)
+  data <- hsi_result$data
+  data_source <- hsi_result$source
   
-  mean_sam <- mean(sam_results)
-  median_sam <- median(sam_results)
-  std_sam <- sd(sam_results)
-  min_sam <- min(sam_results)
-  max_sam <- max(sam_results)
+  n_bands <- dim(data)[1]
+  n_rows <- dim(data)[2]
+  n_cols <- dim(data)[3]
+  cat(sprintf("  ✓ Dataset shape: %d bands × %d × %d pixels\n", n_bands, n_rows, n_cols))
+
+  cat(sprintf("\n[3/5] Running SAM classification (%d runs, %d warmup)...\n", RUNS, WARMUP))
   
-  cat(sprintf("  ✓ Mean SAM: %.6f radians (%.2f°)\n", mean_sam, mean_sam * 180 / pi))
-  cat(sprintf("  ✓ Median SAM: %.6f radians\n", median_sam))
-  cat(sprintf("  ✓ Std Dev: %.6f radians\n", std_sam))
-  cat(sprintf("  ✓ Range: [%.6f, %.6f] radians\n", min_sam, max_sam))
+  task <- function() {
+    process_chunked(data, reference_spectrum)
+  }
   
-  # ===========================================================================
-  # 5. Validation & Export
-  # ===========================================================================
-  cat("\n[5/5] Generating validation data...\n")
+  for (i in seq_len(WARMUP)) {
+    task()
+  }
   
-  # Generate validation hash
-  result_str <- sprintf("%.8f_%d_%.8f", mean_sam, pixels_processed, median_sam)
-  result_hash <- substr(digest(result_str, algo = "sha256"), 1, 16)
+  times <- numeric(RUNS)
+  result <- NULL
+  for (i in seq_len(RUNS)) {
+    t_start <- Sys.time()
+    result <- task()
+    t_end <- Sys.time()
+    times[i] <- as.numeric(difftime(t_end, t_start, units = "secs"))
+  }
   
-  cat(sprintf("  ✓ Validation hash: %s\n", result_hash))
+  cat(sprintf("  ✓ Min: %.4fs (primary)\n", min(times)))
+  cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", mean(times), sd(times)))
   
-  # Export results
+  cat("\n[4/5] SAM classification results...\n")
+  cat(sprintf("  ✓ Mean SAM angle: %.6f rad (%.2f°)\n", result$mean_sam, result$mean_sam * 180 / pi))
+  cat(sprintf("  ✓ Std SAM angle: %.6f rad\n", result$std_sam))
+  cat(sprintf("  ✓ Min SAM angle: %.6f rad\n", result$min_sam))
+  cat(sprintf("  ✓ Max SAM angle: %.6f rad\n", result$max_sam))
+  cat(sprintf("  ✓ Processed %d chunks (%s pixels)\n", result$chunks_processed, format(result$pixels_processed, big.mark = ",")))
+  
+  cat("\n[5/5] Validation and export...\n")
+  hash_input <- c(result$mean_sam, result$std_sam, result$min_sam, result$max_sam)
+  validation_hash <- generate_hash(hash_input)
+  cat(sprintf("  ✓ Validation hash: %s\n", validation_hash))
+  
   results <- list(
     language = "r",
     scenario = "hyperspectral_sam",
-    pixels_processed = pixels_processed,
-    chunks_processed = chunks_processed,
+    data_source = data_source,
+    data_description = if (data_source == "real") "Cuprite.mat" else sprintf("synthetic %dx%dx%d", n_bands, n_rows, n_cols),
+    pixels_processed = result$pixels_processed,
+    chunks_processed = result$chunks_processed,
     n_bands = n_bands,
-    mean_sam_rad = mean_sam,
-    median_sam_rad = median_sam,
-    std_sam_rad = std_sam,
-    min_sam_rad = min_sam,
-    max_sam_rad = max_sam,
-    mean_sam_deg = mean_sam * 180 / pi,
-    validation_hash = result_hash,
+    mean_sam_rad = result$mean_sam,
+    std_sam_rad = result$std_sam,
+    min_sam_rad = result$min_sam,
+    max_sam_rad = result$max_sam,
+    mean_sam_deg = result$mean_sam * 180 / pi,
+    min_time_s = min(times),
+    mean_time_s = mean(times),
+    std_time_s = sd(times),
+    max_time_s = max(times),
+    times = times,
+    validation_hash = validation_hash,
     reference_hash = ref_hash
   )
   
-  # Save results
-  dir.create("validation", showWarnings = FALSE)
+  dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
+  dir.create(VALIDATION_DIR, showWarnings = FALSE, recursive = TRUE)
+  
   write_json(
     results,
-    "validation/raster_r_results.json",
+    file.path(OUTPUT_DIR, "hsi_stream_r.json"),
+    pretty = TRUE,
+    auto_unbox = TRUE
+  )
+  write_json(
+    results,
+    file.path(VALIDATION_DIR, "raster_r_results.json"),
     pretty = TRUE,
     auto_unbox = TRUE
   )
   
-  cat("\n  ✓ Results saved to validation/raster_r_results.json\n")
+  cat("✓ Results saved\n")
+  cat(strrep("=", 70), "\n")
+  cat("Note: Minimum times are primary metrics (Chen & Revels 2016)\n")
   cat(strrep("=", 70), "\n")
   
   return(0)
 }
 
-# Run benchmark
 quit(status = main())

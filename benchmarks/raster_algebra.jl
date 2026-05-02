@@ -9,30 +9,15 @@ using Statistics
 using LinearAlgebra
 using Random
 using JSON3
+using Images
 
 const OUTPUT_DIR = "validation"
 const RESULTS_DIR = "results"
 
 include(joinpath(@__DIR__, "common_hash.jl"))
 
-function load_cuprite_bands()
-    try
-        mat_file = matopen(joinpath(@__DIR__, "..", "data", "Cuprite.mat"), "r")
-        keys_list = keys(mat_file)
-        data_key = first(keys_list)
-        data = read(mat_file, data_key)
-        close(mat_file)
-        
-        # Use specific bands for RGB+NIR
-        green = Float32.(data[:, :, 31])
-        red = Float32.(data[:, :, 51])
-        nir = Float32.(data[:, :, 71])
-        swir = Float32.(data[:, :, 91])
-        
-        return (green=green, red=red, nir=nir, swir=swir, shape=size(data))
-    catch e
-        println("Warning: Could not load Cuprite data: $e")
-        println("Generating synthetic data instead...")
+function load_cuprite_bands(data_mode="auto")
+    if data_mode == "synthetic"
         Random.seed!(42)
         shape = (512, 614)
         return (
@@ -41,8 +26,43 @@ function load_cuprite_bands()
             nir=rand(Float32, shape) .* 2000,
             swir=rand(Float32, shape) .* 1500,
             shape=(4, shape...)
-        )
+        ), "synthetic"
     end
+    try
+        mat_path = joinpath(@__DIR__, "..", "data", "Cuprite.mat")
+        if isfile(mat_path)
+            mat_file = matopen(mat_path, "r")
+            keys_list = keys(mat_file)
+            data_key = first(keys_list)
+            data = read(mat_file, data_key)
+            close(mat_file)
+            green = Float32.(data[:, :, 31])
+            red = Float32.(data[:, :, 51])
+            nir = Float32.(data[:, :, 71])
+            swir = Float32.(data[:, :, 91])
+            println("  ✓ Loaded real Cuprite data: $(size(data))")
+            return (green=green, red=red, nir=nir, swir=swir, shape=size(data)), "real"
+        elseif data_mode == "real"
+            println("  x Cuprite.mat not found")
+            exit(1)
+        end
+    catch e
+        println("Warning: Could not load Cuprite data: $e")
+        if data_mode == "real"
+            println("  x Real data required but unavailable")
+            exit(1)
+        end
+        println("  → Using synthetic data instead...")
+    end
+    Random.seed!(42)
+    shape = (512, 614)
+    return (
+        green=rand(Float32, shape) .* 1000,
+        red=rand(Float32, shape) .* 800,
+        nir=rand(Float32, shape) .* 2000,
+        swir=rand(Float32, shape) .* 1500,
+        shape=(4, shape...)
+    ), "synthetic"
 end
 
 function benchmark_ndvi(nir, red)
@@ -83,25 +103,25 @@ function run_benchmark(func, runs=10, warmup=2)
     return times, result
 end
 
-function run_raster_algebra_benchmark()
+function run_raster_algebra_benchmark(data_mode="auto")
     println("=" ^ 70)
     println("JULIA - Scenario E: Raster Algebra & Band Math")
     println("=" ^ 70)
-    
+
     println("\n[1/4] Loading hyperspectral data...")
-    bands = load_cuprite_bands()
+    bands, data_source = load_cuprite_bands(data_mode)
     println("  ✓ Loaded $(bands.shape[1]) bands, shape: $(bands.shape[2])x$(bands.shape[3]) ($(bands.shape[2] * bands.shape[3]) pixels)")
     
     results = Dict()
     all_hashes = []
     
-    # NDVI benchmark
     println("\n[2/4] Testing NDVI calculation...")
     
     function ndvi_task()
         return benchmark_ndvi(bands.nir, bands.red)
     end
     
+    GC.gc()
     times, ndvi_result = run_benchmark(ndvi_task, 10, 2)
     ndvi_hash = generate_hash(ndvi_result)
     push!(all_hashes, ndvi_hash)
@@ -114,16 +134,19 @@ function run_raster_algebra_benchmark()
         "min_time_s" => minimum(times),
         "mean_time_s" => mean(times),
         "std_time_s" => std(times),
-        "hash" => ndvi_hash
+        "median_time_s" => median(times),
+        "max_time_s" => maximum(times),
+        "times" => times,
+        "validation_hash" => ndvi_hash
     )
     
-    # Band arithmetic benchmark
     println("\n[3/4] Testing band arithmetic...")
     
     function band_math_task()
         return benchmark_band_arithmetic(bands.green, bands.red, bands.nir, bands.swir)
     end
     
+    GC.gc()
     times, indices_result = run_benchmark(band_math_task, 10, 2)
     indices_values = values(indices_result) |> collect
     indices_hash = generate_hash(indices_values)
@@ -137,34 +160,21 @@ function run_raster_algebra_benchmark()
         "min_time_s" => minimum(times),
         "mean_time_s" => mean(times),
         "std_time_s" => std(times),
-        "hash" => indices_hash
+        "median_time_s" => median(times),
+        "max_time_s" => maximum(times),
+        "times" => times,
+        "validation_hash" => indices_hash
     )
     
-    # Convolution (simple moving average)
     println("\n[4/4] Testing 3x3 convolution...")
-    
+
     function conv_task()
-        # Vectorized 3x3 mean filter (efficient in Julia)
         nir = bands.nir
-        nrows, ncols = size(nir)
-        out = similar(nir)
-        
-        # Vectorized mean using views
-        @inbounds @simd for j in 1:ncols
-            for i in 1:nrows
-                i1 = max(1, i-1)
-                i2 = min(nrows, i+1)
-                j1 = max(1, j-1)
-                j2 = min(ncols, j+1)
-                sum = nir[i1, j1] + nir[i1, j] + nir[i1, j2] +
-                      nir[i, j1] + nir[i, j] + nir[i, j2] +
-                      nir[i2, j1] + nir[i2, j] + nir[i2, j2]
-                out[i, j] = sum / 9.0f0
-            end
-        end
-        return out
+        kernel = ones(Float32, 3, 3) ./ 9.0f0
+        imfilter(nir, kernel, Pad(:constant, 0.0f0))
     end
     
+    GC.gc()
     times, conv_result = run_benchmark(conv_task, 10, 2)
     conv_hash = generate_hash(conv_result)
     push!(all_hashes, conv_hash)
@@ -177,10 +187,12 @@ function run_raster_algebra_benchmark()
         "min_time_s" => minimum(times),
         "mean_time_s" => mean(times),
         "std_time_s" => std(times),
-        "hash" => conv_hash
+        "median_time_s" => median(times),
+        "max_time_s" => maximum(times),
+        "times" => times,
+        "validation_hash" => conv_hash
     )
     
-    # Save results
     println("\n" * "=" ^ 70)
     println("SAVING RESULTS...")
     println("=" ^ 70)
@@ -191,6 +203,8 @@ function run_raster_algebra_benchmark()
     output_data = Dict(
         "language" => "julia",
         "scenario" => "raster_algebra",
+        "data_source" => data_source,
+        "data_description" => data_source == "real" ? "Cuprite.mat" : "synthetic 4×512×614",
         "data_shape" => [bands.shape...],
         "results" => results,
         "all_hashes" => all_hashes,
@@ -211,4 +225,11 @@ function run_raster_algebra_benchmark()
     return output_data
 end
 
-run_raster_algebra_benchmark()
+# Parse CLI args
+data_mode = "auto"
+for (i, arg) in enumerate(ARGS)
+    if arg == "--data" && i < length(ARGS)
+        data_mode = ARGS[i+1]
+    end
+end
+run_raster_algebra_benchmark(data_mode)

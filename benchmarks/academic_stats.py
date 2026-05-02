@@ -374,27 +374,27 @@ def compute_statistics(times: np.ndarray, confidence: float = 0.95) -> Dict[str,
     q75, q25 = np.percentile(times, [75, 25])
     iqr = q75 - q25
 
-    # Bootstrap CI for mean
+    # Bootstrap CI for the MINIMUM (primary estimator, Chen & Revels 2016)
     ci_level = confidence
     alpha = 1 - ci_level
 
     n_bootstrap = 1000
-    bootstrap_means = np.zeros(n_bootstrap)
+    bootstrap_mins = np.zeros(n_bootstrap)
     for i in range(n_bootstrap):
         sample = np.random.choice(times, size=n, replace=True)
-        bootstrap_means[i] = np.mean(sample)
+        bootstrap_mins[i] = np.min(sample)
 
-    ci_lower = np.percentile(bootstrap_means, alpha / 2 * 100)
-    ci_upper = np.percentile(bootstrap_means, (1 - alpha / 2) * 100)
+    ci_lower = np.percentile(bootstrap_mins, alpha / 2 * 100)
+    ci_upper = np.percentile(bootstrap_mins, (1 - alpha / 2) * 100)
 
-    # 99% CI
-    bootstrap_means_99 = np.zeros(1000)
+    # 99% CI for the MINIMUM
+    bootstrap_mins_99 = np.zeros(1000)
     for i in range(1000):
         sample = np.random.choice(times, size=n, replace=True)
-        bootstrap_means_99[i] = np.mean(sample)
+        bootstrap_mins_99[i] = np.min(sample)
 
-    ci_99_lower = np.percentile(bootstrap_means_99, 0.5)
-    ci_99_upper = np.percentile(bootstrap_means_99, 99.5)
+    ci_99_lower = np.percentile(bootstrap_mins_99, 0.5)
+    ci_99_upper = np.percentile(bootstrap_mins_99, 99.5)
 
     return {
         "min_time": min_t,

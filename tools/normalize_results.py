@@ -4,6 +4,12 @@ Normalize benchmark results from different sources into a unified format.
 
 This resolves the issue of mixed container vs native result formats and
 ensures consistent data structures for visualization and analysis.
+
+Handles 4 distinct result file formats:
+  1. Standard:    {"results": {"sub_bench": {"min": 1.0, "mean": 2.0, ...}}}
+  2. R flat:      {"csv_write": {"min": 0.5}, "csv_read": {"min": 0.2}}  (no "results" key)
+  3. Single flat: {"min_time_s": 0.014, "mean_time_s": 0.02, ...}
+  4. Nested subs: {"mercator_1000": {"min_time_s": 0.0005}, "utm_1000": {...}}
 """
 
 import json
@@ -12,30 +18,125 @@ from pathlib import Path
 from typing import Dict, List, Any
 import argparse
 
-def normalize_single_result(result_path: Path) -> Dict[str, Any]:
-    """
-    Normalize a single result file to unified format.
-    
-    Args:
-        result_path: Path to result JSON file
-        
-    Returns:
-        Normalized result dictionary
-    """
+METADATA_KEYS = {
+    "language", "numpy_version", "matrix_size", "n_runs", "n_warmup",
+    "methodology", "n_csv_rows", "n_binary_values", "julia_version",
+    "sorting_size", "r_version", "blas_library", "scenario",
+    "zone_type", "n_zones", "polygons", "min_time_s", "mean_time_s",
+    "std_time_s", "median_time_s", "max_time_s", "hash", "n_dates", "warmup", "runs",
+    "library", "ci_95_lower", "ci_95_upper", "cv", "memory_rss_mb",
+    "memory_vms_mb", "validation_hash", "all_hashes", "combined_hash",
+    "n_points", "n_matches", "n_matched", "matches_found",
+    "n_polygons", "pixels_processed", "chunks_processed", "n_bands",
+    "mean_sam_rad", "std_sam_rad", "min_sam_rad", "max_sam_rad", "mean_sam_deg",
+    "total_distance_m", "mean_distance_m", "median_distance_m", "max_distance_m",
+    "n_points_interp", "grid_size", "total_interpolated", "points_per_second",
+    "mean_value", "std_value", "median_value",
+    "mean_ndvi", "mean_trend", "mean_amplitude", "avg_growing_season",
+    "points_per_second", "normality_p", "is_normal", "ci_95", "peak_memory_mb",
+    "reference_hash", "times", "validation_hashes",
+}
+
+TIMING_KEYS = {"min", "mean", "std", "median", "max", "min_time_s", "mean_time_s",
+               "std_time_s", "median_time_s", "max_time_s", "times"}
+
+
+def _unwrap(val):
+    """Unwrap single-element lists from R's auto_unbox=FALSE serialization."""
+    if isinstance(val, list) and len(val) == 1:
+        return val[0]
+    return val
+
+
+def _safe_float(val, default=0.0):
+    """Safely convert a value to float, handling R list-wrapped values."""
+    if val is None:
+        return default
+    val = _unwrap(val)
     try:
-        with open(result_path, 'r') as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"Warning: Could not read {result_path}: {e}", file=sys.stderr)
-        return None
-    
-    # Unified result format
-    normalized = {
-        "language": "",
-        "benchmark": "",
-        "scenario": "",
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_int(val, default=0):
+    """Safely convert a value to int, handling R list-wrapped values."""
+    if val is None:
+        return default
+    val = _unwrap(val)
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def _has_timing(sub_data):
+    """Check if a dict contains any timing keys with non-None values."""
+    if not isinstance(sub_data, dict):
+        return False
+    for k in TIMING_KEYS:
+        v = _unwrap(sub_data.get(k))
+        if v is not None:
+            return True
+    return False
+
+
+def _extract_benchmark_from_filename(filename):
+    """Extract benchmark name and scenario from filename."""
+    fn = filename.lower()
+    if "matrix" in fn:
+        return "matrix_ops", "matrix_operations"
+    elif "io_ops" in fn or ("io" in fn and "ops" in fn):
+        return "io_ops", "io_operations"
+    elif "vector" in fn:
+        return "vector_pip", "vector_point_in_polygon"
+    elif "hsi" in fn or "hyperspectral" in fn:
+        return "hsi_stream", "hyperspectral_sam"
+    elif "interpolation" in fn or "idw" in fn:
+        return "interpolation_idw", "spatial_interpolation"
+    elif "timeseries" in fn or "ndvi" in fn:
+        return "timeseries_ndvi", "time_series_ndvi"
+    elif "reprojection" in fn:
+        return "reprojection", "coordinate_reprojection"
+    elif "zonal" in fn:
+        return "zonal_stats", "zonal_statistics"
+    elif "raster" in fn:
+        return "raster_algebra", "raster_algebra"
+    elif "scaling" in fn:
+        return "scaling", "scaling_analysis"
+    return "", ""
+
+
+def _extract_language(data, filename):
+    """Extract language from data dict or filename."""
+    lang = data.get("language")
+    if lang:
+        if isinstance(lang, list):
+            lang = lang[0] if lang else ""
+        lang = str(lang).strip()
+        if lang:
+            return lang.capitalize()
+    fn = filename.lower()
+    if "python" in fn:
+        return "Python"
+    elif "julia" in fn:
+        return "Julia"
+    elif fn.endswith("_r.json") or fn.startswith("r_") or "_r." in fn:
+        return "R"
+    return ""
+
+
+def _make_entry(sub_name, sub_data, default_bench, default_scenario,
+                default_lang, source_file, mode):
+    """Create a normalized entry from a sub-benchmark dict."""
+    entry = {
+        "language": default_lang,
+        "benchmark": default_bench,
+        "scenario": default_scenario,
+        "sub_benchmark": sub_name,
         "min_time_s": 0.0,
         "mean_time_s": 0.0,
+        "median_time_s": 0.0,
         "std_time_s": 0.0,
         "max_time_s": 0.0,
         "ci_95_lower": 0.0,
@@ -46,248 +147,271 @@ def normalize_single_result(result_path: Path) -> Dict[str, Any]:
         "memory_rss_mb": None,
         "memory_vms_mb": None,
         "validation_hash": "",
-        "source_file": str(result_path),
-        "mode": "unknown"  # container or native
+        "source_file": source_file,
+        "mode": mode,
     }
-    
-    # Extract language from filename or data
-    filename = result_path.name.lower()
-    if "python" in filename:
-        normalized["language"] = "Python"
-    elif "julia" in filename:
-        normalized["language"] = "Julia"
-    elif "r" in filename and "results" not in filename:
-        normalized["language"] = "R"
-    
-    # Try to extract benchmark name from filename
-    if "matrix" in filename:
-        normalized["benchmark"] = "matrix_ops"
-        normalized["scenario"] = "matrix_operations"
-    elif "io" in filename:
-        normalized["benchmark"] = "io_ops"
-        normalized["scenario"] = "io_operations"
-    elif "vector" in filename:
-        normalized["benchmark"] = "vector_pip"
-        normalized["scenario"] = "vector_point_in_polygon"
-    elif "hsi" in filename or "hyperspectral" in filename:
-        normalized["benchmark"] = "hsi_stream"
-        normalized["scenario"] = "hyperspectral_sam"
-    elif "interpolation" in filename or "idw" in filename:
-        normalized["benchmark"] = "interpolation_idw"
-        normalized["scenario"] = "spatial_interpolation"
-    elif "timeseries" in filename or "ndvi" in filename:
-        normalized["benchmark"] = "timeseries_ndvi"
-        normalized["scenario"] = "time_series_ndvi"
-    elif "reprojection" in filename:
-        normalized["benchmark"] = "reprojection"
-        normalized["scenario"] = "coordinate_reprojection"
-    elif "zonal" in filename:
-        normalized["benchmark"] = "zonal_stats"
-        normalized["scenario"] = "zonal_statistics"
-    elif "raster" in filename:
-        normalized["benchmark"] = "raster_algebra"
-        normalized["scenario"] = "raster_algebra"
-    elif "scaling" in filename:
-        normalized["benchmark"] = "scaling"
-        normalized["scenario"] = "scaling_analysis"
-    
-    # Try to extract timing data from various formats
-    if isinstance(data, dict):
-        # Handle different data structures
-        if "results" in data and isinstance(data["results"], dict):
-            # Standard format with results dict
-            results = data["results"]
-            for key in results:
-                if isinstance(results[key], dict) and "min" in results[key]:
-                    # Take the first benchmark with min time
-                    bench_data = results[key]
-                    normalized["min_time_s"] = bench_data.get("min", 0.0)
-                    normalized["mean_time_s"] = bench_data.get("mean", 0.0)
-                    normalized["std_time_s"] = bench_data.get("std", 0.0)
-                    normalized["max_time_s"] = bench_data.get("max", 0.0)
-                    break
-        elif "min_time_s" in data:
-            # Already normalized format
-            normalized.update({k: v for k, v in data.items() if k in normalized})
-        elif "min" in data:
-            # Simple format
-            normalized["min_time_s"] = data.get("min", 0.0)
-            normalized["mean_time_s"] = data.get("mean", data.get("min", 0.0))
-            normalized["std_time_s"] = data.get("std", 0.0)
-            normalized["max_time_s"] = data.get("max", data.get("min", 0.0))
-        
-        # Extract other metadata
-        if "language" in data:
-            lang_val = data["language"]
-            if isinstance(lang_val, str):
-                normalized["language"] = lang_val.capitalize()
-            elif isinstance(lang_val, list) and len(lang_val) > 0:
-                normalized["language"] = str(lang_val[0]).capitalize()
-        if "validation_hash" in data:
-            normalized["validation_hash"] = data["validation_hash"]
-        if "n_runs" in data:
-            normalized["runs"] = data["n_runs"]
-        if "n_warmup" in data:
-            normalized["warmup"] = data["n_warmup"]
-        if "memory_rss_mb" in data:
-            normalized["memory_rss_mb"] = data["memory_rss_mb"]
-        if "memory_vms_mb" in data:
-            normalized["memory_vms_mb"] = data["memory_vms_mb"]
-    
-    return normalized
 
-def scan_and_normalize_results(input_dir: Path) -> List[Dict[str, Any]]:
+    entry["min_time_s"] = _safe_float(_unwrap(sub_data.get("min_time_s", sub_data.get("min"))))
+    entry["mean_time_s"] = _safe_float(_unwrap(sub_data.get("mean_time_s", sub_data.get("mean"))))
+    entry["median_time_s"] = _safe_float(_unwrap(sub_data.get("median_time_s", sub_data.get("median"))))
+    entry["std_time_s"] = _safe_float(_unwrap(sub_data.get("std_time_s", sub_data.get("std"))))
+    entry["max_time_s"] = _safe_float(_unwrap(sub_data.get("max_time_s", sub_data.get("max"))))
+
+    ci95 = sub_data.get("ci_95")
+    if ci95 is not None and isinstance(ci95, list) and len(ci95) >= 2:
+        entry["ci_95_lower"] = _safe_float(ci95[0])
+        entry["ci_95_upper"] = _safe_float(ci95[1])
+    else:
+        entry["ci_95_lower"] = _safe_float(sub_data.get("ci_95_lower"), entry["ci_95_lower"])
+        entry["ci_95_upper"] = _safe_float(sub_data.get("ci_95_upper"), entry["ci_95_upper"])
+
+    if entry["mean_time_s"] > 0:
+        entry["cv"] = entry["std_time_s"] / entry["mean_time_s"]
+
+    entry["runs"] = _safe_int(sub_data.get("runs"), _safe_int(sub_data.get("n_runs"), 0))
+    entry["warmup"] = _safe_int(sub_data.get("warmup"), _safe_int(sub_data.get("n_warmup"), 0))
+
+    entry["memory_rss_mb"] = _unwrap(sub_data.get("memory_rss_mb"))
+    entry["memory_vms_mb"] = _unwrap(sub_data.get("memory_vms_mb"))
+
+    entry["validation_hash"] = str(_unwrap(sub_data.get("validation_hash", sub_data.get("hash", ""))))
+
+    matched = _safe_int(sub_data.get("matches_found", sub_data.get("n_matches", sub_data.get("n_matched", 0))))
+    if matched > 0:
+        entry["matches_found"] = matched
+
+    return entry
+
+
+def normalize_single_result(result_path):
     """
-    Scan directory for result files and normalize them.
-    
-    Args:
-        input_dir: Directory to scan for results
-        
-    Returns:
-        List of normalized results
+    Normalize a single result file to unified format.
+
+    Returns a list of entries (one per sub-benchmark).
     """
+    try:
+        with open(result_path, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Warning: Could not read {result_path}: {e}", file=sys.stderr)
+        return []
+
+    if not isinstance(data, dict):
+        return []
+
+    filename = result_path.name
+    default_bench, default_scenario = _extract_benchmark_from_filename(filename)
+    default_lang = _extract_language(data, filename)
+
+    path_str = str(result_path)
+    if "container" in path_str or "docker" in path_str or "podman" in path_str:
+        mode = "container"
+    elif "native" in path_str:
+        mode = "native"
+    else:
+        mode = "unknown"
+
+    entries = []
+
+    # === Format 1: Standard with "results" key ===
+    if "results" in data and isinstance(data["results"], dict):
+        for sub_name, sub_data in data["results"].items():
+            if _has_timing(sub_data):
+                entries.append(_make_entry(
+                    sub_name, sub_data, default_bench, default_scenario,
+                    default_lang, str(result_path), mode
+                ))
+
+    # === Format 5: Hyperfine-style results (list) ===
+    if not entries and "results" in data and isinstance(data["results"], list):
+        for i, run_data in enumerate(data["results"]):
+            if isinstance(run_data, dict) and _has_timing(run_data):
+                sub_name = f"cold_start_{i}" if len(data["results"]) > 1 else "cold_start"
+                entries.append(_make_entry(
+                    sub_name, run_data, default_bench, default_scenario,
+                    default_lang, str(result_path), mode
+                ))
+
+    # === Format 2/4: Flat sub-benchmarks at top level ===
+    if not entries:
+        has_sub_benchmarks = False
+        for key, val in data.items():
+            if key in METADATA_KEYS:
+                continue
+            if isinstance(val, dict) and _has_timing(val):
+                has_sub_benchmarks = True
+                entries.append(_make_entry(
+                    key, val, default_bench, default_scenario,
+                    default_lang, str(result_path), mode
+                ))
+
+        # === Format 3: Single flat entry ===
+        if not has_sub_benchmarks:
+            sub_data = {}
+            for k in ["min_time_s", "mean_time_s", "std_time_s", "median_time_s", "max_time_s",
+                       "min", "mean", "std", "median", "max", "hash", "validation_hash",
+                       "ci_95", "ci_95_lower", "ci_95_upper", "runs", "warmup",
+                       "n_runs", "n_warmup", "memory_rss_mb", "memory_vms_mb"]:
+                if k in data:
+                    sub_data[k] = _unwrap(data[k])
+            if not sub_data:
+                for key, val in data.items():
+                    if key not in METADATA_KEYS:
+                        sub_data[key] = _unwrap(val)
+            scenario = _unwrap(data.get("scenario", default_bench))
+            sub_name = str(scenario) if scenario else default_bench
+            entries.append(_make_entry(
+                sub_name, sub_data, default_bench, default_scenario,
+                default_lang, str(result_path), mode
+            ))
+
+    return entries
+
+
+def scan_and_normalize_results(input_dir):
+    """Scan directory for result files and normalize them."""
     normalized_results = []
     found_files = set()
-    
-    # Determine if input_dir IS the results directory or the project root
-    # Check if we're already inside a results dir by looking for json files directly
+
     direct_jsons = list(input_dir.glob("*.json"))
-    has_direct_results = any(f.stem.endswith(("python", "julia", "r", "_results")) for f in direct_jsons if f.is_file())
-    
+    has_direct_results = any(
+        f.stem.endswith(("python", "julia", "r", "_results"))
+        for f in direct_jsons if f.is_file()
+    )
+
     if has_direct_results:
-        # input_dir IS the results directory — scan it directly
         patterns = ["*.json", "*/*.json", "*/*/*.json"]
     else:
-        # input_dir is project root — scan subdirectories
         patterns = [
             "results/*.json",
             "results/*/*.json",
             "validation/*results.json",
             "*_results.json"
         ]
-    
+
+    skip_stems = {"hardware_info", "container_hashes", "errors",
+                  "summary", "normalized_results"}
+
     for pattern in patterns:
         for file_path in input_dir.glob(pattern):
             if file_path.is_file() and file_path not in found_files:
-                # Skip non-result files (hardware info, normalized output, etc.)
                 stem = file_path.stem
-                if stem in ("hardware_info", "container_hashes", "errors", "summary", "normalized_results"):
+                if stem in skip_stems:
                     continue
-                    
+
                 found_files.add(file_path)
-                normalized = normalize_single_result(file_path)
-                if normalized:
-                    # Determine mode from path
-                    path_str = str(file_path)
-                    if "container" in path_str or "docker" in path_str or "podman" in path_str:
-                        normalized["mode"] = "container"
-                    elif "native" in path_str:
-                        normalized["mode"] = "native"
-                    else:
-                        normalized["mode"] = "unknown"
-                    
-                    normalized_results.append(normalized)
-    
+                file_entries = normalize_single_result(file_path)
+                normalized_results.extend(file_entries)
+
     return normalized_results
 
-def generate_summary(normalized_results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Generate summary statistics from normalized results.
-    
-    Args:
-        normalized_results: List of normalized results
-        
-    Returns:
-        Summary dictionary
-    """
+
+def generate_summary(normalized_results):
+    """Generate summary statistics from normalized results."""
     summary = {
-        "total_benchmarks": len(normalized_results),
-        "languages": {},
+        "total_entries": len(normalized_results),
         "benchmarks": {},
-        "modes": {}
+        "languages": {},
     }
-    
-    for result in normalized_results:
-        lang = result["language"]
-        bench = result["benchmark"]
-        mode = result["mode"]
-        
-        # Count languages
+
+    for r in normalized_results:
+        bench = r["benchmark"]
+        lang = r["language"]
+        sub = r.get("sub_benchmark", "")
+
+        if bench not in summary["benchmarks"]:
+            summary["benchmarks"][bench] = {"languages": {}, "sub_benchmarks": set()}
+        if lang not in summary["benchmarks"][bench]["languages"]:
+            summary["benchmarks"][bench]["languages"][lang] = 0
+        summary["benchmarks"][bench]["languages"][lang] += 1
+        if sub:
+            summary["benchmarks"][bench]["sub_benchmarks"].add(sub)
+
         if lang not in summary["languages"]:
             summary["languages"][lang] = 0
         summary["languages"][lang] += 1
-        
-        # Count benchmarks
-        if bench not in summary["benchmarks"]:
-            summary["benchmarks"][bench] = 0
-        summary["benchmarks"][bench] += 1
-        
-        # Count modes
-        if mode not in summary["modes"]:
-            summary["modes"][mode] = 0
-        summary["modes"][mode] += 1
-    
+
+    for bench in summary["benchmarks"]:
+        summary["benchmarks"][bench]["sub_benchmarks"] = \
+            sorted(summary["benchmarks"][bench]["sub_benchmarks"])
+
     return summary
+
 
 def main():
     parser = argparse.ArgumentParser(description="Normalize benchmark results")
-    parser.add_argument("--input", "-i", type=Path, default=Path("."), 
+    parser.add_argument("--input", "-i", type=Path, default=None,
                        help="Input directory to scan for results")
-    parser.add_argument("--output", "-o", type=Path, default=Path("results/normalized"), 
+    parser.add_argument("--output", "-o", type=Path, default=None,
                        help="Output directory for normalized results")
     parser.add_argument("--summary", "-s", action="store_true",
                        help="Generate summary statistics")
-    
+
     args = parser.parse_args()
-    
+
+    project_root = Path(__file__).parent.parent
+    if args.input is None:
+        args.input = project_root / "results"
+    if args.output is None:
+        args.output = project_root / "results" / "normalized"
+
     print("=" * 60)
     print("NORMALIZING BENCHMARK RESULTS")
     print("=" * 60)
     print(f"Input directory: {args.input}")
     print(f"Output directory: {args.output}")
     print()
-    
-    # Create output directory
+
     args.output.mkdir(parents=True, exist_ok=True)
-    
-    # Scan and normalize results
+
     normalized_results = scan_and_normalize_results(args.input)
-    
+
     if not normalized_results:
         print("No result files found!")
         return 1
-    
-    print(f"Found {len(normalized_results)} result files")
-    
-    # Save normalized results
+
+    print(f"Found {len(normalized_results)} benchmark entries")
+
+    benchmarks_seen = {}
+    for r in normalized_results:
+        bench = r["benchmark"]
+        if bench not in benchmarks_seen:
+            benchmarks_seen[bench] = set()
+        lang = r["language"]
+        sub = r.get("sub_benchmark", "")
+        benchmarks_seen[bench].add(f"{lang} ({sub})" if sub else lang)
+
+    print("\nBenchmarks found:")
+    for bench in sorted(benchmarks_seen.keys()):
+        langs = sorted(benchmarks_seen[bench])
+        print(f"  {bench}: {', '.join(langs)}")
+    print()
+
     output_file = args.output / "normalized_results.json"
     with open(output_file, 'w') as f:
         json.dump(normalized_results, f, indent=2)
     print(f"Saved normalized results to {output_file}")
-    
-    # Generate summary if requested
+
     if args.summary:
         summary = generate_summary(normalized_results)
         summary_file = args.output / "summary.json"
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
         print(f"Saved summary to {summary_file}")
-        
-        # Print summary
+
         print("\nSUMMARY:")
-        print(f"  Total benchmarks: {summary['total_benchmarks']}")
-        print("  By language:")
-        for lang, count in summary["languages"].items():
-            print(f"    {lang}: {count}")
+        print(f"  Total entries: {summary['total_entries']}")
         print("  By benchmark:")
-        for bench, count in summary["benchmarks"].items():
-            print(f"    {bench}: {count}")
-        print("  By mode:")
-        for mode, count in summary["modes"].items():
-            print(f"    {mode}: {count}")
-    
-    print("\n✓ Normalization complete!")
+        for bench, info in summary["benchmarks"].items():
+            subs = info.get("sub_benchmarks", [])
+            lang_counts = info.get("languages", {})
+            subs_str = f" [{', '.join(subs)}]" if subs else ""
+            langs_str = f" ({', '.join(f'{l}:{c}' for l,c in lang_counts.items())})"
+            print(f"    {bench}{subs_str}{langs_str}")
+
+    print("\nNormalization complete!")
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

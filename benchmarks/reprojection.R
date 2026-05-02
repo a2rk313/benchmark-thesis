@@ -1,11 +1,23 @@
-
 #!/usr/bin/env Rscript
 # =============================================================================
 # SCENARIO G: Coordinate Reprojection - R Implementation
 # Tests: EPSG:4326 <-> UTM/Web Mercator reprojection performance
-# 
+#
 # Uses sf/PROJ library (via sf::st_transform) for fair comparison with Python's pyproj.
 # =============================================================================
+
+# Dynamic path resolution
+get_project_root <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd())
+  }
+}
+PROJECT_ROOT <- get_project_root()
 
 suppressPackageStartupMessages({
   library(sf)
@@ -13,24 +25,12 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
+source(file.path(PROJECT_ROOT, "benchmarks", "common_hash.R"))
+
 PROJ_AVAILABLE <- require(sf)
 
-# Get script directory
-get_script_dir <- function() {
-  cmdArgs <- commandArgs(trailingOnly = FALSE)
-  fileArg <- cmdArgs[grep("^--file=", cmdArgs)]
-  if (length(fileArg) == 0) {
-    return(".")
-  }
-  filePath <- sub("^--file=", "", fileArg)
-  return(dirname(filePath))
-}
-
-script_dir <- get_script_dir()
 OUTPUT_DIR <- "validation"
 RESULTS_DIR <- "results"
-
-source(file.path(script_dir, "common_hash.R"))
 
 reproject_to_web_mercator <- function(lat, lon) {
   if (PROJ_AVAILABLE) {
@@ -62,7 +62,6 @@ reproject_to_utm_batch <- function(lat, lon) {
   y <- numeric(n)
   zones <- integer(n)
 
-  # Group by UTM zone
   zones <- pmax(pmin(floor((lon + 180) / 6) + 1, 60), 1)
   for (zone in unique(zones)) {
     mask <- zones == zone
@@ -74,7 +73,6 @@ reproject_to_utm_batch <- function(lat, lon) {
     )
     sf_pts <- st_as_sf(pts, coords = c("lon", "lat"), crs = "EPSG:4326")
 
-    # Try to transform, fall back to manual on failure
     tryCatch({
       sf_utm <- st_transform(sf_pts, epsg)
       coords <- st_coordinates(sf_utm)
@@ -135,6 +133,32 @@ generate_test_points <- function(n) {
   )
 }
 
+load_reprojection_data <- function(data_mode) {
+  if (data_mode == "synthetic") {
+    cat("  Generating synthetic test points (1M, seed 42)...\n")
+    return(list(lat = runif(1000000, -90, 90), lon = runif(1000000, -180, 180), source = "synthetic"))
+  }
+  gps_path <- file.path(PROJECT_ROOT, "data", "gps_points_1m.csv")
+  if (file.exists(gps_path) || data_mode == "real") {
+    result <- tryCatch({
+      cat(sprintf("  Loading GPS points: %s\n", gps_path))
+      df <- read.csv(gps_path)
+      cat(sprintf("  ✓ Loaded %d real GPS points\n", nrow(df)))
+      list(lat = df$lat, lon = df$lon, source = "real")
+    }, error = function(e) {
+      if (data_mode == "real") {
+        cat(sprintf("  x Real data load failed: %s\n", e$message))
+        quit(status = 1)
+      }
+      cat(sprintf("  - Real data unavailable (%s), using synthetic\n", e$message))
+      list(lat = NULL, lon = NULL, source = NULL)
+    })
+    if (!is.null(result$lat)) return(result)
+  }
+  set.seed(42)
+  return(list(lat = runif(1000000, -90, 90), lon = runif(1000000, -180, 180), source = "synthetic"))
+}
+
 run_benchmark <- function(func, runs = 10, warmup = 2) {
   for (i in 1:warmup) {
     invisible(func())
@@ -153,68 +177,104 @@ run_benchmark <- function(func, runs = 10, warmup = 2) {
 }
 
 main <- function() {
-  cat(rep("=", 70), "\n", sep="")
+  args <- commandArgs(trailingOnly = TRUE)
+  data_mode <- "auto"
+  for (i in seq_along(args)) {
+    if (args[i] == "--data" && i < length(args)) {
+      data_mode <- args[i + 1]
+    }
+  }
+
+  cat(strrep("=", 70), "\n")
   cat("R - Scenario G: Coordinate Reprojection\n")
   cat(sprintf("Using sf/PROJ: %s\n", PROJ_AVAILABLE))
-  cat(rep("=", 70), "\n\n", sep="")
+  cat(strrep("=", 70), "\n\n")
 
-  n_runs <- 5
+  # Load data once based on mode
+  all_data <- load_reprojection_data(data_mode)
+
+  n_runs <- 10
   n_warmup <- 2
-  sizes <- c(1000, 5000, 10000)
+  sizes <- c(1000, 5000, 10000, 50000, 100000, 500000)
 
-  points <- generate_test_points(10000)
+  results <- list()
+  all_hashes <- character(0)
 
   cat("[1/2] Web Mercator (EPSG:4326 -> 3857)...\n")
 
-  merc_results <- list()
   for (n in sizes) {
-    func <- function() reproject_to_web_mercator(points$lat[1:n], points$lon[1:n])
+    n_subset <- min(n, length(all_data$lat))
+    func <- function() reproject_to_web_mercator(all_data$lat[1:n_subset], all_data$lon[1:n_subset])
     bench <- run_benchmark(func, n_runs, n_warmup)
+
+    merc_result <- reproject_to_web_mercator(all_data$lat[1:n_subset], all_data$lon[1:n_subset])
+    merc_hash <- generate_hash(c(mean(merc_result$x), mean(merc_result$y)))
+    all_hashes <- c(all_hashes, merc_hash)
 
     key <- paste0("mercator_", n)
-    merc_results[[key]] <- list(
+    results[[key]] <- list(
       n_points = n,
       min_time_s = min(bench$times),
       mean_time_s = mean(bench$times),
       std_time_s = sd(bench$times),
-      points_per_second = round(n / min(bench$times))
+      median_time_s = median(bench$times),
+      max_time_s = max(bench$times),
+      times = as.list(bench$times),
+      points_per_second = round(n / min(bench$times)),
+      validation_hash = merc_hash
     )
-    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs\n", n, min(bench$times), mean(bench$times)))
+    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs, hash=%s\n",
+                n, min(bench$times), mean(bench$times), merc_hash))
   }
 
-  cat("[2/2] UTM (zone-optimized)...\n")
+  cat("\n[2/2] UTM (zone-optimized)...\n")
 
-  utm_results <- list()
   for (n in sizes) {
-    func <- function() reproject_to_utm_batch(points$lat[1:n], points$lon[1:n])
+    n_subset <- min(n, length(all_data$lat))
+    func <- function() reproject_to_utm_batch(all_data$lat[1:n_subset], all_data$lon[1:n_subset])
     bench <- run_benchmark(func, n_runs, n_warmup)
 
+    utm_result <- reproject_to_utm_batch(all_data$lat[1:n_subset], all_data$lon[1:n_subset])
+    utm_hash <- generate_hash(c(mean(utm_result$x), mean(utm_result$y)))
+    all_hashes <- c(all_hashes, utm_hash)
+
     key <- paste0("utm_", n)
-    utm_results[[key]] <- list(
+    results[[key]] <- list(
       n_points = n,
       min_time_s = min(bench$times),
       mean_time_s = mean(bench$times),
       std_time_s = sd(bench$times),
-      points_per_second = round(n / min(bench$times))
+      median_time_s = median(bench$times),
+      max_time_s = max(bench$times),
+      times = as.list(bench$times),
+      points_per_second = round(n / min(bench$times)),
+      validation_hash = utm_hash
     )
-    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs\n", n, min(bench$times), mean(bench$times)))
+    cat(sprintf("  %d points: min=%.4fs, mean=%.4fs, hash=%s\n",
+                n, min(bench$times), mean(bench$times), utm_hash))
   }
 
-  results <- list(
+  output_data <- list(
     language = "r",
     scenario = "coordinate_reprojection",
+    data_source = all_data$source,
+    data_description = if (all_data$source == "real") "GPS points 1M (subsampled)" else "synthetic points (seed 42)",
     library = ifelse(PROJ_AVAILABLE, "sf/PROJ", "manual"),
-    results = c(merc_results, utm_results)
+    results = results,
+    all_hashes = all_hashes,
+    combined_hash = generate_hash(all_hashes)
   )
 
   dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
   dir.create(RESULTS_DIR, showWarnings = FALSE, recursive = TRUE)
 
-  json_output <- toJSON(results, auto_unbox = FALSE, pretty = TRUE)
-  writeLines(json_output, file.path(RESULTS_DIR, "reprojection_r.json"))
+  json_output <- toJSON(output_data, auto_unbox = TRUE, pretty = TRUE)
   writeLines(json_output, file.path(OUTPUT_DIR, "reprojection_r_results.json"))
+  writeLines(json_output, file.path(RESULTS_DIR, "reprojection_r.json"))
 
-  cat("\nResults saved to results/reprojection_r.json\n")
+  cat("\n✓ Results saved\n")
+  cat(sprintf("✓ Combined validation hash: %s\n", output_data$combined_hash))
+  cat(strrep("=", 70), "\n")
 }
 
 main()

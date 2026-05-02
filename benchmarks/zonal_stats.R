@@ -1,4 +1,3 @@
-
 #!/usr/bin/env Rscript
 # =============================================================================
 # SCENARIO F: Zonal Statistics - R Implementation
@@ -7,6 +6,19 @@
 # Uses IDENTICAL rectangular polygon zones as Python and Julia for valid comparison.
 # =============================================================================
 
+# Dynamic path resolution
+get_project_root <- function() {
+  args <- commandArgs(trailingOnly = FALSE)
+  file_arg <- args[grep("--file=", args)]
+  if (length(file_arg) > 0) {
+    script_path <- sub("--file=", "", file_arg)
+    return(normalizePath(file.path(dirname(script_path), "..")))
+  } else {
+    return(getwd())
+  }
+}
+PROJECT_ROOT <- get_project_root()
+
 suppressPackageStartupMessages({
   library(terra)
   library(sf)
@@ -14,22 +26,10 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
-# Get script directory
-get_script_dir <- function() {
-  cmdArgs <- commandArgs(trailingOnly = FALSE)
-  fileArg <- cmdArgs[grep("^--file=", cmdArgs)]
-  if (length(fileArg) == 0) {
-    return(".")
-  }
-  filePath <- sub("^--file=", "", fileArg)
-  return(dirname(filePath))
-}
+source(file.path(PROJECT_ROOT, "benchmarks", "common_hash.R"))
 
-script_dir <- get_script_dir()
 OUTPUT_DIR <- "validation"
 RESULTS_DIR <- "results"
-
-source(file.path(script_dir, "common_hash.R"))
 
 run_benchmark <- function(func, runs = 10, warmup = 2) {
   for (i in 1:warmup) {
@@ -61,7 +61,6 @@ create_rectangular_zones <- function(n_zones = 10) {
       min_lat <- -90.0 + i * lat_step
       max_lat <- min_lat + lat_step
 
-      # Create polygon using sf
       coords <- matrix(c(
         min_lon, min_lat,
         max_lon, min_lat,
@@ -156,11 +155,57 @@ run_zonal_stats_benchmark <- function() {
   cols <- 600
   n_zones <- 10
 
-  set.seed(42)
-  raster_vals <- runif(rows * cols) * 3000
-  raster_matrix <- matrix(raster_vals, nrow = rows, ncol = cols)
+  args <- commandArgs(trailingOnly = TRUE)
+  data_mode <- "auto"
+  if ("--data" %in% args) {
+    idx <- which(args == "--data")
+    if (length(idx) > 0 && idx < length(args)) {
+      data_mode <- args[idx + 1]
+    }
+  }
 
-  cat(sprintf("\n[1/4] Created synthetic raster: %d x %d cells\n", rows, cols))
+  raster_matrix <- NULL
+  data_source <- "synthetic"
+
+  if (data_mode != "synthetic") {
+    nlcd_paths <- c(
+      file.path(PROJECT_ROOT, "data", "nlcd", "nlcd_landcover_large.bin"),
+      file.path(PROJECT_ROOT, "data", "nlcd", "nlcd_landcover.bin")
+    )
+    for (path in nlcd_paths) {
+      if (file.exists(path)) {
+        hdr_path <- sub("\\.bin$", ".hdr", path)
+        if (file.exists(hdr_path)) {
+          hdr_lines <- readLines(hdr_path)
+          r_line <- grep("^samples", hdr_lines, value = TRUE)
+          l_line <- grep("^lines", hdr_lines, value = TRUE)
+          if (length(r_line) > 0 && length(l_line) > 0) {
+            cols <- as.integer(sub(".*= *", "", r_line))
+            rows <- as.integer(sub(".*= *", "", l_line))
+            con <- file(path, "rb")
+            raw <- readBin(con, "double", n = rows * cols, size = 1, signed = FALSE)
+            close(con)
+            raster_matrix <- matrix(raw, nrow = rows, ncol = cols)
+            storage.mode(raster_matrix) <- "double"
+            data_source <- "real"
+            cat(sprintf("\n[1/4] Loaded real NLCD land cover: %s (%dx%d)\n", path, rows, cols))
+            break
+          }
+        }
+      }
+    }
+    if (is.null(raster_matrix) && data_mode == "real") {
+      cat("  x Real NLCD data not found\n")
+      quit(status = 1)
+    }
+  }
+
+  if (is.null(raster_matrix)) {
+    set.seed(42)
+    raster_vals <- runif(rows * cols) * 3000
+    raster_matrix <- matrix(raster_vals, nrow = rows, ncol = cols)
+    cat(sprintf("\n[1/4] Created synthetic raster: %d x %d cells\n", rows, cols))
+  }
 
   cat("\n[2/4] Creating rectangular polygon zones (consistent with Python/Julia)...\n")
   zones_sfc <- create_rectangular_zones(n_zones)
@@ -176,6 +221,7 @@ run_zonal_stats_benchmark <- function() {
     runs = runs, warmup = warmup
   )
   mask <- mask_result$result
+  mask_hash <- generate_hash(mask)
   cat(sprintf("  ✓ Mask creation: min=%.4fs, mean=%.4fs\n",
               min(mask_result$times), mean(mask_result$times)))
 
@@ -185,24 +231,40 @@ run_zonal_stats_benchmark <- function() {
   )
   stats <- stats_result$result
 
+  zonal_hash <- generate_hash(stats$means)
   cat(sprintf("  ✓ Zonal stats: min=%.4fs, mean=%.4fs\n",
               min(stats_result$times), mean(stats_result$times)))
-
-  zonal_hash <- generate_hash(stats$means)
   cat(sprintf("  ✓ Validation hash: %s\n", zonal_hash))
 
   output_data <- list(
     language = "r",
-    scenario = "zonal_stats",
+    scenario = "zonal_statistics",
     zone_type = "rectangular_polygons",
     n_zones = n_zones * n_zones,
-    min_time_s = min(stats_result$times),
-    mean_time_s = mean(stats_result$times),
-    std_time_s = sd(stats_result$times),
-    polygons = length(zones_sfc),
-    hash = zonal_hash,
-    warmup = warmup,
-    runs = runs
+    results = list(
+      mask_creation = list(
+        min_time_s = min(mask_result$times),
+        mean_time_s = mean(mask_result$times),
+        std_time_s = sd(mask_result$times),
+        median_time_s = median(mask_result$times),
+        max_time_s = max(mask_result$times),
+        times = as.list(mask_result$times),
+        n_zones = n_zones * n_zones,
+        validation_hash = mask_hash
+      ),
+      zonal_stats = list(
+        min_time_s = min(stats_result$times),
+        mean_time_s = mean(stats_result$times),
+        std_time_s = sd(stats_result$times),
+        median_time_s = median(stats_result$times),
+        max_time_s = max(stats_result$times),
+        times = as.list(stats_result$times),
+        n_zones = length(stats$means),
+        validation_hash = zonal_hash
+      )
+    ),
+    all_hashes = c(mask_hash, zonal_hash),
+    combined_hash = generate_hash(c(mask_hash, zonal_hash))
   )
 
   dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
@@ -214,7 +276,7 @@ run_zonal_stats_benchmark <- function() {
              pretty = TRUE, auto_unbox = TRUE)
 
   cat("✓ Results saved\n")
-  cat(sprintf("✓ Hash: %s\n", zonal_hash))
+  cat(sprintf("✓ Combined validation hash: %s\n", output_data$combined_hash))
 
   cat("\n", strrep("=", 70), "\n")
   cat("Note: Minimum times are primary metrics (Chen & Revels 2016)\n")

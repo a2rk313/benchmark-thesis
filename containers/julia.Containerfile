@@ -1,8 +1,8 @@
 # =============================================================================
 # THESIS JULIA ENVIRONMENT - Reproducible Micro-Container
-# Version: 4.0.0 (full package setup for all benchmarks)
+# Version: 5.0.0 (full package setup for all benchmarks)
 # Base: Fedora 43
-# Julia: 1.11.4 (latest stable LTS)
+# Julia: 1.12.6 (latest stable)
 # =============================================================================
 #
 # This container includes ALL packages needed for benchmarks:
@@ -11,13 +11,13 @@
 #   - GeoDataFrames, LibGEOS: for vector_pip.jl
 #   - Rasters: for raster operations
 #
-# BUILD:  podman build -t thesis-julia:1.11 -f containers/julia.Containerfile .
+# BUILD:  podman build -t thesis-julia:1.12 -f containers/julia.Containerfile .
 # =============================================================================
 
 FROM docker.io/library/fedora:43
 
 LABEL org.opencontainers.image.title="Thesis Julia Geospatial Lab" \
-      org.opencontainers.image.version="1.11.4-simplified"
+      org.opencontainers.image.version="1.12.6-full"
 
 # =============================================================================
 # System Dependencies
@@ -39,8 +39,8 @@ RUN rpm -q gdal proj geos sqlite | tee /build-versions.txt
 # =============================================================================
 # Julia Installation
 # =============================================================================
-ENV JULIA_MAJOR=1.11 \
-    JULIA_VERSION=1.11.4 \
+ENV JULIA_MAJOR=1.12 \
+    JULIA_VERSION=1.12.6 \
     JULIA_PATH=/usr/local/julia
 
 ENV PATH="${JULIA_PATH}/bin:${PATH}"
