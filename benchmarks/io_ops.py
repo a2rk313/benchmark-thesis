@@ -137,6 +137,10 @@ def main():
 
     output = {'language': 'Python', 'n_csv_rows': n_csv_rows, 'n_binary_values': n_binary_values, 'n_runs': n_runs, 'data_source': data_source, 'data_description': data_description, 'results': results}
     Path('results').mkdir(exist_ok=True)
+    # Ensure output directory exists
+    import os
+    os.makedirs('results', exist_ok=True)
+    
     with open('results/io_ops_python.json', 'w') as f: json.dump(output, f, indent=2)
     print("✓ Results saved to: results/io_ops_python.json")
     for path in ['data/io_test_python.csv', 'data/io_test_python.bin']:
