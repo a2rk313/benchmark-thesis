@@ -28,6 +28,8 @@ import json
 import time
 import gc
 import warnings
+import geopandas as gpd
+import pandas as pd
 from pathlib import Path
 
 import numpy as np
@@ -505,7 +507,7 @@ class HyperspectralSAMScaling(ScalingBenchmark):
         ref /= np.linalg.norm(ref)
         return data, ref
 
-def run_at_scale(self, setup_result):
+    def run_at_scale(self, setup_result):
         import time
         data, ref = setup_result
         n_bands, n_rows, n_cols = data.shape
@@ -545,10 +547,6 @@ class VectorPipScaling(ScalingBenchmark):
         self.polys = None
 
     def setup_at_scale(self, scale_name, n_points):
-        import geopandas as gpd
-        import pandas as pd
-        from pathlib import Path
-
         if self.polys is None:
             data_dir = Path(__file__).parent / "data"
             self.polys = gpd.read_file(str(data_dir / "natural_earth_countries.gpkg"))
