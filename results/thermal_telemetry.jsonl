@@ -1,0 +1,1343 @@
+{"bench":"native_Python_matrix_ops","lang":"Python","scenario":"matrix_ops","wall_ms":100,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812140134513516,
+  "timestamp_human": "2026-05-03T17:42:20.136+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":60}],"max_c":60,"avg_c":60},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812240314132216,
+  "timestamp_human": "2026-05-03T17:44:00.316+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_matrix_ops","lang":"Julia","scenario":"matrix_ops","wall_ms":95,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812250797722490,
+  "timestamp_human": "2026-05-03T17:44:10.800+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812345132392206,
+  "timestamp_human": "2026-05-03T17:45:45.134+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_matrix_ops","lang":"R","scenario":"matrix_ops","wall_ms":232,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812355601710100,
+  "timestamp_human": "2026-05-03T17:45:55.604+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812587212006731,
+  "timestamp_human": "2026-05-03T17:49:47.214+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":67}],"max_c":67,"avg_c":67},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_raster_algebra","lang":"Python","scenario":"raster_algebra","wall_ms":8,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812597679526835,
+  "timestamp_human": "2026-05-03T17:49:57.681+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812605040356319,
+  "timestamp_human": "2026-05-03T17:50:05.042+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_raster_algebra","lang":"Julia","scenario":"raster_algebra","wall_ms":38,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812615526998478,
+  "timestamp_human": "2026-05-03T17:50:15.529+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812653514555268,
+  "timestamp_human": "2026-05-03T17:50:53.518+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_raster_algebra","lang":"R","scenario":"raster_algebra","wall_ms":38,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812664038799478,
+  "timestamp_human": "2026-05-03T17:51:04.041+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777812702156185756,
+  "timestamp_human": "2026-05-03T17:51:42.160+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_io_ops","lang":"Python","scenario":"io_ops","wall_ms":330,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777812712659783243,
+  "timestamp_human": "2026-05-03T17:51:52.662+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":58}],"max_c":58,"avg_c":58},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813042708968919,
+  "timestamp_human": "2026-05-03T17:57:22.711+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1698,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_io_ops","lang":"Julia","scenario":"io_ops","wall_ms":129,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813053196805884,
+  "timestamp_human": "2026-05-03T17:57:33.199+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813182056040214,
+  "timestamp_human": "2026-05-03T17:59:42.059+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":66}],"max_c":66,"avg_c":66},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_io_ops","lang":"R","scenario":"io_ops","wall_ms":24,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813252794716586,
+  "timestamp_human": "2026-05-03T18:00:52.797+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":60}],"max_c":60,"avg_c":60},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813276411700638,
+  "timestamp_human": "2026-05-03T18:01:16.413+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_reprojection","lang":"Python","scenario":"reprojection","wall_ms":115,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813286881159743,
+  "timestamp_human": "2026-05-03T18:01:26.883+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813402937956483,
+  "timestamp_human": "2026-05-03T18:03:22.940+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_matrix_ops","lang":"Python","scenario":"matrix_ops","wall_ms":91,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813469632535561,
+  "timestamp_human": "2026-05-03T18:04:29.635+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813560892485591,
+  "timestamp_human": "2026-05-03T18:06:00.895+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":67}],"max_c":67,"avg_c":67},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_matrix_ops","lang":"Julia","scenario":"matrix_ops","wall_ms":95,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813571367571408,
+  "timestamp_human": "2026-05-03T18:06:11.370+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813666352802585,
+  "timestamp_human": "2026-05-03T18:07:46.355+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":67}],"max_c":67,"avg_c":67},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_matrix_ops","lang":"R","scenario":"matrix_ops","wall_ms":222,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813676867993223,
+  "timestamp_human": "2026-05-03T18:07:56.870+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813899364971036,
+  "timestamp_human": "2026-05-03T18:11:39.371+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":68}],"max_c":68,"avg_c":68},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_raster_algebra","lang":"Python","scenario":"raster_algebra","wall_ms":7,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813909873957737,
+  "timestamp_human": "2026-05-03T18:11:49.876+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813917042762246,
+  "timestamp_human": "2026-05-03T18:11:57.045+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_raster_algebra","lang":"Julia","scenario":"raster_algebra","wall_ms":39,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813927526990783,
+  "timestamp_human": "2026-05-03T18:12:07.529+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777813966201652516,
+  "timestamp_human": "2026-05-03T18:12:46.204+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_raster_algebra","lang":"R","scenario":"raster_algebra","wall_ms":47,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777813976677157161,
+  "timestamp_human": "2026-05-03T18:12:56.679+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777814023033034397,
+  "timestamp_human": "2026-05-03T18:13:43.035+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_io_ops","lang":"Python","scenario":"io_ops","wall_ms":339,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777814063633670020,
+  "timestamp_human": "2026-05-03T18:14:23.636+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777814402968411696,
+  "timestamp_human": "2026-05-03T18:20:02.970+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_io_ops","lang":"Julia","scenario":"io_ops","wall_ms":100,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777814413442467869,
+  "timestamp_human": "2026-05-03T18:20:13.444+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":58}],"max_c":58,"avg_c":58},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1697,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777814513506893435,
+  "timestamp_human": "2026-05-03T18:21:53.509+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_io_ops","lang":"R","scenario":"io_ops","wall_ms":23,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777814523968417758,
+  "timestamp_human": "2026-05-03T18:22:03.970+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777814547103591072,
+  "timestamp_human": "2026-05-03T18:22:27.105+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":60}],"max_c":60,"avg_c":60},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_reprojection","lang":"Python","scenario":"reprojection","wall_ms":97,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777814557552893678,
+  "timestamp_human": "2026-05-03T18:22:37.555+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1697,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1698,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1697,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777814654940973638,
+  "timestamp_human": "2026-05-03T18:24:14.943+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":60}],"max_c":60,"avg_c":60},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_matrix_ops","lang":"Python","scenario":"matrix_ops","wall_ms":144,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777827198752165878,
+  "timestamp_human": "2026-05-03T21:53:18.754+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777827342699497229,
+  "timestamp_human": "2026-05-03T21:55:42.701+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":71}],"max_c":71,"avg_c":71},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_matrix_ops","lang":"Julia","scenario":"matrix_ops","wall_ms":113,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777827473728300251,
+  "timestamp_human": "2026-05-03T21:57:53.731+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777827586561375955,
+  "timestamp_human": "2026-05-03T21:59:46.563+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":69}],"max_c":69,"avg_c":69},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1702,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_matrix_ops","lang":"R","scenario":"matrix_ops","wall_ms":216,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777827747704430253,
+  "timestamp_human": "2026-05-03T22:02:27.706+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":65}],"max_c":65,"avg_c":65},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777827963036115569,
+  "timestamp_human": "2026-05-03T22:06:03.038+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_raster_algebra","lang":"Python","scenario":"raster_algebra","wall_ms":8,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777827973521397944,
+  "timestamp_human": "2026-05-03T22:06:13.523+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777827981004198675,
+  "timestamp_human": "2026-05-03T22:06:21.006+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_raster_algebra","lang":"Julia","scenario":"raster_algebra","wall_ms":37,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777827991492434851,
+  "timestamp_human": "2026-05-03T22:06:31.495+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828028692964151,
+  "timestamp_human": "2026-05-03T22:07:08.695+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_raster_algebra","lang":"R","scenario":"raster_algebra","wall_ms":38,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828039163485854,
+  "timestamp_human": "2026-05-03T22:07:19.165+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":60}],"max_c":60,"avg_c":60},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828077687890124,
+  "timestamp_human": "2026-05-03T22:07:57.690+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_io_ops","lang":"Python","scenario":"io_ops","wall_ms":356,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828088168883884,
+  "timestamp_human": "2026-05-03T22:08:08.172+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":63}],"max_c":63,"avg_c":63},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828444718487592,
+  "timestamp_human": "2026-05-03T22:14:04.720+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_io_ops","lang":"Julia","scenario":"io_ops","wall_ms":92,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828455188094644,
+  "timestamp_human": "2026-05-03T22:14:15.190+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":58}],"max_c":58,"avg_c":58},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828547162577261,
+  "timestamp_human": "2026-05-03T22:15:47.164+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":62}],"max_c":62,"avg_c":62},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_io_ops","lang":"R","scenario":"io_ops","wall_ms":22,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828557643977389,
+  "timestamp_human": "2026-05-03T22:15:57.646+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828579137347641,
+  "timestamp_human": "2026-05-03T22:16:19.139+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_reprojection","lang":"Python","scenario":"reprojection","wall_ms":100,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828589592432546,
+  "timestamp_human": "2026-05-03T22:16:29.594+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828689929492459,
+  "timestamp_human": "2026-05-03T22:18:09.936+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_reprojection","lang":"Julia","scenario":"reprojection","wall_ms":28,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828700423400956,
+  "timestamp_human": "2026-05-03T22:18:20.425+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828728033087766,
+  "timestamp_human": "2026-05-03T22:18:48.035+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_reprojection","lang":"R","scenario":"reprojection","wall_ms":174,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828738508055788,
+  "timestamp_human": "2026-05-03T22:18:58.510+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777828912304410267,
+  "timestamp_human": "2026-05-03T22:21:52.306+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_zonal_stats","lang":"Python","scenario":"zonal_stats","wall_ms":245,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777828922816906572,
+  "timestamp_human": "2026-05-03T22:22:02.819+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777829167390829701,
+  "timestamp_human": "2026-05-03T22:26:07.393+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_zonal_stats","lang":"Julia","scenario":"zonal_stats","wall_ms":10,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777829177873434958,
+  "timestamp_human": "2026-05-03T22:26:17.876+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777829188279883584,
+  "timestamp_human": "2026-05-03T22:26:28.282+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_zonal_stats","lang":"Julia","scenario":"zonal_stats","wall_ms":10,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777832996168226566,
+  "timestamp_human": "2026-05-03T23:29:56.170+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":51}],"max_c":51,"avg_c":51},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833006825919730,
+  "timestamp_human": "2026-05-03T23:30:06.828+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_zonal_stats","lang":"R","scenario":"zonal_stats","wall_ms":14,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833150686349145,
+  "timestamp_human": "2026-05-03T23:32:30.688+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":52}],"max_c":52,"avg_c":52},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833164030344536,
+  "timestamp_human": "2026-05-03T23:32:44.032+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":53}],"max_c":53,"avg_c":53},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_interpolation","lang":"Python","scenario":"interpolation","wall_ms":28,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833174481075897,
+  "timestamp_human": "2026-05-03T23:32:54.483+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":52}],"max_c":52,"avg_c":52},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833202022374759,
+  "timestamp_human": "2026-05-03T23:33:22.024+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_interpolation","lang":"Julia","scenario":"interpolation","wall_ms":56,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833810952990153,
+  "timestamp_human": "2026-05-03T23:43:30.955+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1698,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833867824613123,
+  "timestamp_human": "2026-05-03T23:44:27.827+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_interpolation","lang":"R","scenario":"interpolation","wall_ms":33,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833878282779396,
+  "timestamp_human": "2026-05-03T23:44:38.284+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833911997855501,
+  "timestamp_human": "2026-05-03T23:45:12.000+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_timeseries","lang":"Python","scenario":"timeseries","wall_ms":3,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833922547756083,
+  "timestamp_human": "2026-05-03T23:45:22.549+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833925083536828,
+  "timestamp_human": "2026-05-03T23:45:25.085+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1700,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_timeseries","lang":"Julia","scenario":"timeseries","wall_ms":14,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833935542924125,
+  "timestamp_human": "2026-05-03T23:45:35.545+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":52}],"max_c":52,"avg_c":52},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833949885080249,
+  "timestamp_human": "2026-05-03T23:45:49.888+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1536,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_timeseries","lang":"R","scenario":"timeseries","wall_ms":5,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833960351198128,
+  "timestamp_human": "2026-05-03T23:46:00.353+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833965397455091,
+  "timestamp_human": "2026-05-03T23:46:05.399+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1700,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_hsi_stream","lang":"Python","scenario":"hsi_stream","wall_ms":14,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833975855366475,
+  "timestamp_human": "2026-05-03T23:46:15.857+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777833989015742271,
+  "timestamp_human": "2026-05-03T23:46:29.017+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_hsi_stream","lang":"Julia","scenario":"hsi_stream","wall_ms":49,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777833999479789925,
+  "timestamp_human": "2026-05-03T23:46:39.482+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777834048724384833,
+  "timestamp_human": "2026-05-03T23:47:28.726+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":58}],"max_c":58,"avg_c":58},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1702,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1702,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_hsi_stream","lang":"R","scenario":"hsi_stream","wall_ms":72,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777834059197218978,
+  "timestamp_human": "2026-05-03T23:47:39.199+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1698,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777834131871903200,
+  "timestamp_human": "2026-05-03T23:48:51.874+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_vector_pip","lang":"Python","scenario":"vector_pip","wall_ms":898,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777834142371751606,
+  "timestamp_human": "2026-05-03T23:49:02.377+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":59}],"max_c":59,"avg_c":59},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1700,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777835040289380238,
+  "timestamp_human": "2026-05-04T00:04:00.291+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":64}],"max_c":64,"avg_c":64},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1699,"min_mhz":1699,"max_mhz":1701,"spread_pct":0,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_vector_pip","lang":"Python","scenario":"vector_pip","wall_ms":15,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777873453578966483,
+  "timestamp_human": "2026-05-04T10:44:13.581+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777873468517348230,
+  "timestamp_human": "2026-05-04T10:44:28.519+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_vector_pip","lang":"Julia","scenario":"vector_pip","wall_ms":131,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777873479082137366,
+  "timestamp_human": "2026-05-04T10:44:39.084+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777873610533540627,
+  "timestamp_human": "2026-05-04T10:46:50.535+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":61}],"max_c":61,"avg_c":61},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_vector_pip","lang":"R","scenario":"vector_pip","wall_ms":491,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777873621092710746,
+  "timestamp_human": "2026-05-04T10:47:01.094+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":56}],"max_c":56,"avg_c":56},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777874112668376922,
+  "timestamp_human": "2026-05-04T10:55:12.670+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":50}],"max_c":50,"avg_c":50},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1703,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1703,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"jit_analysis","lang":"Julia","scenario":"jit_cold_start","wall_ms":7,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777874123037756343,
+  "timestamp_human": "2026-05-04T10:55:23.040+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1697,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1702,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1702,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777874130779313285,
+  "timestamp_human": "2026-05-04T10:55:30.781+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_matrix_ops","lang":"Python","scenario":"matrix_ops","wall_ms":53,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777874959851020462,
+  "timestamp_human": "2026-05-04T11:09:19.853+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":44}],"max_c":44,"avg_c":44},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1702,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1702,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875012104448069,
+  "timestamp_human": "2026-05-04T11:10:12.106+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_matrix_ops","lang":"Julia","scenario":"matrix_ops","wall_ms":53,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875022659168304,
+  "timestamp_human": "2026-05-04T11:10:22.661+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875075504248460,
+  "timestamp_human": "2026-05-04T11:11:15.506+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":55}],"max_c":55,"avg_c":55},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_matrix_ops","lang":"R","scenario":"matrix_ops","wall_ms":177,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875086039982274,
+  "timestamp_human": "2026-05-04T11:11:26.042+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":51}],"max_c":51,"avg_c":51},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875263139439297,
+  "timestamp_human": "2026-05-04T11:14:23.141+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":54}],"max_c":54,"avg_c":54},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_raster_algebra","lang":"Python","scenario":"raster_algebra","wall_ms":7,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875273676170301,
+  "timestamp_human": "2026-05-04T11:14:33.678+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":51}],"max_c":51,"avg_c":51},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875280778046609,
+  "timestamp_human": "2026-05-04T11:14:40.780+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_raster_algebra","lang":"Julia","scenario":"raster_algebra","wall_ms":33,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875291316086112,
+  "timestamp_human": "2026-05-04T11:14:51.318+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875324362629613,
+  "timestamp_human": "2026-05-04T11:15:24.364+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_raster_algebra","lang":"R","scenario":"raster_algebra","wall_ms":35,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875334899058803,
+  "timestamp_human": "2026-05-04T11:15:34.901+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875370854715567,
+  "timestamp_human": "2026-05-04T11:16:10.856+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_io_ops","lang":"Python","scenario":"io_ops","wall_ms":299,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875381391548677,
+  "timestamp_human": "2026-05-04T11:16:21.393+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875680513571362,
+  "timestamp_human": "2026-05-04T11:21:20.515+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1374,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_io_ops","lang":"Julia","scenario":"io_ops","wall_ms":82,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875691051126337,
+  "timestamp_human": "2026-05-04T11:21:31.053+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1374,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875773178338350,
+  "timestamp_human": "2026-05-04T11:22:53.180+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":53}],"max_c":53,"avg_c":53},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_io_ops","lang":"R","scenario":"io_ops","wall_ms":20,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875783717414701,
+  "timestamp_human": "2026-05-04T11:23:03.719+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875803947957129,
+  "timestamp_human": "2026-05-04T11:23:23.950+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":51}],"max_c":51,"avg_c":51},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_reprojection","lang":"Python","scenario":"reprojection","wall_ms":94,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875814486495110,
+  "timestamp_human": "2026-05-04T11:23:34.488+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875908246588039,
+  "timestamp_human": "2026-05-04T11:25:08.248+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1374,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_reprojection","lang":"Julia","scenario":"reprojection","wall_ms":26,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875918784548775,
+  "timestamp_human": "2026-05-04T11:25:18.786+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777875944224189187,
+  "timestamp_human": "2026-05-04T11:25:44.226+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_reprojection","lang":"R","scenario":"reprojection","wall_ms":162,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777875954765300434,
+  "timestamp_human": "2026-05-04T11:25:54.767+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876116004267356,
+  "timestamp_human": "2026-05-04T11:28:36.006+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_zonal_stats","lang":"Python","scenario":"zonal_stats","wall_ms":214,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876126546490193,
+  "timestamp_human": "2026-05-04T11:28:46.548+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876340766586127,
+  "timestamp_human": "2026-05-04T11:32:20.768+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1701,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_zonal_stats","lang":"Julia","scenario":"zonal_stats","wall_ms":9,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876351309066293,
+  "timestamp_human": "2026-05-04T11:32:31.311+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876360560471668,
+  "timestamp_human": "2026-05-04T11:32:40.562+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_zonal_stats","lang":"R","scenario":"zonal_stats","wall_ms":11,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876371098688360,
+  "timestamp_human": "2026-05-04T11:32:51.100+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876382613627319,
+  "timestamp_human": "2026-05-04T11:33:02.615+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_interpolation","lang":"Python","scenario":"interpolation","wall_ms":26,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876393152576827,
+  "timestamp_human": "2026-05-04T11:33:13.154+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876419465044117,
+  "timestamp_human": "2026-05-04T11:33:39.467+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_interpolation","lang":"Julia","scenario":"interpolation","wall_ms":50,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876429890115667,
+  "timestamp_human": "2026-05-04T11:33:49.892+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876480851686344,
+  "timestamp_human": "2026-05-04T11:34:40.853+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1050,"min_mhz":400,"max_mhz":1700,"spread_pct":123,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_interpolation","lang":"R","scenario":"interpolation","wall_ms":31,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876491389326921,
+  "timestamp_human": "2026-05-04T11:34:51.391+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876522040106872,
+  "timestamp_human": "2026-05-04T11:35:22.042+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_timeseries","lang":"Python","scenario":"timeseries","wall_ms":2,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876532578340803,
+  "timestamp_human": "2026-05-04T11:35:32.580+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876534905534669,
+  "timestamp_human": "2026-05-04T11:35:34.907+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_timeseries","lang":"Julia","scenario":"timeseries","wall_ms":13,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876545446202603,
+  "timestamp_human": "2026-05-04T11:35:45.448+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":45}],"max_c":45,"avg_c":45},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876558268978498,
+  "timestamp_human": "2026-05-04T11:35:58.271+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1699,"hw_mhz":null}],"avg_mhz":1374,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_timeseries","lang":"R","scenario":"timeseries","wall_ms":5,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876568807728231,
+  "timestamp_human": "2026-05-04T11:36:08.809+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":45}],"max_c":45,"avg_c":45},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876573379107012,
+  "timestamp_human": "2026-05-04T11:36:13.381+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_hsi_stream","lang":"Python","scenario":"hsi_stream","wall_ms":11,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876583918565670,
+  "timestamp_human": "2026-05-04T11:36:23.920+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1537,"min_mhz":400,"max_mhz":1700,"spread_pct":84,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876595991528302,
+  "timestamp_human": "2026-05-04T11:36:35.993+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_hsi_stream","lang":"Julia","scenario":"hsi_stream","wall_ms":45,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876606531820789,
+  "timestamp_human": "2026-05-04T11:36:46.534+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1704,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1704,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876651024829116,
+  "timestamp_human": "2026-05-04T11:37:31.026+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":50}],"max_c":50,"avg_c":50},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_hsi_stream","lang":"R","scenario":"hsi_stream","wall_ms":67,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876661563147345,
+  "timestamp_human": "2026-05-04T11:37:41.565+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876728673921908,
+  "timestamp_human": "2026-05-04T11:38:48.676+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Python_vector_pip","lang":"Python","scenario":"vector_pip","wall_ms":15,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876739216191288,
+  "timestamp_human": "2026-05-04T11:38:59.218+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1374,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876754194631380,
+  "timestamp_human": "2026-05-04T11:39:14.196+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":49}],"max_c":49,"avg_c":49},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_Julia_vector_pip","lang":"Julia","scenario":"vector_pip","wall_ms":131,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876764733097464,
+  "timestamp_human": "2026-05-04T11:39:24.735+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1701,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777876895468822168,
+  "timestamp_human": "2026-05-04T11:41:35.470+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":57}],"max_c":57,"avg_c":57},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1701,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"native_R_vector_pip","lang":"R","scenario":"vector_pip","wall_ms":488,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777876906017222333,
+  "timestamp_human": "2026-05-04T11:41:46.019+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":53}],"max_c":53,"avg_c":53},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1700,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777877394955573814,
+  "timestamp_human": "2026-05-04T11:49:54.957+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1698,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"jit_analysis","lang":"Julia","scenario":"jit_cold_start","wall_ms":8,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777877405316761340,
+  "timestamp_human": "2026-05-04T11:50:05.319+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1212,"min_mhz":400,"max_mhz":1700,"spread_pct":107,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777877413089264388,
+  "timestamp_human": "2026-05-04T11:50:13.091+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":47}],"max_c":47,"avg_c":47},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1699,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1703,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1703,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}
+{"bench":"scaling_suite","lang":"all","scenario":"scaling","wall_ms":351,"throttle_events":0,"pre":{
+  "snapshot": "pre",
+  "timestamp_ns": 1777877423300187527,
+  "timestamp_human": "2026-05-04T11:50:23.302+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":46}],"max_c":46,"avg_c":46},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":1701,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":400,"hw_mhz":null}],"avg_mhz":1375,"min_mhz":400,"max_mhz":1701,"spread_pct":94,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+},"post":{
+  "snapshot": "post",
+  "timestamp_ns": 1777877774804547424,
+  "timestamp_human": "2026-05-04T11:56:14.806+0500",
+  "temperature": {"zones":[{"path":"/sys/class/thermal/thermal_zone7/temp","temp_c":48}],"max_c":48,"avg_c":48},
+  "frequency": {"cores":[{"cpu":"cpu0","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu1","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu2","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu3","gov_mhz":400,"hw_mhz":null},{"cpu":"cpu4","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu5","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu6","gov_mhz":1700,"hw_mhz":null},{"cpu":"cpu7","gov_mhz":1700,"hw_mhz":null}],"avg_mhz":1050,"min_mhz":400,"max_mhz":1700,"spread_pct":123,"has_hw_freq":false},
+  "cpu_governor": "performance",
+  "turbo_boost": "disabled"
+}}

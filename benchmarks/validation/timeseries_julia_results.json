@@ -1,1 +1,0 @@
-{"throughput_pixels_per_sec":1.2554676532478455e7,"avg_growing_season":4.554652,"language":"julia","n_dates":12,"scenario":"timeseries_ndvi","validation_hash":"a340cce5ace76d1e","total_pixels_processed":3000000,"execution_time_s":0.23895478248596191,"mean_trend":-0.021129312,"mean_amplitude":0.49055818,"image_size":"500x500","mean_ndvi":0.25028092}

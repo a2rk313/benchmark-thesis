@@ -24,7 +24,8 @@ include(joinpath(@__DIR__, "common_hash.jl"))
 const RUNS = 5
 const WARMUP = 2
 
-function idw_interpolation(points::Matrix{Float64}, values::Vector{Float64},
+# Changed signature: values can be any AbstractVector{Float64}
+function idw_interpolation(points::Matrix{Float64}, values::AbstractVector{Float64},
                            grid_x::Matrix{Float64}, grid_y::Matrix{Float64};
                            power::Float64=2.0, neighbors::Int=12)
     tree = KDTree(points')
@@ -59,8 +60,12 @@ function load_idw_data(data_mode)
         try
             df = CSV.read(csv_path, DataFrame)
             println("  ✓ Loaded $(nrow(df)) points from shared CSV")
-            return df.x, df.y, df.value, "real"
-        catch e
+            # Convert columns to plain Vector{Float64} for safety
+            x = Vector{Float64}(df.x)
+            y = Vector{Float64}(df.y)
+            v = Vector{Float64}(df.value)
+            return x, y, v, "real"
+            catch e
             if data_mode == "real"
                 println("  x Real data load failed: $e")
                 exit(1)
@@ -90,22 +95,22 @@ function main()
     points = hcat(x, y)
     println("  ✓ Loaded $n_points scattered points ($data_source)")
     println("  ✓ Value range: [$(minimum(values)), $(maximum(values))]")
-    
+
     println("\n[2/3] Creating interpolation grid...")
     grid_resolution = 1000
     grid_x = repeat(range(0, 1000, length=grid_resolution)', grid_resolution, 1)
     grid_y = repeat(range(0, 1000, length=grid_resolution), 1, grid_resolution)
     println("  ✓ Grid size: $grid_resolution × $grid_resolution")
     println("  ✓ Total interpolation points: $(grid_resolution^2)")
-    
+
     println("\n[3/3] Performing IDW interpolation ($RUNS runs, $WARMUP warmup)...")
-    
+
     task = () -> idw_interpolation(points, values, grid_x, grid_y, power=2.0, neighbors=12)
-    
+
     for _ in 1:WARMUP
         task()
     end
-    
+
     GC.gc()
     times = Float64[]
     interpolated = nothing
@@ -115,22 +120,22 @@ function main()
         t_end = time_ns()
         push!(times, (t_end - t_start) / 1e9)
     end
-    
+
     points_per_second = (grid_resolution^2) / minimum(times)
-    
+
     println("  ✓ Min: $(minimum(times))s (primary)")
     println("  ✓ Mean: $(mean(times))s ± $(std(times))s")
     println("  ✓ Processing rate: $(round(Int, points_per_second)) grid points/second")
-    
+
     println("\nComputing domain statistics...")
     mean_value = mean(interpolated)
     std_value = std(interpolated)
     median_value = median(interpolated)
     println("  ✓ Mean: $(round(mean_value, digits=2)), Std: $(round(std_value, digits=2)), Median: $(round(median_value, digits=2))")
-    
+
     result_hash = generate_hash(interpolated)
     println("  ✓ Validation hash: $result_hash")
-    
+
     results = Dict(
         "language" => "julia",
         "scenario" => "interpolation_idw",
@@ -149,25 +154,25 @@ function main()
         "std_value" => std_value,
         "median_value" => median_value,
         "validation_hash" => result_hash
-    )
-    
+        )
+
     OUTPUT_DIR = joinpath(@__DIR__, "..", "results")
     VALIDATION_DIR = joinpath(@__DIR__, "..", "validation")
     mkpath(OUTPUT_DIR)
     mkpath(VALIDATION_DIR)
-    
+
     open(joinpath(OUTPUT_DIR, "interpolation_idw_julia.json"), "w") do f
         JSON3.pretty(f, results)
     end
     open(joinpath(VALIDATION_DIR, "interpolation_julia_results.json"), "w") do f
         JSON3.pretty(f, results)
     end
-    
+
     println("\n✓ Results saved")
     println("=" ^ 70)
     println("Note: Minimum times are primary metrics (Chen & Revels 2016)")
     println("=" ^ 70)
-    
+
     return 0
 end
 

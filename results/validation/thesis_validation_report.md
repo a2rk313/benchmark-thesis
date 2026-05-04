@@ -3,69 +3,44 @@ CROSS-LANGUAGE VALIDATION REPORT
 ================================================================================
 
 Total Scenarios Tested: 9
-Successfully Validated: 4
+Successfully Validated: 0
 Mismatched Scenarios: 4
-Insufficient Data: 1
+Insufficient Data: 0
 
 DETAILED RESULTS:
 ----------------------------------------
-
-Scenario: raster_algebra
-  Status: VALID
-  Languages Present: julia, python, r
-  ✓ Hashes match across all languages
-
-Scenario: zonal_statistics
-  Status: VALID
-  Languages Present: python, r
-  ✓ Hashes match across all languages
 
 Scenario: interpolation_idw
   Status: MISMATCH
   Languages Present: julia, r, python
   MISMATCH DETAILS:
-    julia: d9cb3f93244e3b9a
-    r: 0e0c6690c867d530
-    python: 9e2916bf08f9d7dd
+    julia: 0280fc90fe7a4ae7
+    r: d69d816ee9514c0b
+    python: a09f293f370acf86
 
 Scenario: timeseries_ndvi
   Status: MISMATCH
   Languages Present: r, python, julia
   MISMATCH DETAILS:
-    r: db8b7c787a34be07
-    python: 839a2f1f8f1f932f
-    julia: a340cce5ace76d1e
-
-Scenario: coordinate_reprojection
-  Status: VALID
-  Languages Present: julia, r, python
-  ✓ Hashes match across all languages
+    r: 3b34524ec5bc880d
+    python: 7d085423ab411cc7
+    julia: 56341e7c407901e7
 
 Scenario: hyperspectral_sam
   Status: MISMATCH
   Languages Present: r, julia, python
   MISMATCH DETAILS:
-    r: 3680c87c1450913b
-    julia: 7588c1df0a64df6d
-    python: 8bfacd6cf706f65b
+    r: 67b162161bb19c12
+    julia: c554533319eb7b78
+    python: 98b83c8f005f88d8
 
 Scenario: vector_pip
   Status: MISMATCH
   Languages Present: python, julia, r
   MISMATCH DETAILS:
-    python: d6c2fa9db2195cd6
-    julia: dd7d02795fd5aaf1
-    r: c5b82cf20a8fdfd6
-
-Scenario: zonal_stats
-  Status: VALID
-  Languages Present: r, julia
-  ✓ Hashes match across all languages
-
-Scenario: unknown
-  Status: INSUFFICIENT_DATA
-  Languages Present: unknown
-  WARNING: Insufficient language coverage for validation
+    python: 1a609d466dcf1fa6
+    julia: 9f997c79152495b3
+    r: 840b0f9641110e94
 
 METHODOLOGY NOTE:
 --------------------

@@ -1,3 +1,0 @@
-Python  ghcr.io/a2rk313/thesis-python:latest  sha256:57fa5e15fdb12d708f8a86a250d72d2eff9d462dc65bbd5e75e58fe5d1a28168
-Julia   ghcr.io/a2rk313/thesis-julia:latest   sha256:d8a3e782c84e529558ae30753f834849ac6a4c3225a9d5ef0d4ad569c024b386
-R       ghcr.io/a2rk313/thesis-r:latest       sha256:65608f3728d1c909ad473a82285bdfd4f6fb814acbd3e2aa5c760f6de7f245b5

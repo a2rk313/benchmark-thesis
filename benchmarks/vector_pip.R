@@ -3,13 +3,19 @@
 # SCENARIO B: Complex Vector Operations – R Implementation (terra only)
 ################################################################################
 # Task: Point-in-Polygon spatial join + Haversine distance calculation
-# Uses terra::intersect for spatial indexing (similar to Python/Julia spatial index)
 # Methodology: Chen & Revels (2016) - min time as primary estimator
+#
+# FAIRNESS NOTES (vs Julia/Python):
+#   1. terra::extract() builds its spatial index internally on every call —
+#      this is included in timing, consistent with Python (gpd.sjoin) and
+#      Julia (STRtree now built inside run_pip_and_distances).
+#   2. gc() called before timing loop to match Julia's GC.gc().
+#   3. terra uses all available cores (default). Julia uses Threads.@threads
+#      with --threads auto, and Python uses GEOS/GDAL multi-threading.
 ################################################################################
 
-# Dynamic path resolution
 get_project_root <- function() {
-  args <- commandArgs(trailingOnly = FALSE)
+  args     <- commandArgs(trailingOnly = FALSE)
   file_arg <- args[grep("--file=", args)]
   if (length(file_arg) > 0) {
     script_path <- sub("--file=", "", file_arg)
@@ -18,9 +24,9 @@ get_project_root <- function() {
     return(getwd())
   }
 }
-PROJECT_ROOT <- get_project_root()
-DATA_DIR <- file.path(PROJECT_ROOT, "data")
-OUTPUT_DIR <- file.path(PROJECT_ROOT, "results")
+PROJECT_ROOT   <- get_project_root()
+DATA_DIR       <- file.path(PROJECT_ROOT, "data")
+OUTPUT_DIR     <- file.path(PROJECT_ROOT, "results")
 VALIDATION_DIR <- file.path(PROJECT_ROOT, "validation")
 
 source(file.path(PROJECT_ROOT, "benchmarks", "common_hash.R"))
@@ -31,60 +37,66 @@ suppressPackageStartupMessages({
   library(digest)
 })
 
-RUNS <- 10
+# terra uses all available cores by default — consistent with Julia
+# (Threads.@threads) and Python (GEOS/GDAL multi-threaded).
+# No terraOptions override needed.
+
+RUNS   <- 10
 WARMUP <- 2
 
 haversine_vectorized <- function(lat1, lon1, lat2, lon2) {
-  R <- 6371000.0
-  lat1_rad <- lat1 * pi / 180
-  lat2_rad <- lat2 * pi / 180
+  R    <- 6371000.0
   dlat <- (lat2 - lat1) * pi / 180
   dlon <- (lon2 - lon1) * pi / 180
-  a <- sin(dlat / 2)^2 + cos(lat1_rad) * cos(lat2_rad) * sin(dlon / 2)^2
-  c <- 2 * atan2(sqrt(a), sqrt(1 - a))
-  R * c
+  a    <- sin(dlat / 2)^2 +
+    cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dlon / 2)^2
+  R * 2 * atan2(sqrt(a), sqrt(1 - a))
 }
 
-run_pip_and_distances <- function(points, polys) {
-  # Use terra::relate() to get containment matrix (fixes @data S4 slot issue)
-  relation <- relate(points, polys, relation = "within")
-  matched_rows <- which(rowSums(relation) > 0)
-  n_matched <- length(matched_rows)
-  
-  if (n_matched == 0) {
+# OPT: centroid_lats/lons are precomputed plain numeric vectors passed in.
+# terra::extract() builds its spatial index internally on every call — this is
+# intentional and consistent with Python (sjoin) and Julia (STRtree inside fn).
+run_pip_and_distances <- function(points, polys, centroid_lats, centroid_lons) {
+
+  polys_idx          <- polys
+  polys_idx$poly_idx <- seq_len(nrow(polys))
+
+  # terra::extract builds spatial index + runs PIP — both included in timing.
+  result <- terra::extract(polys_idx["poly_idx"], points)
+
+  matched_mask <- !is.na(result$poly_idx)
+  n_matched    <- sum(matched_mask)
+
+  if (n_matched == 0L) {
     return(list(
-      n_matched = 0,
-      total_distance = 0.0,
-      mean_distance = 0.0,
+      n_matched       = 0L,
+      total_distance  = 0.0,
+      mean_distance   = 0.0,
       median_distance = 0.0,
-      max_distance = 0.0,
-      distances = numeric(0)
+      max_distance    = 0.0,
+      distances       = numeric(0)
     ))
   }
-  
-  # Get matched point coordinates
-  matched_coords <- crds(points)[matched_rows, ]
-  
-  # Get poly indices for each matched point (first matching poly)
-  poly_indices <- apply(relation[matched_rows, , drop = FALSE], 1, function(row) which(row)[1])
-  
-  # Get centroids of matched polygons
-  matched_centroids <- crds(centroids(polys))[poly_indices, ]
-  
-  point_lats <- matched_coords[, "y"]
-  point_lons <- matched_coords[, "x"]
-  centroid_lats <- matched_centroids[, "y"]
-  centroid_lons <- matched_centroids[, "x"]
-  
-  distances <- haversine_vectorized(point_lats, point_lons, centroid_lats, centroid_lons)
-  
+
+  matched_point_ids <- result$id[matched_mask]
+  poly_idx          <- result$poly_idx[matched_mask]
+
+  pt_coords  <- crds(points)[matched_point_ids, ]
+  point_lats <- pt_coords[, "y"]
+  point_lons <- pt_coords[, "x"]
+
+  c_lats <- centroid_lats[poly_idx]
+  c_lons <- centroid_lons[poly_idx]
+
+  distances <- haversine_vectorized(point_lats, point_lons, c_lats, c_lons)
+
   list(
-    n_matched = n_matched,
-    total_distance = sum(distances),
-    mean_distance = mean(distances),
+    n_matched       = n_matched,
+    total_distance  = sum(distances),
+    mean_distance   = mean(distances),
     median_distance = median(distances),
-    max_distance = max(distances),
-    distances = distances
+    max_distance    = max(distances),
+    distances       = distances
   )
 }
 
@@ -99,17 +111,20 @@ generate_synthetic_polygons <- function(n_polys = 50) {
       if (idx > n_polys) break
       min_lon <- -180 + j * lon_step + runif(1, -2, 2)
       max_lon <- min_lon + lon_step + runif(1, -2, 2)
-      min_lat <- -90 + i * lat_step + runif(1, -2, 2)
+      min_lat <- -90  + i * lat_step + runif(1, -2, 2)
       max_lat <- min_lat + lat_step + runif(1, -2, 2)
       min_lon <- max(-180, min(min_lon, 180))
       max_lon <- max(-180, min(max_lon, 180))
-      min_lat <- max(-90, min(min_lat, 90))
-      max_lat <- max(-90, min(max_lat, 90))
+      min_lat <- max(-90,  min(min_lat,  90))
+      max_lat <- max(-90,  min(max_lat,  90))
       if (max_lon > min_lon && max_lat > min_lat) {
-        poly <- vect(rbind(c(min_lon, min_lat), c(max_lon, min_lat),
-                          c(max_lon, max_lat), c(min_lon, max_lat), c(min_lon, min_lat)),
-                    type = "polygons", crs = "EPSG:4326")
-        poly$name <- paste0("Country_", idx)
+        poly       <- vect(
+          rbind(c(min_lon, min_lat), c(max_lon, min_lat),
+                c(max_lon, max_lat), c(min_lon, max_lat),
+                c(min_lon, min_lat)),
+          type = "polygons", crs = "EPSG:4326"
+        )
+        poly$name  <- paste0("Country_", idx)
         pts_list[[idx]] <- poly
         idx <- idx + 1
       }
@@ -126,14 +141,16 @@ generate_synthetic_points <- function(n = 1000000) {
 load_vector_data <- function(data_mode) {
   if (data_mode == "synthetic") {
     cat("  Generating synthetic polygons and points...\n")
-    polys <- generate_synthetic_polygons()
+    polys     <- generate_synthetic_polygons()
     points_df <- generate_synthetic_points()
     return(list(polys = polys, points_df = points_df, source = "synthetic"))
   }
-  poly_path <- file.path(DATA_DIR, "natural_earth_countries.gpkg")
+
+  poly_path   <- file.path(DATA_DIR, "natural_earth_countries.gpkg")
   points_path <- file.path(DATA_DIR, "gps_points_1m.csv")
-  poly_exists <- file.exists(poly_path)
+  poly_exists   <- file.exists(poly_path)
   points_exists <- file.exists(points_path)
+
   if ((poly_exists && points_exists) || data_mode == "real") {
     result <- tryCatch({
       if (!poly_exists && data_mode == "real") {
@@ -146,7 +163,7 @@ load_vector_data <- function(data_mode) {
       }
       if (poly_exists && points_exists) {
         cat("  Loading real Natural Earth polygons + GPS points...\n")
-        polys <- vect(poly_path)
+        polys     <- vect(poly_path)
         points_df <- read.csv(points_path)
         list(polys = polys, points_df = points_df, source = "real")
       } else {
@@ -162,19 +179,19 @@ load_vector_data <- function(data_mode) {
     })
     if (!is.null(result$polys)) return(result)
   }
-  cat("  → Using synthetic data\n")
-  polys <- generate_synthetic_polygons()
+
+  cat("  -> Using synthetic data\n")
+  polys     <- generate_synthetic_polygons()
   points_df <- generate_synthetic_points()
-  return(list(polys = polys, points_df = points_df, source = "synthetic"))
+  list(polys = polys, points_df = points_df, source = "synthetic")
 }
 
 main <- function() {
-  args <- commandArgs(trailingOnly = TRUE)
+  args      <- commandArgs(trailingOnly = TRUE)
   data_mode <- "auto"
   for (i in seq_along(args)) {
-    if (args[i] == "--data" && i < length(args)) {
+    if (args[i] == "--data" && i < length(args))
       data_mode <- args[i + 1]
-    }
   }
 
   cat(strrep("=", 70), "\n")
@@ -182,70 +199,81 @@ main <- function() {
   cat(strrep("=", 70), "\n")
 
   cat("\n[1/4] Loading data...\n")
-  vec_data <- load_vector_data(data_mode)
-  polys <- vec_data$polys
-  points_df <- vec_data$points_df
+  vec_data    <- load_vector_data(data_mode)
+  polys       <- vec_data$polys
+  points_df   <- vec_data$points_df
   data_source <- vec_data$source
-  points <- vect(points_df, geom = c("lon", "lat"), crs = "EPSG:4326")
-  cat(sprintf("  ✓ Loaded %d polygons and %d points (%s)\n", nrow(polys), nrow(points), data_source))
+  points      <- vect(points_df, geom = c("lon", "lat"), crs = "EPSG:4326")
+  cat(sprintf("  ✓ Loaded %d polygons and %d points (%s)\n",
+              nrow(polys), nrow(points), data_source))
 
-  cat(sprintf("\n[2/4] Running spatial join + Haversine (%d runs, %d warmup)...\n", RUNS, WARMUP))
+  # Precompute centroid coordinates as plain numeric vectors once —
+  # terra centroid() + crds() is non-trivial; consistent with Julia/Python.
+  cat("  Precomputing polygon centroids...\n")
+  centroid_coords <- crds(centroids(polys))
+  centroid_lats   <- centroid_coords[, "y"]
+  centroid_lons   <- centroid_coords[, "x"]
+  cat(sprintf("  ✓ Precomputed %d polygon centroids\n", nrow(polys)))
 
-  task <- function() {
-    run_pip_and_distances(points, polys)
-  }
+  cat(sprintf("\n[2/4] Running spatial join + Haversine (%d runs, %d warmup)...\n",
+              RUNS, WARMUP))
 
-  for (i in seq_len(WARMUP)) {
-    task()
-  }
+  task <- function() run_pip_and_distances(points, polys, centroid_lats, centroid_lons)
 
-  times <- numeric(RUNS)
+  for (i in seq_len(WARMUP)) task()
+
+  # FAIRNESS: force GC before timing loop, consistent with Julia's GC.gc()
+  # and Python's gc.collect().
+  gc()
+
+  times  <- numeric(RUNS)
   result <- NULL
   for (i in seq_len(RUNS)) {
-    t_start <- Sys.time()
-    result <- task()
-    t_end <- Sys.time()
-    times[i] <- as.numeric(difftime(t_end, t_start, units = "secs"))
+    t_start  <- Sys.time()
+    result   <- task()
+    times[i] <- as.numeric(difftime(Sys.time(), t_start, units = "secs"))
   }
 
-  cat(sprintf("  ✓ Min: %.4fs (primary)\n", min(times)))
+  cat(sprintf("  ✓ Min:  %.4fs (primary)\n", min(times)))
   cat(sprintf("  ✓ Mean: %.4fs ± %.4fs\n", mean(times), sd(times)))
   cat(sprintf("  ✓ Matched %d points to polygons\n", result$n_matched))
 
   cat("\n[3/4] Distance statistics...\n")
-  cat(sprintf("  ✓ Total distance: %s meters\n", format(result$total_distance, big.mark = ",")))
-  cat(sprintf("  ✓ Mean distance: %s meters\n", format(result$mean_distance, big.mark = ",")))
-  cat(sprintf("  ✓ Median distance: %s meters\n", format(result$median_distance, big.mark = ",")))
-  cat(sprintf("  ✓ Max distance: %s meters\n", format(result$max_distance, big.mark = ",")))
+  cat(sprintf("  ✓ Total distance:  %s m\n", format(result$total_distance,  big.mark = ",")))
+  cat(sprintf("  ✓ Mean distance:   %s m\n", format(result$mean_distance,   big.mark = ",")))
+  cat(sprintf("  ✓ Median distance: %s m\n", format(result$median_distance, big.mark = ",")))
+  cat(sprintf("  ✓ Max distance:    %s m\n", format(result$max_distance,    big.mark = ",")))
 
   cat("\n[4/4] Validation and export...\n")
   result_hash <- generate_hash(result$distances)
   cat(sprintf("  ✓ Validation hash: %s\n", result_hash))
 
   results <- list(
-    language = "r",
-    scenario = "vector_pip",
-    data_source = data_source,
-    data_description = if (data_source == "real") "Natural Earth + GPS 1M" else "synthetic polygons + 1M points (seed 42)",
-    n_points = nrow(points),
-    n_polygons = nrow(polys),
-    matches_found = result$n_matched,
-    total_distance_m = result$total_distance,
-    mean_distance_m = result$mean_distance,
+    language         = "r",
+    scenario         = "vector_pip",
+    data_source      = data_source,
+    data_description = if (data_source == "real")
+      "Natural Earth + GPS 1M"
+    else
+      "synthetic polygons + 1M points (seed 42)",
+    n_points         = nrow(points),
+    n_polygons       = nrow(polys),
+    matches_found    = result$n_matched,
+    total_distance_m  = result$total_distance,
+    mean_distance_m   = result$mean_distance,
     median_distance_m = result$median_distance,
-    max_distance_m = result$max_distance,
-    min_time_s = min(times),
-    mean_time_s = mean(times),
-    std_time_s = sd(times),
-    max_time_s = max(times),
-    times = times,
-    validation_hash = result_hash
+    max_distance_m    = result$max_distance,
+    min_time_s        = min(times),
+    mean_time_s       = mean(times),
+    std_time_s        = sd(times),
+    max_time_s        = max(times),
+    times             = times,
+    validation_hash   = result_hash
   )
 
-  dir.create(OUTPUT_DIR, showWarnings = FALSE, recursive = TRUE)
+  dir.create(OUTPUT_DIR,    showWarnings = FALSE, recursive = TRUE)
   dir.create(VALIDATION_DIR, showWarnings = FALSE, recursive = TRUE)
-
-  write_json(results, file.path(OUTPUT_DIR, "vector_pip_r.json"), pretty = TRUE, auto_unbox = TRUE)
+  write_json(results, file.path(OUTPUT_DIR,    "vector_pip_r.json"),      pretty = TRUE, auto_unbox = TRUE)
   write_json(results, file.path(VALIDATION_DIR, "vector_r_results.json"), pretty = TRUE, auto_unbox = TRUE)
 
   cat("✓ Results saved\n")

@@ -1,12 +1,8 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# SCENARIO F: Zonal Statistics - R Implementation
-# Tests: Polygon-based raster statistics (mean, std, sum over zones)
-#
-# Uses IDENTICAL rectangular polygon zones as Python and Julia for valid comparison.
+# SCENARIO F: Zonal Statistics - R Implementation (Optimized, real‑data first)
 # =============================================================================
 
-# Dynamic path resolution
 get_project_root <- function() {
   args <- commandArgs(trailingOnly = FALSE)
   file_arg <- args[grep("--file=", args)]
@@ -35,7 +31,6 @@ run_benchmark <- function(func, runs = 10, warmup = 2) {
   for (i in 1:warmup) {
     invisible(func())
   }
-
   times <- numeric(runs)
   result <- NULL
   for (i in 1:runs) {
@@ -44,7 +39,6 @@ run_benchmark <- function(func, runs = 10, warmup = 2) {
     t_end <- proc.time()
     times[i] <- (t_end - t_start)["elapsed"]
   }
-
   list(times = times, result = result)
 }
 
@@ -78,39 +72,22 @@ create_rectangular_zones <- function(n_zones = 10) {
   sf::st_sfc(zones, crs = "EPSG:4326")
 }
 
+# ---- Fast mask creation with terra::rasterize ----
 rasterize_polygons_to_mask <- function(zones_sfc, rows, cols) {
-  mask <- matrix(0, nrow = rows, ncol = cols)
-  lat_step <- 180.0 / rows
-  lon_step <- 360.0 / cols
-  n_zones <- length(zones_sfc)
+  zones_vect <- vect(zones_sfc)
+  zones_vect$zone_id <- 1:nrow(zones_vect)
 
-  for (zone_id in 1:n_zones) {
-    geom <- zones_sfc[[zone_id]]
-    bbox <- sf::st_bbox(geom)
+  r_template <- rast(
+    nrows = rows, ncols = cols,
+    xmin = -180, xmax = 180,
+    ymin = -90, ymax = 90,
+    crs = "EPSG:4326"
+  )
 
-    r0 <- max(1, floor((90 - bbox["ymax"]) / lat_step) + 1)
-    r1 <- min(rows, ceiling((90 - bbox["ymin"]) / lat_step))
-    c0 <- max(1, floor((bbox["xmin"] + 180) / lon_step) + 1)
-    c1 <- min(cols, ceiling((bbox["xmax"] + 180) / lon_step))
-
-    r0 <- max(1, r0)
-    r1 <- min(rows, r1)
-    c0 <- max(1, c0)
-    c1 <- min(cols, c1)
-
-    for (r in r0:r1) {
-      for (c in c0:c1) {
-        lat <- 90 - (r - 0.5) * lat_step
-        lon <- -180 + (c - 0.5) * lon_step
-        pt <- sf::st_point(c(lon, lat))
-        if (sf::st_contains(geom, pt, sparse = FALSE) || sf::st_intersects(geom, pt, sparse = FALSE)) {
-          mask[r, c] <- zone_id
-        }
-      }
-    }
-  }
-
-  mask
+  mask_rast <- rasterize(zones_vect, r_template, field = "zone_id", background = 0)
+  mask <- matrix(values(mask_rast), nrow = rows, ncol = cols, byrow = TRUE)
+  storage.mode(mask) <- "integer"
+  return(mask)
 }
 
 vectorized_zonal_stats <- function(raster_matrix, mask_matrix) {
@@ -156,7 +133,7 @@ run_zonal_stats_benchmark <- function() {
   n_zones <- 10
 
   args <- commandArgs(trailingOnly = TRUE)
-  data_mode <- "auto"
+  data_mode <- "auto"  # default: try real, fallback synthetic
   if ("--data" %in% args) {
     idx <- which(args == "--data")
     if (length(idx) > 0 && idx < length(args)) {
@@ -167,7 +144,8 @@ run_zonal_stats_benchmark <- function() {
   raster_matrix <- NULL
   data_source <- "synthetic"
 
-  if (data_mode != "synthetic") {
+  # --- Try loading real NLCD data (identical logic as Julia) ---
+  if (data_mode %in% c("auto", "real")) {
     nlcd_paths <- c(
       file.path(PROJECT_ROOT, "data", "nlcd", "nlcd_landcover_large.bin"),
       file.path(PROJECT_ROOT, "data", "nlcd", "nlcd_landcover.bin")
@@ -183,23 +161,28 @@ run_zonal_stats_benchmark <- function() {
             cols <- as.integer(sub(".*= *", "", r_line))
             rows <- as.integer(sub(".*= *", "", l_line))
             con <- file(path, "rb")
-            raw <- readBin(con, "double", n = rows * cols, size = 1, signed = FALSE)
+            # NLCD .bin is typically unsigned 8‑bit, stored as raw bytes.
+            # Julia reads as Matrix{UInt8} – we replicate that here.
+            raw_data <- readBin(con, "raw", n = rows * cols)
             close(con)
-            raster_matrix <- matrix(raw, nrow = rows, ncol = cols)
-            storage.mode(raster_matrix) <- "double"
-            data_source <- "real"
-            cat(sprintf("\n[1/4] Loaded real NLCD land cover: %s (%dx%d)\n", path, rows, cols))
-            break
+            if (length(raw_data) == rows * cols) {
+              raster_matrix <- matrix(as.numeric(raw_data), nrow = rows, ncol = cols)
+              storage.mode(raster_matrix) <- "double"
+              data_source <- "real"
+              cat(sprintf("\n[1/4] Loaded real NLCD land cover: %s (%dx%d)\n", path, rows, cols))
+              break
+            }
           }
         }
       }
     }
     if (is.null(raster_matrix) && data_mode == "real") {
-      cat("  x Real NLCD data not found\n")
+      cat("  x Real NLCD data not found or unreadable\n")
       quit(status = 1)
     }
   }
 
+  # Fallback to synthetic (identical to Julia/Python)
   if (is.null(raster_matrix)) {
     set.seed(42)
     raster_vals <- runif(rows * cols) * 3000

@@ -379,23 +379,23 @@ else
     # Container setup function
     setup_container() {
         local tag="$1" file="$2" name="$3"
-        
+
         # Check if image exists locally
         if podman image exists "$tag" 2>/dev/null; then
             echo -e "  ${GREEN}✓${NC} $name: $tag (found locally)"
             return 0
         fi
-        
+
         # Try to pull from GHCR
         echo -e "  ${CYAN}→${NC} $name: $tag (not found locally, trying GHCR...)"
         pull_output=$(podman pull "$tag" 2>&1)
         pull_status=$?
-        
+
         if [[ $pull_status -eq 0 ]]; then
             echo -e "    ${GREEN}✓${NC} Pulled from GHCR"
             return 0
         fi
-        
+
         # Check failure reason
         if echo "$pull_output" | grep -qi "unauthorized\|authentication\|denied"; then
             echo -e "    ${YELLOW}⚠${NC} GHCR auth failed (container is private)"
@@ -404,7 +404,7 @@ else
             echo -e "    ${YELLOW}⚠${NC} GHCR pull failed"
         fi
         echo -e "    ${CYAN}→${NC} Building locally..."
-        
+
         # Fall back to local build
         if [[ -n "$file" ]] && [[ -f "$file" ]]; then
             echo -e "  ${YELLOW}→${NC} $name: Building locally..."
@@ -413,7 +413,7 @@ else
                 return 0
             fi
         fi
-        
+
         log_error "Failed to get container: $tag"
         return 1
     }
@@ -423,12 +423,12 @@ else
     PYTHON_DOCKERFILE="containers/python.Containerfile"
     JULIA_DOCKERFILE="containers/julia.Containerfile"
     R_DOCKERFILE="containers/r.Containerfile"
-    
+
     # Prefer optimized if available
     [ -f "containers/python-optimized.Containerfile" ] && PYTHON_DOCKERFILE="containers/python-optimized.Containerfile"
     [ -f "containers/julia-optimized.Containerfile" ] && JULIA_DOCKERFILE="containers/julia-optimized.Containerfile"
     [ -f "containers/r-optimized.Containerfile" ] && R_DOCKERFILE="containers/r-optimized.Containerfile"
-    
+
     setup_container "$PYTHON_TAG" "$PYTHON_DOCKERFILE" "Python"
     setup_container "$JULIA_TAG"  "$JULIA_DOCKERFILE" "Julia"
     setup_container "$R_TAG"      "$R_DOCKERFILE" "R"
@@ -469,7 +469,7 @@ else
     if [[ -f "tools/download_data.py" ]]; then
         source .venv/bin/activate 2>/dev/null || true
         python3 tools/download_data.py --all 2>&1 | grep -E "✓|⚠" | head -10 || true
-        
+
         # STRICT VALIDATION: Verify critical data exists before proceeding
         echo -e "  ${BLUE}Validating required datasets...${NC}"
         python3 tools/download_data.py --check > /tmp/data_check.log 2>&1
@@ -479,20 +479,20 @@ else
             cat /tmp/data_check.log | sed 's/^/    /'
             exit 1
         fi
-        
+
         # Additional check for critical Cuprite hyperspectral data
         if [[ ! -f "data/Cuprite.mat" ]] && [[ ! -f "data/Cuprite.npy" ]]; then
             echo -e "  ${RED}✗ CRITICAL: Hyperspectral data (Cuprite.mat/npy) not found!${NC}"
             echo -e "  ${YELLOW}Run: python3 tools/download_data.py --hsi${NC}"
             exit 1
         fi
-        
+
         # Check GPS points
         if [[ ! -f "data/gps_points_1m.csv" ]]; then
             echo -e "  ${RED}✗ CRITICAL: GPS points data not found!${NC}"
             exit 1
         fi
-        
+
         echo -e "  ${GREEN}✓${NC} All critical datasets validated"
     else
         echo -e "  ${RED}✗ tools/download_data.py not found!${NC}"
@@ -708,7 +708,7 @@ if [[ "$MODE" != "container" ]]; then
         local lang="$1" cmd="$2" name="$3"
         progress
         echo -e "  ${GREEN}$lang${NC}: $name"
-        
+
         # Always use builtin depot (works on bootc + host system)
         export JULIA_DEPOT_PATH="/usr/share/julia/depot:/var/lib/julia:$PWD/.julia"
         source /etc/environment
@@ -719,7 +719,7 @@ if [[ "$MODE" != "container" ]]; then
             freq_before=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)
             echo "    CPU freq: $((freq_before / 1000)) MHz"
         fi
-        
+
         # Capture both stdout and stderr, fix grep pattern to be more flexible
         local output
         if [[ "$CPU_PIN_ENABLED" == "true" ]] && [[ -n "$CPU_CORES" ]]; then
@@ -727,7 +727,7 @@ if [[ "$MODE" != "container" ]]; then
         else
             output=$(eval "$cmd" 2>&1)
         fi
-        
+
         # Check for success patterns (more flexible with ANSI prefix)
         if echo "$output" | grep -qE "^.*✓ (Min|Results saved|interpolation|Interp)"; then
             echo "$output" | grep -E "^.*✓" | head -10
@@ -756,14 +756,14 @@ if [[ "$MODE" != "container" ]]; then
     # UNIFIED Threading Strategy - FAIR COMPARISON
     # All benchmarks use: 8 Language Threads + 8 BLAS Threads
     # This ensures every language has equivalent computational resources
-    
+
     echo -e "${YELLOW}  Unified Threading (8 Language + 8 BLAS threads):${NC}"
     export OPENBLAS_NUM_THREADS=8
     export FLEXIBLAS_NUM_THREADS=8
     export GOTO_NUM_THREADS=8
     export JULIA_NUM_THREADS=8
     export OMP_NUM_THREADS=8
-    
+
     CLI_FLAGS="--data $DATA_MODE"
     SIZE_FLAGS="--size $SIZE_MODE"
 
@@ -870,19 +870,19 @@ if command -v $PY_BIN &>/dev/null; then
     # Initialize PYTHONPATH with default if unset (fixes unbound variable in strict mode)
     export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
     [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
-    
+
     # Step 1: Normalize results (unified format for container + native)
-    [[ -f "tools/normalize_results.py" ]] && { 
-        echo "  Normalizing results (unified format)..."; 
-        $PY_BIN tools/normalize_results.py --input results/ --output results/normalized/ --summary 2>&1 | tail -5 || log_error "Result normalization failed"; 
+    [[ -f "tools/normalize_results.py" ]] && {
+        echo "  Normalizing results (unified format)...";
+        $PY_BIN tools/normalize_results.py --input results/ --output results/normalized/ --summary 2>&1 | tail -5 || log_error "Result normalization failed";
     }
-    
+
     # Step 2: Generate visualizations (uses normalized results if available)
     [[ -f "tools/thesis_viz.py" ]] && { echo "  Generating visualizations..."; $PY_BIN tools/thesis_viz.py --all 2>&1 | tail -3 || log_error "Visualization failed"; }
-    
+
     # Step 3: Validation
     [[ -f "validation/thesis_validation.py" ]] && { echo "  Running validation..."; $PY_BIN validation/thesis_validation.py --all 2>&1 | tail -15 || log_error "Validation failed"; }
-    
+
     echo -e "${GREEN}  ✓ Academic report complete${NC}"
 fi
 

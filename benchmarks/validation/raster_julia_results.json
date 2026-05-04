@@ -1,1 +1,0 @@
-{"pixels_processed":314368,"mean_sam_rad":0.6617098,"max_sam_rad":0.9708922,"language":"julia","scenario":"hyperspectral_sam","median_sam_rad":0.6660727,"validation_hash":"7588c1df0a64df6d","std_sam_rad":0.085367434,"n_bands":224,"mean_sam_deg":37.913177,"chunks_processed":6,"reference_hash":"73f8511d09eccb07","min_sam_rad":0.5172104}

@@ -3,239 +3,195 @@
 SCENARIO F: Zonal Statistics - Julia Implementation
 Tests: Polygon-based raster statistics (mean, std, sum over zones)
 
-Uses IDENTICAL rectangular polygon zones as Python and R for valid comparison.
+FAIRNESS PROTOCOL:
+- Uses manual nested loops for rasterization (no GDAL/Terra engines).
+- Uses center-pixel coordinate logic (r - 0.5) for validation parity.
+- Defaults to real NLCD land cover data.
 """
 
 using Statistics
 using Random
 using SHA
 using JSON3
+using DataFrames
 
 const OUTPUT_DIR = "validation"
 const RESULTS_DIR = "results"
 
 include(joinpath(@__DIR__, "common_hash.jl"))
 
-function create_rectangular_zones_simple(n_zones::Int=10)
-    zones = Tuple{Float64,Float64,Float64,Float64}[]
-    lat_step = 180.0 / n_zones
-    lon_step = 360.0 / n_zones
+"""
+Create rectangular bounding boxes. Matches the 'create_polygon_zones'
+logic in Python/R for spatial parity.
+    """
+    function create_rectangular_zones(n_zones::Int=10)
+        # Return as (id, xmin, ymin, xmax, ymax)
+        zones = Tuple{Int, Float64, Float64, Float64, Float64}[]
+        lat_step = 180.0 / n_zones
+        lon_step = 360.0 / n_zones
 
-    for i in 0:(n_zones-1)
-        for j in 0:(n_zones-1)
-            min_lon = -180.0 + j * lon_step
-            max_lon = min_lon + lon_step
-            min_lat = -90.0 + i * lat_step
-            max_lat = min_lat + lat_step
-            push!(zones, (min_lon, min_lat, max_lon, max_lat))
+        id = 1
+        for i in 0:(n_zones-1)
+            for j in 0:(n_zones-1)
+                min_lon = -180.0 + j * lon_step
+                max_lon = min_lon + lon_step
+                min_lat = -90.0 + i * lat_step
+                max_lat = min_lat + lat_step
+                push!(zones, (id, min_lon, min_lat, max_lon, max_lat))
+                id += 1
+            end
         end
+        return zones
     end
-    return zones
-end
 
+    """
+    Manual Rasterization Loop.
+    Directly tests Julia's loop performance against Python/R manual loops.
+    """
+    function rasterize_polygons_to_mask(zones, rows::Int, cols::Int)
+        mask = zeros(Int32, rows, cols)
+        lat_step = 180.0 / rows
+        lon_step = 360.0 / cols
 
-function rasterize_polygons_to_mask(zones::Vector{Tuple{Float64,Float64,Float64,Float64}}, rows::Int, cols::Int)
-    mask = zeros(Int32, rows, cols)
-    lat_step = 180.0 / rows
-    lon_step = 360.0 / cols
+        for (zone_id, xmin, ymin, xmax, ymax) in zones
+            # Calculate row/col ranges based on bounding box
+            r0 = max(1, floor(Int, (90.0 - ymax) / lat_step) + 1)
+            r1 = min(rows, ceil(Int, (90.0 - ymin) / lat_step))
+            c0 = max(1, floor(Int, (xmin + 180.0) / lon_step) + 1)
+            c1 = min(cols, ceil(Int, (xmax + 180.0) / lon_step))
 
-    for (zone_id, (xmin, ymin, xmax, ymax)) in enumerate(zones)
-        r0 = max(1, floor(Int, (90.0 - ymax) / lat_step) + 1)
-        r1 = min(rows, ceil(Int, (90.0 - ymin) / lat_step))
-        c0 = max(1, floor(Int, (xmin + 180.0) / lon_step) + 1)
-        c1 = min(cols, ceil(Int, (xmax + 180.0) / lon_step))
-
-        for r in r0:r1
-            for c in c0:c1
-                lat = 90.0 - (r - 0.5) * lat_step
-                lon = -180.0 + (c - 0.5) * lon_step
-                if lon >= xmin && lon <= xmax && lat >= ymin && lat <= ymax
-                    mask[r, c] = zone_id
+            @inbounds for r in r0:r1
+                lat = 90.0 - (r - 0.5) * lat_step # Pixel center
+                for c in c0:c1
+                    lon = -180.0 + (c - 0.5) * lon_step # Pixel center
+                    if lon >= xmin && lon <= xmax && lat >= ymin && lat <= ymax
+                        mask[r, c] = Int32(zone_id)
+                    end
                 end
             end
         end
+        return mask
     end
 
-    return mask
-end
+    """
+    Zonal Statistics calculation using Julia's native array views.
+    """
+    function calculate_zonal_stats(raster::Matrix{Float32}, mask::Matrix{Int32})
+        unique_zones = filter(z -> z > 0, unique(mask))
 
+        means = Float64[]
+        stds = Float64[]
 
-function vectorized_zonal_stats(raster::Matrix{Float32}, mask::Matrix{Int32})
-    unique_zones = filter(z -> z > 0, unique(vec(mask)))
-    n_zones = length(unique_zones)
+        for zone_id in unique_zones
+            # Logical indexing is native and fair across all three languages
+            values = raster[mask .== zone_id]
 
-    means = Float64[]
-    stds = Float64[]
-    sums = Float64[]
-    counts = Int[]
-
-    for zone_id in unique_zones
-        zone_mask = mask .== zone_id
-        values = raster[zone_mask]
-        if length(values) > 0
-            push!(means, mean(values))
-            push!(stds, std(values))
-            push!(sums, sum(values))
-            push!(counts, length(values))
-        else
-            push!(means, 0.0)
-            push!(stds, 0.0)
-            push!(sums, 0.0)
-            push!(counts, 0)
+            if !isempty(values)
+                push!(means, mean(values))
+                push!(stds, std(values))
+            else
+                push!(means, 0.0)
+                push!(stds, 0.0)
+            end
         end
+        return (means=means, stds=stds, zones=unique_zones)
     end
 
-    return (means=means, stds=stds, sums=sums, counts=counts, zones=unique_zones)
-end
-
-
-function run_benchmark_zonal(func, runs, warmup)
-    for _ in 1:warmup
-        func()
+    function run_benchmark_task(func, runs, warmup)
+        for _ in 1:warmup
+            func()
+        end
+        times = Float64[]
+        result = nothing
+        for _ in 1:runs
+            t_start = time_ns()
+            result = func()
+            t_end = time_ns()
+            push!(times, (t_end - t_start) / 1e9)
+        end
+        return times, result
     end
-    times = Float64[]
-    result = nothing
-    for _ in 1:runs
-        t_start = time_ns()
-        result = func()
-        t_end = time_ns()
-        push!(times, (t_end - t_start) / 1e9)
-    end
-    return times, result
-end
 
+    function main()
+        println("=" ^ 70)
+        println("JULIA - Scenario F: Zonal Statistics (Fairness-Optimized)")
+        println("=" ^ 70)
 
-function main()
-    println("=" ^ 70)
-    println("JULIA - Scenario F: Zonal Statistics (Bare-Metal)")
-    println("=" ^ 70)
-
-    data_mode = "auto"
-    if "--data" in ARGS
-        idx = findfirst(isequal("--data"), ARGS)
-        if idx !== nothing && idx < length(ARGS)
+        # 1. Data Selection (Default: Real NLCD)
+        data_mode = "auto"
+        if "--data" in ARGS
+            idx = findfirst(isequal("--data"), ARGS)
             data_mode = ARGS[idx + 1]
         end
-    end
 
-    rows, cols = 600, 600
-    n_zones = 10
-    raster = nothing
-    data_source = "synthetic"
+        raster = nothing
+        rows, cols = 600, 600
+        data_source = "synthetic"
 
-    if data_mode != "synthetic"
-        nlcd_paths = [
-            joinpath(@__DIR__, "..", "data", "nlcd", "nlcd_landcover_large.bin"),
-            joinpath(@__DIR__, "..", "data", "nlcd", "nlcd_landcover.bin"),
-        ]
-        for p in nlcd_paths
-            if isfile(p)
+        if data_mode != "synthetic"
+            nlcd_path = joinpath(@__DIR__, "..", "data", "nlcd", "nlcd_landcover.bin")
+            hdr_path = replace(nlcd_path, ".bin" => ".hdr")
+
+            if isfile(nlcd_path) && isfile(hdr_path)
                 try
-                    hdr_path = replace(p, ".bin" => ".hdr")
-                    if isfile(hdr_path)
-                        local r, c
-                        for line in eachline(hdr_path)
-                            if startswith(line, "samples")
-                                c = parse(Int, split(line, "=")[2])
-                            elseif startswith(line, "lines")
-                                r = parse(Int, split(line, "=")[2])
-                            end
-                        end
-                        data = Matrix{UInt8}(undef, r, c)
-                        open(p, "r") do io
-                            read!(io, data)
-                        end
-                        raster = Float32.(data)
-                        rows, cols = r, c
-                        data_source = "real"
-                        println("\n[1/4] Loaded real NLCD land cover: $p ($(rows)x$(cols))")
-                        break
+                    local r, c
+                    for line in eachline(hdr_path)
+                        if startswith(line, "samples") c = parse(Int, split(line, "=")[2]) end
+                        if startswith(line, "lines") r = parse(Int, split(line, "=")[2]) end
                     end
-                catch e
-                    println("  - Could not load $p: $e")
+
+                    raw_data = Vector{UInt8}(undef, r * c)
+                    read!(nlcd_path, raw_data)
+                    raster = reshape(Float32.(raw_data), r, c)
+                    rows, cols = r, c
+                    data_source = "real"
+                    println("  ✓ Loaded real NLCD data: $(rows)x$(cols)")
+                    catch e
+                    println("  ⚠ Failed to load NLCD: $e")
                 end
             end
         end
-        if raster === nothing && data_mode == "real"
-            println("  x Real NLCD data not found")
-            exit(1)
+
+        if raster === nothing
+            Random.seed!(42)
+            raster = rand(Float64, rows, cols) .* 3000.0 |> Matrix{Float32}
+            println("  → Created synthetic raster: $(rows)x$(cols)")
         end
-    end
 
-    if raster === nothing
-        Random.seed!(42)
-        raster = rand(Float32, rows, cols) .* 3000f0
-        println("\n[1/4] Created synthetic raster: $rows x $cols cells")
-    end
+        # 2. Geometry Creation
+        zones = create_rectangular_zones(10)
 
-    println("\n[2/4] Creating rectangular polygon zones (consistent with Python/R)...")
-    zones = create_rectangular_zones_simple(n_zones)
-    println("  ✓ Created $(length(zones)) rectangular polygon zones")
+        # 3. Benchmark: Mask Creation
+        println("\n[1/2] Benchmarking Mask Creation...")
+        m_times, mask = run_benchmark_task(() -> rasterize_polygons_to_mask(zones, rows, cols), 10, 2)
+        mask_hash = generate_hash(mask)
+        println("    Min Time: $(minimum(m_times))s")
+        println("    Hash: $mask_hash")
 
-    println("\n[3/4] Running zonal statistics benchmark...")
+        # 4. Benchmark: Zonal Stats
+        println("\n[2/2] Benchmarking Zonal Statistics...")
+        s_times, stats = run_benchmark_task(() -> calculate_zonal_stats(raster, mask), 10, 2)
+        result_hash = generate_hash(stats.means)
+        println("    Min Time: $(minimum(s_times))s")
+        println("    Hash: $result_hash")
 
-    warmup = 2
-    runs = 10
-
-    GC.gc()
-    mask_times, mask = run_benchmark_zonal(() -> rasterize_polygons_to_mask(zones, rows, cols), runs, warmup)
-    println("  ✓ Mask creation: min=$(minimum(mask_times))s, mean=$(mean(mask_times))s")
-    mask_hash = generate_hash(mask)
-
-    GC.gc()
-    stats_times, results = run_benchmark_zonal(() -> vectorized_zonal_stats(raster, mask), runs, warmup)
-    println("  ✓ Zonal stats: min=$(minimum(stats_times))s, mean=$(mean(stats_times))s")
-
-    result_hash = generate_hash(results.means)
-    println("  ✓ Validation hash: $result_hash")
-
-    output = Dict(
-        "language" => "julia",
-        "scenario" => "zonal_statistics",
-        "data_source" => data_source,
-        "data_description" => data_source == "real" ? "NLCD land cover" : "synthetic uniform",
-        "zone_type" => "rectangular_polygons",
-        "n_zones" => n_zones * n_zones,
-        "data_shape" => [rows, cols],
-        "results" => Dict(
-            "mask_creation" => Dict(
-                "min_time_s" => minimum(mask_times),
-                "mean_time_s" => mean(mask_times),
-                "std_time_s" => std(mask_times),
-                "median_time_s" => median(mask_times),
-                "max_time_s" => maximum(mask_times),
-                "times" => mask_times,
-                "n_zones" => n_zones * n_zones,
-                "validation_hash" => mask_hash
-            ),
-            "zonal_stats" => Dict(
-                "min_time_s" => minimum(stats_times),
-                "mean_time_s" => mean(stats_times),
-                "std_time_s" => std(stats_times),
-                "median_time_s" => median(stats_times),
-                "max_time_s" => maximum(stats_times),
-                "times" => stats_times,
-                "n_zones" => length(results.means),
-                "validation_hash" => result_hash
+        # 5. Save Results
+        output = Dict(
+            "language" => "julia",
+            "scenario" => "zonal_statistics",
+            "data_source" => data_source,
+            "results" => Dict(
+                "mask_creation" => Dict("min_time_s" => minimum(m_times), "times" => m_times, "validation_hash" => mask_hash),
+                "zonal_stats" => Dict("min_time_s" => minimum(s_times), "times" => s_times, "validation_hash" => result_hash)
+                ),
+            "combined_hash" => generate_hash([mask_hash, result_hash])
             )
-        ),
-        "all_hashes" => [mask_hash, result_hash],
-        "combined_hash" => generate_hash([mask_hash, result_hash])
-    )
 
-    mkpath("results")
-    open("results/zonal_stats_julia.json", "w") do f
-        JSON3.pretty(f, output)
-    end
-    mkpath("validation")
-    open("validation/zonal_stats_julia_results.json", "w") do f
-        JSON3.pretty(f, output)
-    end
-    println("✓ Results saved")
-    println("✓ Combined validation hash: $(output["combined_hash"])")
-    println("\n" * "=" ^ 70)
-    println("Note: Minimum times are primary metrics (Chen & Revels 2016)")
-    println("=" ^ 70)
-end
+            mkpath(RESULTS_DIR); mkpath(OUTPUT_DIR)
+            open(joinpath(RESULTS_DIR, "zonal_stats_julia.json"), "w") do f JSON3.pretty(f, output) end
+            open(joinpath(OUTPUT_DIR, "zonal_stats_julia_results.json"), "w") do f JSON3.pretty(f, output) end
 
-main()
+            println("\n✓ Benchmark Complete. Results saved.")
+    end
+
+    main()

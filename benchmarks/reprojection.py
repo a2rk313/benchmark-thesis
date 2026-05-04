@@ -253,7 +253,7 @@ def run_reprojection_benchmark(data_mode="auto", size_flag="default"):
     import os
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    
+
     with open(OUTPUT_DIR / "reprojection_python_results.json", "w") as f:
         json.dump(output_data, f, indent=2, default=str)
 
