@@ -8,7 +8,88 @@
 
 ---
 
-## Architecture Overview
+## Language Versions (Thesis-Grade)
+
+| Language | Version | Notes |
+|----------|---------|-------|
+| Python | 3.14.x | System RPMs on bootc |
+| Julia | 1.12.6 | Direct binary tarball |
+| R | 4.5.x | dnf5 package |
+| NumPy | 2.x | System RPMs |
+| GDAL | 3.9.x | dnf5 package |
+
+---
+
+## Orchestrators
+
+### run_benchmarks.sh (Original)
+- Native + container benchmarking
+- Standard telemetry
+- Basic thermal awareness
+
+### rb.sh (Enhanced with Thermal Telemetry)
+- **Features**: 
+  - Per-core CPU temperature monitoring via sysfs
+  - Per-core frequency tracking
+  - Thermal throttle event detection via dmesg
+  - Coefficient of variation (CV) analysis
+  - Frequency spread warning
+- **Usage**: `./rb.sh --scaling --scaling-quick`
+- **Telemetry output**: `results/thermal_telemetry.jsonl`
+
+```bash
+# Run with thermal telemetry
+./rb.sh --scaling --scaling-quick
+
+# Run all benchmarks with telemetry
+./rb.sh --native-only --scaling
+```
+
+---
+
+## Data Scaling Framework
+
+The scaling benchmarks analyze algorithmic complexity via log-log regression (Tedesco et al. 2025).
+
+### Python (`benchmark_scaling.py`)
+```bash
+python3 benchmark_scaling.py --quick --runs 5
+python3 benchmark_scaling.py --runs 10  # Full analysis
+```
+
+### Julia (`benchmark_scaling.jl`)
+```bash
+julia benchmark_scaling.jl --quick
+julia benchmark_scaling.jl
+```
+
+### R (`benchmark_scaling.R`)
+```bash
+Rscript benchmark_scaling.R --quick
+Rscript benchmark_scaling.R
+```
+
+### Scaling Scenarios (All 9)
+
+| Scenario | Scales (Quick) | Scales (Full) | Complexity Expected |
+|----------|----------------|---------------|---------------------|
+| Matrix Operations (crossproduct) | 250-1000 | 500-3000 | O(n^2.37) to O(n^3) |
+| I/O Operations (CSV write) | 25K-250K | 100K-3M | O(n) |
+| Hyperspectral SAM | 64-384 | 128-768 | O(n^2) |
+| Vector Point-in-Polygon | 25K-250K | 100K-3M | O(n log m) |
+| IDW Interpolation | 2K-20K | 5K-100K | O(n^2 log n) |
+| Time-Series NDVI | 128-768 | 256-1024 | O(n^2) |
+| Raster Algebra | 128-768 | 256-2048 | O(n^2) |
+| Zonal Statistics | 128-768 | 256-2048 | O(n^2) |
+| Coordinate Reprojection | 500-10K | 1K-100K | O(n) |
+
+### Output
+- `results/scaling/{scenario}_scaling_{python,julia,r}.json`
+- Complexity analysis with scaling exponent (k), R², and complexity label
+
+---
+
+## Statistical Methodology
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -616,6 +697,35 @@ OMP_NUM_THREADS=8
 
 ---
 
+## Code Quality Assurance (Code Review Fixes)
+
+This framework has been audited for correctness and methodological fairness. The following critical issues were identified and fixed:
+
+### Critical Fixes (Must Fix)
+1. **HyperspectralSAMScaling timing bug** — `run_at_scale()` was returning SAM angle (~1.2 radians) instead of timing
+2. **Hash inconsistency** — Three different `generate_hash()` implementations across Python files; consolidated to `common_hash.py`
+3. **run_benchmarks.sh argument order** — `profile_memory_container` was using scenario name as container tag
+4. **Wilcoxon fallback** — Was referencing scipy.stats when scipy unavailable
+
+### Significant Fixes (Methodological Fairness)
+5. **reprojection.py Transformer caching** — Verified using cached transformer (not per-point creation)
+6. **zonal_stats.py loops** — Changed from O(rows×cols×zones) per-pixel to bbox pre-filtering with prepared geometries
+7. **vector_pip.py index fallback** — Fixed to use `index__poly` column for newer GeoPandas
+
+### Additional Fixes
+8. **benchmark_scaling.py** — Fixed indentation of `run_at_scale` method in HyperspectralSAMScaling class
+9. **benchmark_scaling.py** — Moved geopandas imports to module level (were local to `setup_at_scale`)
+10. **benchmark_scaling.jl** — Fixed Float32 literal syntax (`1.0f-8` not `1e-8f0`)
+11. **benchmark_scaling.jl** — Fixed broadcasting assignment in zonal_setup
+
+### Testing
+All fixes tested in distrobox container:
+- ✅ Python benchmarks (vector_pip, raster_algebra, timeseries_ndvi)
+- ✅ R benchmarks (matrix_ops, io_ops)
+- ✅ Julia benchmarks (matrix_ops, timeseries_ndvi, raster_algebra, interpolation_idw)
+
+---
+
 ## References
 
 1. Chen, J.Y., & Revels, J. (2016). "Robust Benchmarking in Noisy Environments." arXiv:1608.04295
@@ -650,6 +760,6 @@ OMP_NUM_THREADS=8
 
 ---
 
-**Document Version**: 2.0  
-**Last Updated**: April 2026  
-**Framework Version**: v2.0 (Statistical Enhancements)
+**Document Version**: 2.1  
+**Last Updated**: May 2026  
+**Framework Version**: v2.1 (Scaling Benchmarks + Code Review Fixes)

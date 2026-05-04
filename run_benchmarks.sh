@@ -845,6 +845,7 @@ if [[ "$SCALING" == "true" ]]; then
     if check_resume "scaling"; then
         :
     else
+        # Python scaling benchmarks
         if command -v $PY_BIN &>/dev/null; then
             export PYTHONPATH="${PYTHONPATH:-/usr/local/lib/python-deps}"
             [[ "$IS_BOOTC" != "true" ]] && source .venv/bin/activate 2>/dev/null || true
@@ -852,12 +853,37 @@ if [[ "$SCALING" == "true" ]]; then
             SCALING_ARGS="--runs 10"
             [[ "$SCALING_QUICK" == "true" ]] && SCALING_ARGS="--quick --runs 5"
 
-            echo -e "${CYAN}  Running scaling benchmarks (all 9 scenarios)...${NC}"
+            echo -e "${CYAN}  Running Python scaling benchmarks (all 9 scenarios)...${NC}"
             echo ""
-            $PY_BIN benchmark_scaling.py $SCALING_ARGS || log_error "Scaling benchmarks failed"
+            $PY_BIN benchmark_scaling.py $SCALING_ARGS || log_error "Python scaling benchmarks failed"
         else
-            log_error "Python not found, skipping scaling benchmarks"
+            log_error "Python not found, skipping Python scaling benchmarks"
         fi
+
+        # Julia scaling benchmarks
+        if command -v julia &>/dev/null; then
+            JL_SCALING_ARGS=""
+            [[ "$SCALING_QUICK" == "true" ]] && JL_SCALING_ARGS="--quick"
+
+            echo -e "${CYAN}  Running Julia scaling benchmarks (all 9 scenarios)...${NC}"
+            echo ""
+            julia benchmark_scaling.jl $JL_SCALING_ARGS || log_error "Julia scaling benchmarks failed"
+        else
+            log_error "Julia not found, skipping Julia scaling benchmarks"
+        fi
+
+        # R scaling benchmarks
+        if command -v Rscript &>/dev/null; then
+            R_SCALING_ARGS=""
+            [[ "$SCALING_QUICK" == "true" ]] && R_SCALING_ARGS="--quick"
+
+            echo -e "${CYAN}  Running R scaling benchmarks (all 9 scenarios)...${NC}"
+            echo ""
+            Rscript benchmark_scaling.R $R_SCALING_ARGS || log_error "R scaling benchmarks failed"
+        else
+            log_error "Rscript not found, skipping R scaling benchmarks"
+        fi
+
         mark_checkpoint "scaling"
     fi
 fi
