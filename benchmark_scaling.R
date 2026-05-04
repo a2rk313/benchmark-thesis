@@ -217,6 +217,22 @@ format_num <- function(n) {
 
 benchmark_matrix_scaling <- function(quick = FALSE) {
   scales <- if (quick) MATRIX_SCALES_QUICK else MATRIX_SCALES
+  vector_scales <- if (quick) VECTOR_SCALES_QUICK else VECTOR_SCALES
+
+  # Matrix creation, transpose, reshape
+  setup_creation <- function(n) { set.seed(42); matrix(rnorm(n * n), n, n) }
+  run_creation <- function(A) {
+    n <- nrow(A)
+    A <- t(A)
+    new_rows <- as.integer(n * 2 / 5)
+    new_cols <- as.integer(n * n / new_rows)
+    A <- matrix(A, nrow = new_rows, ncol = new_cols)
+    A <- t(A)
+    invisible(NULL)
+  }
+
+  results_creation <- run_all_scales("matrix_creation", scales, setup_creation, run_creation, n_runs = 10, unit = "matrix dimension (n)")
+  save_results("matrix_creation", scales, results_creation, "matrix dimension (n)", 10)
 
   # Cross-product
   setup_cp <- function(n) { set.seed(42); matrix(rnorm(n * n), n, n) }
@@ -238,6 +254,13 @@ benchmark_matrix_scaling <- function(quick = FALSE) {
 
   results_pow <- run_all_scales("matrix_power", scales, setup_pow, run_pow, n_runs = 10, unit = "matrix dimension (n)")
   save_results("matrix_power", scales, results_pow, "matrix dimension (n)", 10)
+
+  # Sorting
+  setup_sort <- function(n) { set.seed(42); rnorm(n) }
+  run_sort <- function(arr) { sort(arr); invisible(NULL) }
+
+  results_sort <- run_all_scales("sorting", vector_scales, setup_sort, run_sort, n_runs = 10, unit = "elements")
+  save_results("sorting", vector_scales, results_sort, "elements", 10)
 }
 
 # =============================================================================
@@ -283,6 +306,46 @@ benchmark_io_scaling <- function(quick = FALSE) {
 
   results_bin <- run_all_scales("io_binary_write", scales, setup_bin, run_bin, n_runs = 5, unit = "values")
   save_results("io_binary_write", scales, results_bin, "values", 5)
+
+  # CSV Read
+  setup_csv_read <- function(n) {
+    set.seed(42)
+    df <- data.frame(
+      lat = runif(n, -90, 90),
+      lon = runif(n, -180, 180),
+      device_id = sample(10000L, n, replace = TRUE)
+    )
+    output_path <- file.path(DATA_DIR, "io_test_r.csv")
+    fwrite(df, output_path)
+    output_path
+  }
+  run_csv_read <- function(path) {
+    dt <- fread(path)
+    invisible(NULL)
+  }
+
+  results_csv_read <- run_all_scales("io_csv_read", scales, setup_csv_read, run_csv_read, n_runs = 5, unit = "rows")
+  save_results("io_csv_read", scales, results_csv_read, "rows", 5)
+
+  # Binary Read
+  setup_bin_read <- function(n) {
+    set.seed(42)
+    arr <- rnorm(n)
+    output_path <- file.path(DATA_DIR, "io_test_r.bin")
+    con <- file(output_path, "wb")
+    writeBin(as.double(arr), con)
+    close(con)
+    output_path
+  }
+  run_bin_read <- function(path) {
+    con <- file(path, "rb")
+    arr <- readBin(con, "double", n = file.info(path)$size / 8)
+    close(con)
+    invisible(NULL)
+  }
+
+  results_bin_read <- run_all_scales("io_binary_read", scales, setup_bin_read, run_bin_read, n_runs = 5, unit = "values")
+  save_results("io_binary_read", scales, results_bin_read, "values", 5)
 }
 
 # =============================================================================
@@ -339,8 +402,65 @@ benchmark_vector_scaling <- function(quick = FALSE) {
 
   setup <- function(n) {
     set.seed(42)
-    list(lon = runif(n, -180, 180), lat = runif(n, -90, 90), n = n)
+    df <- data.frame(
+      lon = runif(n, -180, 180),
+      lat = runif(n, -90, 90)
+    )
+
+    # Create polygons (10x10 grid of countries for spatial join)
+    polys <- list()
+    for (i in 1:10) {
+      for (j in 1:10) {
+        min_lon <- -180 + (j-1)*36
+        max_lon <- -180 + j*36
+        min_lat <- -90 + (i-1)*18
+        max_lat <- -90 + i*18
+        coords <- matrix(c(min_lon, min_lat, max_lon, min_lat, max_lon, max_lat, min_lon, max_lat, min_lon, min_lat), ncol=2, byrow=TRUE)
+        polys[[length(polys) + 1]] <- terra::vect(geom = list(coords), type="polygons", crs="EPSG:4326")
+      }
+    }
+    polys <- terra::vect(polys)
+
+    list(points_df = df, polys = polys)
   }
+
+  run <- function(s) {
+    df <- s$points_df
+    polys <- s$polys
+
+    # Convert to terra SpatVector
+    points <- terra::vect(df, geom = c("lon", "lat"), crs = "EPSG:4326")
+
+    # Point-in-polygon using terra extract
+    extracted <- terra::extract(polys, points, touches = TRUE)
+
+    if (nrow(extracted) > 0) {
+      # Get polygon centroids for Haversine calculation
+      centroids <- terra::centroids(polys)
+
+      # Calculate Haversine distance for matched points
+      for (idx in seq_len(nrow(extracted))) {
+        poly_idx <- extracted[idx, 2]  # Polygon index
+        if (!is.na(poly_idx)) {
+          point_lon <- df$lon[idx]
+          point_lat <- df$lat[idx]
+          centroid <- centroids[poly_idx]
+          centroid_coords <- terra::geom(centroid)[1, c("x", "y")]
+
+          dlon <- point_lon - centroid_coords[1]
+          dlat <- point_lat - centroid_coords[2]
+          a <- sin(dlat/2)^2 + cos(point_lat) * cos(centroid_coords[2]) * sin(dlon/2)^2
+          c <- 2 * asin(pmin(sqrt(a), 1.0))
+          dist <- 6371000.0 * c
+        }
+      }
+    }
+    invisible(NULL)
+  }
+
+  results <- run_all_scales("vector_pip", scales, setup, run, n_runs = 5, unit = "query points")
+  save_results("vector_pip", scales, results, "query points", 5)
+}
 
   run <- function(data) {
     lon <- data$lon
@@ -372,38 +492,55 @@ benchmark_vector_scaling <- function(quick = FALSE) {
 
 benchmark_idw_scaling <- function(quick = FALSE) {
   scales <- if (quick) IDW_SCALES_QUICK else IDW_SCALES
+  has_fnn <- requireNamespace("FNN", quietly = TRUE)
 
   setup <- function(n) {
     set.seed(42)
     x <- runif(n, 0, 1000)
     y <- runif(n, 0, 1000)
-    values <- 100.0 * sin(x / 200.0) * cos(y / 200.0) + 50.0 * sin(x / 50.0) + 20.0 * rnorm(n)
+    values <- 100.0 * sin(x / 200.0 + 10) * cos(y / 200.0) + 50.0 * sin(x / 50.0) + 20.0 * rnorm(n)
 
     grid_size <- max(100L, as.integer(sqrt(n) * 3))
-    list(x = x, y = y, values = values, n = n, grid_size = grid_size)
+    gx <- seq(0, 1000, length.out = grid_size)
+    gy <- seq(0, 1000, length.out = grid_size)
+    grid_points <- cbind(rep(gx, each = grid_size), rep(gy, grid_size))
+
+    list(x = x, y = y, values = values, n = n, grid_points = grid_points, grid_size = grid_size, has_fnn = has_fnn)
   }
 
   run <- function(s) {
     x <- s$x
     y <- s$y
     values <- s$values
+    grid_points <- s$grid_points
     grid_size <- s$grid_size
+    has_fnn <- s$has_fnn
 
-    gx <- seq(0, 1000, length.out = grid_size)
-    gy <- seq(0, 1000, length.out = grid_size)
-    grid_x <- matrix(rep(gx, grid_size), nrow = grid_size, byrow = TRUE)
-    grid_y <- matrix(rep(gy, each = grid_size), nrow = grid_size, byrow = FALSE)
+    points <- cbind(x, y)
 
-    # Brute-force IDW
-    result <- matrix(0.0, grid_size, grid_size)
-    for (gi in seq_len(grid_size)) {
-      for (gj in seq_len(grid_size)) {
-        gx_pt <- grid_x[gi, gj]
-        gy_pt <- grid_y[gi, gj]
+    if (has_fnn) {
+      # Use FNN::get.knnx for kNN search
+      k <- min(12L, s$n)
+      nn <- FNN::get.knnx(points, grid_points, k = k)
+      result <- numeric(nrow(grid_points))
+
+      for (i in seq_len(nrow(grid_points))) {
+        dists <- nn$nn.dist[i, ]
+        dists[dists < 1e-10] <- 1e-10
+        weights <- 1.0 / (dists ^ 2)
+        weights <- weights / sum(weights)
+        result[i] <- sum(weights * values[nn$nn.index[i, ]])
+      }
+    } else {
+      # Fallback to brute-force
+      result <- numeric(nrow(grid_points))
+      for (i in seq_len(nrow(grid_points))) {
+        gx_pt <- grid_points[i, 1]
+        gy_pt <- grid_points[i, 2]
         dists <- sqrt((x - gx_pt)^2 + (y - gy_pt)^2)
         dists[dists < 1e-10] <- 1e-10
         weights <- 1.0 / dists
-        result[gi, gj] <- sum(weights * values) / sum(weights)
+        result[i] <- sum(weights * values) / sum(weights)
       }
     }
     invisible(NULL)
@@ -423,8 +560,23 @@ benchmark_timeseries_scaling <- function(quick = FALSE) {
 
   setup <- function(n) {
     set.seed(42)
-    ndvi_stack <- array(rnorm(n_dates * n * n, mean = 0.3, sd = 0.2),
-                        dim = c(n_dates, n, n))
+    x <- seq(-1, 1, length.out = n)
+    y <- seq(-1, 1, length.out = n)
+    xx <- outer(x, y, function(a, b) a)
+    yy <- outer(x, y, function(a, b) b)
+    base_veg <- 0.5 * (1 - (xx^2 + yy^2))
+
+    ndvi_stack <- array(0, dim = c(n_dates, n, n))
+    for (t in seq_len(n_dates)) {
+      veg_level <- 0.5 + 0.3 * sin(2 * pi * t / n_dates)
+      red_noise <- array(rnorm(n * n, mean = 0, sd = 0.05), dim = c(n, n))
+      nir_noise <- array(rnorm(n * n, mean = 0, sd = 0.05), dim = c(n, n))
+      red <- 0.1 + 0.2 * (1 - base_veg * veg_level) + red_noise
+      nir <- 0.3 + 0.5 * base_veg * veg_level + nir_noise
+      epsilon <- 1e-6
+      ndvi <- (nir - red) / (nir + red + epsilon)
+      ndvi_stack[t, , ] <- pmin(pmax(ndvi, -0.1), 1.0)
+    }
     list(ndvi_stack = ndvi_stack, n_dates = n_dates, n = n)
   }
 
@@ -552,26 +704,38 @@ benchmark_reproj_scaling <- function(quick = FALSE) {
 
   setup <- function(n) {
     set.seed(42)
-    list(
-      lons = runif(n, -180, 180),
-      lats = runif(n, -90, 90)
-    )
+    lons <- runif(n, -180, 180)
+    lats <- runif(n, -90, 90)
+
+    # Web Mercator (EPSG:3857)
+    x_3857 <- lons * 20037508.34 / 180.0
+    y_3857 <- log(tan((90.0 + lats) * pi / 360.0)) * 20037508.34 / pi
+
+    # Determine UTM zone from center
+    lon_center <- mean(lons)
+    zone <- as.integer(floor((lon_center + 180.0) / 6.0)) + 1
+
+    list(lons = lons, lats = lats, x_3857 = x_3857, y_3857 = y_3857, zone = zone)
   }
 
   run <- function(data) {
     lons <- data$lons
     lats <- data$lats
+    x_3857 <- data$x_3857
+    y_3857 <- data$y_3857
+    zone <- data$zone
     n <- length(lons)
 
-    # Approximate UTM conversion using basic formulas
-    for (i in seq_len(n)) {
-      lon <- lons[i]
-      lat <- lats[i]
-      zone <- as.integer(floor((lon + 180.0) / 6.0)) + 1
-      lon0 <- -183.0 + zone * 6.0
+    # Web Mercator (already computed in setup, just reference)
+    x_3857_result <- x_3857
+    y_3857_result <- y_3857
 
-      lat_rad <- lat * pi / 180
-      lon_rad <- lon * pi / 180
+    # UTM conversion
+    lon0 <- -183.0 + zone * 6.0
+
+    for (i in seq_len(n)) {
+      lat_rad <- lats[i] * pi / 180
+      lon_rad <- lons[i] * pi / 180
       lon0_rad <- lon0 * pi / 180
 
       k0 <- 0.9996

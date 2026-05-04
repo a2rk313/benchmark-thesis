@@ -356,6 +356,28 @@ class ScalingBenchmark:
 # Scenario 1: Matrix Operations Scaling
 # =============================================================================
 
+class MatrixCreationScaling(ScalingBenchmark):
+    """Matrix creation, transpose, and reshape. Expected: O(n^2)."""
+
+    def __init__(self, quick=False):
+        scales = MATRIX_SCALES_QUICK if quick else MATRIX_SCALES
+        super().__init__("matrix_creation", scales, n_runs=10, unit="matrix dimension (n)")
+
+    def setup_at_scale(self, scale_name, n):
+        rng = np.random.default_rng(42)
+        return rng.standard_normal((n, n))
+
+    def run_at_scale(self, A):
+        n = A.shape[0]
+        start = time.perf_counter()
+        A = A.T
+        new_rows = int(n * 2 / 5)
+        new_cols = int(n * n / new_rows)
+        A = A.reshape(new_rows, new_cols)
+        A = A.T
+        return time.perf_counter() - start
+
+
 class MatrixCrossProductScaling(ScalingBenchmark):
     """Matrix cross-product A^T A scaling. Expected: O(n^2.37) to O(n^3)."""
 
@@ -364,8 +386,8 @@ class MatrixCrossProductScaling(ScalingBenchmark):
         super().__init__("matrix_crossproduct", scales, n_runs=10, unit="matrix dimension (n)")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        return np.random.randn(n, n).astype(np.float64)
+        rng = np.random.default_rng(42)
+        return rng.standard_normal((n, n))
 
     def run_at_scale(self, A):
         start = time.perf_counter()
@@ -381,8 +403,8 @@ class MatrixDeterminantScaling(ScalingBenchmark):
         super().__init__("matrix_determinant", scales, n_runs=10, unit="matrix dimension (n)")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        return np.random.randn(n, n).astype(np.float64)
+        rng = np.random.default_rng(42)
+        return rng.standard_normal((n, n))
 
     def run_at_scale(self, A):
         start = time.perf_counter()
@@ -398,8 +420,8 @@ class MatrixPowerScaling(ScalingBenchmark):
         super().__init__("matrix_power", scales, n_runs=10, unit="matrix dimension (n)")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        A = np.random.randn(n, n).astype(np.float64)
+        rng = np.random.default_rng(42)
+        A = rng.standard_normal((n, n))
         return np.abs(A) / 2.0
 
     def run_at_scale(self, A):
@@ -416,8 +438,8 @@ class SortingScaling(ScalingBenchmark):
         super().__init__("sorting", scales, n_runs=10, unit="elements")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        return np.random.randn(n).astype(np.float64)
+        rng = np.random.default_rng(42)
+        return rng.standard_normal(n)
 
     def run_at_scale(self, arr):
         start = time.perf_counter()
@@ -437,26 +459,46 @@ class CSVWriteScaling(ScalingBenchmark):
         super().__init__("io_csv_write", scales, n_runs=10, unit="rows")
 
     def setup_at_scale(self, scale_name, n_rows):
-        import csv
-        np.random.seed(42)
-        data = []
-        for i in range(n_rows):
-            data.append((
-                round(np.random.uniform(-90, 90), 6),
-                round(np.random.uniform(-180, 180), 6),
-                round(float(np.random.randn()), 6),
-            ))
-        return data
+        rng = np.random.default_rng(42)
+        df = pd.DataFrame({
+            "lat": rng.uniform(-90, 90, n_rows),
+            "lon": rng.uniform(-180, 180, n_rows),
+            "device_id": rng.integers(1, 10000, n_rows),
+        })
+        return df
 
-    def run_at_scale(self, data):
-        import csv
+    def run_at_scale(self, df):
         output_path = Path("data") / "scaling_test.csv"
         output_path.parent.mkdir(exist_ok=True)
         start = time.perf_counter()
-        with open(output_path, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["lat", "lon", "value"])
-            writer.writerows(data)
+        df.to_csv(output_path, index=False)
+        elapsed = time.perf_counter() - start
+        output_path.unlink(missing_ok=True)
+        return elapsed
+
+
+class CSVReadScaling(ScalingBenchmark):
+    """CSV read performance. Expected: O(n)."""
+
+    def __init__(self, quick=False):
+        scales = IO_SCALES_QUICK if quick else IO_SCALES
+        super().__init__("io_csv_read", scales, n_runs=10, unit="rows")
+
+    def setup_at_scale(self, scale_name, n_rows):
+        rng = np.random.default_rng(42)
+        df = pd.DataFrame({
+            "lat": rng.uniform(-90, 90, n_rows),
+            "lon": rng.uniform(-180, 180, n_rows),
+            "device_id": rng.integers(1, 10000, n_rows),
+        })
+        output_path = Path("data") / "scaling_test.csv"
+        output_path.parent.mkdir(exist_ok=True)
+        df.to_csv(output_path, index=False)
+        return output_path
+
+    def run_at_scale(self, output_path):
+        start = time.perf_counter()
+        df = pd.read_csv(output_path)
         elapsed = time.perf_counter() - start
         output_path.unlink(missing_ok=True)
         return elapsed
@@ -470,14 +512,37 @@ class BinaryWriteScaling(ScalingBenchmark):
         super().__init__("io_binary_write", scales, n_runs=10, unit="float64 values")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        return np.random.randn(n).astype(np.float64)
+        rng = np.random.default_rng(42)
+        return rng.standard_normal(n)
 
     def run_at_scale(self, arr):
         output_path = Path("data") / "scaling_test.bin"
         output_path.parent.mkdir(exist_ok=True)
         start = time.perf_counter()
         arr.tofile(output_path)
+        elapsed = time.perf_counter() - start
+        output_path.unlink(missing_ok=True)
+        return elapsed
+
+
+class BinaryReadScaling(ScalingBenchmark):
+    """Raw binary read performance. Expected: O(n)."""
+
+    def __init__(self, quick=False):
+        scales = IO_SCALES_QUICK if quick else IO_SCALES
+        super().__init__("io_binary_read", scales, n_runs=10, unit="float64 values")
+
+    def setup_at_scale(self, scale_name, n):
+        rng = np.random.default_rng(42)
+        arr = rng.standard_normal(n)
+        output_path = Path("data") / "scaling_test.bin"
+        output_path.parent.mkdir(exist_ok=True)
+        arr.tofile(output_path)
+        return output_path
+
+    def run_at_scale(self, output_path):
+        start = time.perf_counter()
+        arr = np.fromfile(output_path, dtype=np.float64)
         elapsed = time.perf_counter() - start
         output_path.unlink(missing_ok=True)
         return elapsed
@@ -501,8 +566,8 @@ class HyperspectralSAMScaling(ScalingBenchmark):
         super().__init__("hyperspectral_sam", scales, n_runs=5, unit="pixels per side (n x n x 224 bands)")
 
     def setup_at_scale(self, scale_name, n_pixels):
-        np.random.seed(42)
-        data = np.random.randn(self.N_BANDS, n_pixels, n_pixels).astype(np.float32)
+        rng = np.random.default_rng(42)
+        data = rng.standard_normal((self.N_BANDS, n_pixels, n_pixels)).astype(np.float32)
         ref = np.linspace(0.1, 0.9, self.N_BANDS).astype(np.float32)
         ref /= np.linalg.norm(ref)
         return data, ref
@@ -513,6 +578,7 @@ class HyperspectralSAMScaling(ScalingBenchmark):
         n_bands, n_rows, n_cols = data.shape
         start = time.perf_counter()
 
+        all_angles = []
         for row in range(0, n_rows, self.CHUNK_SIZE):
             for col in range(0, n_cols, self.CHUNK_SIZE):
                 row_end = min(row + self.CHUNK_SIZE, n_rows)
@@ -526,6 +592,13 @@ class HyperspectralSAMScaling(ScalingBenchmark):
                 cos_angle = dot_product / (pixel_norms * ref_norm + 1e-8)
                 cos_angle = np.clip(cos_angle, -1.0, 1.0)
                 angles = np.arccos(cos_angle)
+                all_angles.append(angles)
+
+        all_angles = np.concatenate(all_angles)
+        mean_angle = np.mean(all_angles)
+        std_angle = np.std(all_angles)
+        min_angle = np.min(all_angles)
+        max_angle = np.max(all_angles)
 
         return time.perf_counter() - start
 
@@ -551,10 +624,10 @@ class VectorPipScaling(ScalingBenchmark):
             data_dir = Path(__file__).parent / "data"
             self.polys = gpd.read_file(str(data_dir / "natural_earth_countries.gpkg"))
 
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         points_df = pd.DataFrame({
-            "lon": np.random.uniform(-180, 180, n_points),
-            "lat": np.random.uniform(-90, 90, n_points),
+            "lon": rng.uniform(-180, 180, n_points),
+            "lat": rng.uniform(-90, 90, n_points),
         })
         points = gpd.GeoDataFrame(
             points_df,
@@ -565,8 +638,22 @@ class VectorPipScaling(ScalingBenchmark):
 
     def run_at_scale(self, points):
         start = time.perf_counter()
-        joined = gpd.sjoin(points, self.polys, how="inner", predicate="within",
-                           lsuffix="_point", rsuffix="_poly")
+        joined = gpd.sjoin(points, self.polys, how="inner", predicate="within")
+
+        if len(joined) > 0:
+            lats = joined["lat"].values
+            lons = joined["lon"].values
+            R = 6371.0
+            lat1 = np.radians(lats)
+            lon1 = np.radians(lons)
+            lat2 = np.radians(joined.geometry.centroid.y.values)
+            lon2 = np.radians(joined.geometry.centroid.x.values)
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+            a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+            c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+            distances = R * c
+
         elapsed = time.perf_counter() - start
         return elapsed
 
@@ -588,16 +675,15 @@ class IDWInterpolationScaling(ScalingBenchmark):
 
     def setup_at_scale(self, scale_name, n_points):
         from scipy.spatial import cKDTree
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
 
-        # Scale grid resolution proportionally to sqrt of points
         grid_size = max(100, int(np.sqrt(n_points) * 3))
 
-        x = np.random.uniform(0, 1000, n_points)
-        y = np.random.uniform(0, 1000, n_points)
-        values = (100 * np.sin(x / 200) * np.cos(y / 200) +
+        x = rng.uniform(0, 1000, n_points)
+        y = rng.uniform(0, 1000, n_points)
+        values = (100 * np.sin(x / 200 + 10) * np.cos(y / 200) +
                   50 * np.sin(x / 50) +
-                  20 * np.random.randn(n_points))
+                  20 * rng.standard_normal(n_points))
         points = np.column_stack([x, y])
 
         grid_x, grid_y = np.meshgrid(
@@ -626,18 +712,18 @@ class IDWInterpolationScaling(ScalingBenchmark):
 
 class TimeseriesNDVIVScaling(ScalingBenchmark):
     """NDVI time-series analysis scaling.
-    
-    Scales spatial extent (rows x cols) with fixed 12 time steps.
+
+    Scales spatial extent (rows x cols) with fixed 46 time steps.
     Expected: O(n^2 * t) for statistics, O(n^2) for trend.
     """
-    N_DATES = 12
+    N_DATES = 46
 
     def __init__(self, quick=False):
         scales = TIMESERIES_SCALES_QUICK if quick else TIMESERIES_SCALES
-        super().__init__("timeseries_ndvi", scales, n_runs=5, unit="pixels per side (n x n x 12 dates)")
+        super().__init__("timeseries_ndvi", scales, n_runs=5, unit="pixels per side (n x n x 46 dates)")
 
     def setup_at_scale(self, scale_name, n_pixels):
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         x = np.linspace(-1, 1, n_pixels)
         y = np.linspace(-1, 1, n_pixels)
         xx, yy = np.meshgrid(x, y)
@@ -646,8 +732,8 @@ class TimeseriesNDVIVScaling(ScalingBenchmark):
         ndvi_stack = np.zeros((self.N_DATES, n_pixels, n_pixels), dtype=np.float32)
         for t in range(self.N_DATES):
             vegetation_level = 0.5 + 0.3 * np.sin(2 * np.pi * t / self.N_DATES)
-            red_noise = np.random.normal(0, 0.05, (n_pixels, n_pixels))
-            nir_noise = np.random.normal(0, 0.05, (n_pixels, n_pixels))
+            red_noise = rng.normal(0, 0.05, (n_pixels, n_pixels))
+            nir_noise = rng.normal(0, 0.05, (n_pixels, n_pixels))
             red = 0.1 + 0.2 * (1 - base_vegetation * vegetation_level) + red_noise
             nir = 0.3 + 0.5 * base_vegetation * vegetation_level + nir_noise
             epsilon = 1e-6
@@ -691,12 +777,12 @@ class RasterAlgebraScaling(ScalingBenchmark):
         super().__init__("raster_algebra", scales, n_runs=5, unit="pixels per side (n x n)")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         return {
-            "green": np.random.rand(n, n).astype(np.float32) * 1000,
-            "red":   np.random.rand(n, n).astype(np.float32) * 800,
-            "nir":   np.random.rand(n, n).astype(np.float32) * 2000,
-            "swir":  np.random.rand(n, n).astype(np.float32) * 1500,
+            "green": rng.random((n, n)).astype(np.float32) * 1000,
+            "red":   rng.random((n, n)).astype(np.float32) * 800,
+            "nir":   rng.random((n, n)).astype(np.float32) * 2000,
+            "swir":  rng.random((n, n)).astype(np.float32) * 1500,
         }
 
     def run_at_scale(self, bands):
@@ -706,6 +792,16 @@ class RasterAlgebraScaling(ScalingBenchmark):
         numerator = bands["nir"] - bands["red"]
         denominator = bands["nir"] + bands["red"]
         ndvi = np.where(denominator != 0, numerator / denominator, 0)
+
+        # SAVI (Soil Adjusted Vegetation Index)
+        L = 0.5
+        savi = ((bands["nir"] - bands["red"]) / (bands["nir"] + bands["red"] + L)) * (1 + L)
+
+        # NDWI (Normalized Difference Water Index)
+        ndwi = (bands["green"] - bands["swir"]) / (bands["green"] + bands["swir"] + 1e-8)
+
+        # NBR (Normalized Burn Ratio)
+        nbr = (bands["nir"] - bands["swir"]) / (bands["nir"] + bands["swir"] + 1e-8)
 
         # Band arithmetic
         total = bands["green"] + bands["red"] + bands["nir"] + bands["swir"]
@@ -738,8 +834,8 @@ class ZonalStatsScaling(ScalingBenchmark):
         super().__init__("zonal_stats", scales, n_runs=5, unit="pixels per side (n x n)")
 
     def setup_at_scale(self, scale_name, n):
-        np.random.seed(42)
-        raster = (np.random.rand(n, n) * 3000).astype(np.float32)
+        rng = np.random.default_rng(42)
+        raster = (rng.random((n, n)) * 3000).astype(np.float32)
 
         # Create zone mask
         mask = np.zeros((n, n), dtype=np.int32)
@@ -791,8 +887,8 @@ class ZonalStatsScaling(ScalingBenchmark):
 # =============================================================================
 
 class ReprojectionScaling(ScalingBenchmark):
-    """Coordinate reprojection scaling.
-    
+    """Coordinate reprojection scaling (Web Mercator and UTM).
+
     Scales number of points. Expected: O(n).
     """
 
@@ -802,16 +898,26 @@ class ReprojectionScaling(ScalingBenchmark):
 
     def setup_at_scale(self, scale_name, n_points):
         from pyproj import Transformer
-        np.random.seed(42)
-        lats = np.random.uniform(-90, 90, n_points)
-        lons = np.random.uniform(-180, 180, n_points)
-        transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
-        return lats, lons, transformer
+        rng = np.random.default_rng(42)
+        lats = rng.uniform(-90, 90, n_points)
+        lons = rng.uniform(-180, 180, n_points)
+
+        transformer_3857 = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+        lon_center = np.mean(lons)
+        zone = int((lon_center + 180) / 6) + 1
+        epsg_utm = 32600 + zone
+        transformer_utm = Transformer.from_crs("EPSG:4326", f"EPSG:{epsg_utm}", always_xy=True)
+
+        return lats, lons, transformer_3857, transformer_utm
 
     def run_at_scale(self, setup_result):
-        lats, lons, transformer = setup_result
+        lats, lons, transformer_3857, transformer_utm = setup_result
         start = time.perf_counter()
-        x, y = transformer.transform(lons, lats)
+
+        x_3857, y_3857 = transformer_3857.transform(lons, lats)
+
+        x_utm, y_utm = transformer_utm.transform(lons, lats)
+
         return time.perf_counter() - start
 
 
@@ -823,6 +929,7 @@ def build_benchmark_suite(quick=False):
     """Build the complete scaling benchmark suite covering all 9 scenarios."""
     return [
         # Scenario 1: Matrix Operations
+        MatrixCreationScaling(quick=quick),
         MatrixCrossProductScaling(quick=quick),
         MatrixDeterminantScaling(quick=quick),
         MatrixPowerScaling(quick=quick),
@@ -830,7 +937,9 @@ def build_benchmark_suite(quick=False):
 
         # Scenario 2: I/O Operations
         CSVWriteScaling(quick=quick),
+        CSVReadScaling(quick=quick),
         BinaryWriteScaling(quick=quick),
+        BinaryReadScaling(quick=quick),
 
         # Scenario 3: Hyperspectral SAM
         HyperspectralSAMScaling(quick=quick),

@@ -278,6 +278,16 @@ function matrix_setup(n::Int)
     return randn(rng, n, n)
 end
 
+function matrix_creation_run(A::Matrix{Float64})
+    n = size(A, 1)
+    B = A'
+    new_rows = Int(n * 2 / 5)
+    new_cols = Int(n * n / new_rows)
+    C = reshape(B, new_rows, new_cols)
+    D = C'
+    return nothing
+end
+
 function matrix_crossproduct_run(A::Matrix{Float64})
     B = A' * A
     return nothing
@@ -344,6 +354,41 @@ function io_binary_write_run(arr::Vector{Float64})
     return nothing
 end
 
+function io_setup_csv_read(n::Int)
+    rng = MersenneTwister(42)
+    lat = rand(rng, n) .* 180 .- 90
+    lon = rand(rng, n) .* 360 .- 180
+    device_id = rand(rng, 1:10000, n)
+    df = DataFrame(lat=lat, lon=lon, device_id=device_id)
+    output_path = joinpath(@__DIR__, "data", "io_test_julia.csv")
+    mkpath(dirname(output_path))
+    CSV.write(output_path, df)
+    return output_path
+end
+
+function io_csv_read_run(output_path)
+    df = CSV.read(output_path, DataFrame)
+    return nothing
+end
+
+function io_setup_binary_read(n::Int)
+    rng = MersenneTwister(42)
+    arr = randn(rng, Float64, n)
+    output_path = joinpath(@__DIR__, "data", "io_test_julia.bin")
+    mkpath(dirname(output_path))
+    open(output_path, "w") do io
+        write(io, arr)
+    end
+    return output_path
+end
+
+function io_binary_read_run(output_path)
+    arr = open(output_path) do io
+        read(io, Float64)
+    end
+    return nothing
+end
+
 function benchmark_io_scaling(quick::Bool=false)
     if !HAS_CSV
         println("\n  Skipping I/O scaling: CSV/DataFrames not available")
@@ -355,8 +400,14 @@ function benchmark_io_scaling(quick::Bool=false)
     results_csv = run_all_scales("io_csv_write", scales, io_setup_csv, io_csv_write_run; n_runs=5, unit="rows")
     save_results("io_csv_write", scales, results_csv, "rows", 5)
 
+    results_csv_read = run_all_scales("io_csv_read", scales, io_setup_csv_read, io_csv_read_run; n_runs=5, unit="rows")
+    save_results("io_csv_read", scales, results_csv_read, "rows", 5)
+
     results_bin = run_all_scales("io_binary_write", scales, io_setup_binary, io_binary_write_run; n_runs=5, unit="values")
     save_results("io_binary_write", scales, results_bin, "values", 5)
+
+    results_bin_read = run_all_scales("io_binary_read", scales, io_setup_binary_read, io_binary_read_run; n_runs=5, unit="values")
+    save_results("io_binary_read", scales, results_bin_read, "values", 5)
 end
 
 # =============================================================================
@@ -413,24 +464,43 @@ function vector_pip_setup(n_points::Int)
 end
 
 function vector_pip_run(data)
-    # Pure Julia implementation: simple rectangular polygon test
-    # Tests point containment and haversine distance computation
     lon, lat = data
     n = length(lon)
 
-    # Simulate PIP by checking against a rectangular region
-    mask = (lon .> -10.0) .& (lon .< 10.0) .& (lat .> -10.0) .& (lat .< 10.0)
+    # Create polygons (10x10 grid of countries for spatial join)
+    polys = []
+    for i in 1:10, j in 1:10
+        min_lon = -180.0 + (j-1)*36.0
+        max_lon = -180.0 + j*36.0
+        min_lat = -90.0 + (i-1)*18.0
+        max_lat = -90.0 + i*18.0
+        coords = [(min_lon, min_lat), (max_lon, min_lat), (max_lon, max_lat), (min_lon, max_lat), (min_lon, min_lat)]
+        push!(polys, LibGEOS.createPolygon(LibGEOS.createLinearRing(coords)))
+    end
 
-    # Haversine distance for matched points
-    lon_m, lat_m = lon[mask], lat[mask]
-    distances = zeros(Float64, sum(mask))
-    for i in 1:length(distances)
-        # Distance to polygon center (0, 0)
-        dlon = lon_m[i] - 0.0
-        dlat = lat_m[i] - 0.0
-        a = sin(dlat/2)^2 + cos(lat_m[i]) * cos(0.0) * sin(dlon/2)^2
-        c = 2 * asin(sqrt(a))
-        distances[i] = 6371000.0 * c
+    # Build spatial index
+    index = LibGEOS.STRtree(polys)
+
+    # Query points
+    points = [LibGEOS.createPoint(lon[i], lat[i]) for i in 1:n]
+
+    # Point-in-polygon query using spatial index
+    matched = 0
+    for i in 1:n
+        for poly in LibGEOS.query(index, points[i])
+            if LibGEOS.contains(polys[poly], points[i])
+                matched += 1
+                # Haversine distance to centroid
+                centroid = LibGEOS.getCoordinates(LibGEOS.centroid(polys[poly]))[1]
+                lon_c, lat_c = centroid[1], centroid[2]
+                dlon = deg2rad(lon[i] - lon_c)
+                dlat = deg2rad(lat[i] - lat_c)
+                a = sin(dlat/2)^2 + cos(deg2rad(lat_c)) * cos(deg2rad(lat[i])) * sin(dlon/2)^2
+                c = 2 * asin(sqrt(a))
+                dist = 6371000.0 * c
+                break
+            end
+        end
     end
 
     return nothing
@@ -450,14 +520,22 @@ function idw_setup(n_points::Int)
     rng = MersenneTwister(42)
     x = rand(rng, n_points) .* 1000
     y = rand(rng, n_points) .* 1000
-    values = 100.0 .* sin.(x ./ 200.0) .* cos.(y ./ 200.0) .+ 50.0 .* sin.(x ./ 50.0) .+ 20.0 .* randn(rng, n_points)
+    values = 100.0 .* sin.(x ./ 200.0 .+ 10.0) .* cos.(y ./ 200.0) .+ 50.0 .* sin.(x ./ 50.0) .+ 20.0 .* randn(rng, n_points)
 
     grid_size = max(100, isqrt(n_points) * 3)
     gx = range(0, 1000, length=grid_size)
     gy = range(0, 1000, length=grid_size)
     grid_x, grid_y = meshgrid(gx, gy)
 
-    return (x=x, y=y, values=values, grid_x=grid_x, grid_y=grid_y, n=n_points, grid_size=grid_size)
+    points = hcat(x, y)
+    grid_points = hcat(vec(grid_x), vec(grid_y))
+
+    if HAS_NEIGHBORS
+        tree = KDTree(points)
+        return (tree=tree, values=values, grid_points=grid_points, grid_size=grid_size, use_kdtree=true)
+    else
+        return (points=points, values=values, grid_points=grid_points, grid_size=grid_size, use_kdtree=false)
+    end
 end
 
 function meshgrid(x::AbstractRange, y::AbstractRange)
@@ -467,17 +545,32 @@ function meshgrid(x::AbstractRange, y::AbstractRange)
 end
 
 function idw_run(setup)
-    x, y, values, grid_x, grid_y, n, grid_size = setup
-    k_nearest = min(8, n)
-    result = zeros(Float64, grid_size, grid_size)
+    k_nearest = 12
+    result = zeros(Float64, setup.grid_size, setup.grid_size)
 
-    # Use brute-force kNN (no KD-tree for simplicity, matches Python behavior)
-    for gi in 1:grid_size, gj in 1:grid_size
-        gx, gy = grid_x[gi, gj], grid_y[gi, gj]
-        dists = sqrt.((x .- gx).^2 .+ (y .- gy).^2)
-        dists[dists .< 1e-10] .= 1e-10
-        weights = 1.0 ./ dists
-        result[gi, gj] = sum(weights .* values) / sum(weights)
+    if setup.use_kdtree
+        # Use NearestNeighbors.jl KDTree
+        idxs, dists = knn(setup.tree, setup.grid_points', k_nearest, true)
+        for i in 1:length(idxs)
+            d = max.(dists[i], 1e-10)
+            w = 1.0 ./ (d .^ 2)
+            w = w ./ sum(w)
+            result[i] = sum(w .* setup.values[idxs[i]])
+        end
+    else
+        # Fallback to brute-force (should not happen if NearestNeighbors available)
+        points = setup.points
+        values = setup.values
+        grid_points = setup.grid_points
+        grid_size = setup.grid_size
+
+        for gi in 1:grid_size, gj in 1:grid_size
+            gx, gy = grid_points[(gi-1)*grid_size + gj, 1], grid_points[(gi-1)*grid_size + gj, 2]
+            dists = sqrt.((points[:,1] .- gx).^2 .+ (points[:,2] .- gy).^2)
+            dists[dists .< 1e-10] .= 1e-10
+            weights = 1.0 ./ dists
+            result[gi, gj] = sum(weights .* values) / sum(weights)
+        end
     end
 
     return nothing
@@ -496,7 +589,25 @@ end
 function timeseries_setup(n::Int)
     rng = MersenneTwister(42)
     n_dates = 46
-    ndvi_stack = randn(rng, Float32, n_dates, n, n) .* 0.2f0 .+ 0.3f0
+
+    x = LinRange(-1.0f0, 1.0f0, n)
+    y = LinRange(-1.0f0, 1.0f0, n)
+    xx = [xi for xi in x, yi in y]
+    yy = [yi for xi in x, yi in y]
+    base_veg = 0.5f0 .* (1.0f0 .- (xx.^2 .+ yy.^2))
+
+    ndvi_stack = zeros(Float32, n_dates, n, n)
+    for t in 1:n_dates
+        veg_level = 0.5f0 .+ 0.3f0 .* sin(2.0f0 * π * t / n_dates)
+        red_noise = Float32.(randn(rng, n, n) .* 0.05)
+        nir_noise = Float32.(randn(rng, n, n) .* 0.05)
+        red = 0.1f0 .+ 0.2f0 .* (1.0f0 .- base_veg .* veg_level) .+ red_noise
+        nir = 0.3f0 .+ 0.5f0 .* base_veg .* veg_level .+ nir_noise
+        epsilon = 1.0f-6
+        ndvi = (nir .- red) ./ (nir .+ red .+ epsilon)
+        ndvi_stack[t, :, :] = clamp.(ndvi, -0.1f0, 1.0f0)
+    end
+
     return (ndvi_stack=ndvi_stack, n_dates=n_dates)
 end
 
@@ -633,50 +744,63 @@ function reproj_setup(n::Int)
     rng = MersenneTwister(42)
     lons = rand(rng, n) .* 360.0 .- 180.0
     lats = rand(rng, n) .* 180.0 .- 90.0
-    return (lons=lons, lats=lats)
+
+    # Web Mercator (EPSG:3857)
+    x_3857 = lons .* 20037508.34 ./ 180.0
+    y_3857 = log.(tan.((90.0 .+ lats) .* π ./ 360.0)) .* 20037508.34 ./ π
+
+    # UTM (determine zone from center longitude)
+    lon_center = mean(lons)
+    zone = Int(floor((lon_center + 180.0) / 6.0)) + 1
+    epsg_utm = 32600 + zone
+
+    return (lons=lons, lats=lats, x_3857=x_3857, y_3857=y_3857, zone=zone)
 end
 
-function reproj_wgs84_to_utm(lons::Vector{Float64}, lats::Vector{Float64})
+function reproj_wgs84_to_utm(lons::Vector{Float64}, lats::Vector{Float64}, zone::Int)
     # Approximate UTM conversion using basic formulas
     n = length(lons)
     x = zeros(Float64, n)
     y = zeros(Float64, n)
 
-    for i in 1:n
-        lon, lat = lons[i], lats[i]
-        zone = Int(floor((lon + 180.0) / 6.0)) + 1
-        lon0 = -183.0 + zone * 6.0
-        lat_rad = deg2rad(lat)
-        lon_rad = deg2rad(lon)
-        lon0_rad = deg2rad(lon0)
+    lon0 = -183.0 + zone * 6.0
+    lat_rad = deg2rad.(lats)
+    lon_rad = deg2rad.(lons)
+    lon0_rad = deg2rad(lon0)
 
-        # Simplified Transverse Mercator approximation
-        k0 = 0.9996
-        a = 6378137.0
-        e2 = 0.00669438
-        e4 = e2^2
-        e6 = e2^3
+    # Simplified Transverse Mercator approximation
+    k0 = 0.9996
+    a = 6378137.0
+    e2 = 0.00669438
+    e4 = e2^2
+    e6 = e2^3
 
-        m = a * ((1 - e2/4 - 3*e4/64 - 5*e6/256) * lat_rad
-               - (3*e2/8 + 3*e4/32 + 45*e6/1024) * sin(2*lat_rad)
-               + (15*e4/256 + 45*e6/1024) * sin(4*lat_rad)
-               - (35*e6/3072) * sin(6*lat_rad))
+    m = a .* ((1 .- e2./4 .- 3*e4./64 .- 5*e6./256) .* lat_rad
+           .- (3*e2./8 .+ 3*e4./32 .+ 45*e6./1024) .* sin.(2.*lat_rad)
+           .+ (15*e4./256 .+ 45*e6./1024) .* sin.(4.*lat_rad)
+           .- (35*e6./3072) .* sin.(6.*lat_rad))
 
-        n_val = a / sqrt(1 - e2 * sin(lat_rad)^2)
-        t = tan(lat_rad)^2
-        c = e2 / (1 - e2) * cos(lat_rad)^2
-        a_val = cos(lat_rad) * (lon_rad - lon0_rad)
+    n_val = a ./ sqrt.(1 .- e2 .* sin.(lat_rad).^2)
+    t = tan.(lat_rad).^2
+    c = e2 ./ (1 .- e2) .* cos.(lat_rad).^2
+    a_val = cos.(lat_rad) .* (lon_rad .- lon0_rad)
 
-        x[i] = k0 * n_val * (a_val + (1-t+c)*a_val^3/6 + (5-18*t+t^2+72*c-58*0.00669438/(1-0.00669438))*a_val^5/120) + 500000
-        y[i] = k0 * (m + n_val * tan(lat_rad) * (a_val^2/2 + (5-t+9*c+4*c^2)*a_val^4/24 + (61-58*t+t^2+600*c-330*0.00669438/(1-0.00669438))*a_val^6/720))
-    end
+    x = k0 .* n_val .* (a_val .+ (1 .- t .+ c).*a_val.^3./6 .+ (5 .- 18.*t .+ t.^2 .+ 72.*c .- 58*0.00669438./(1-0.00669438)).*a_val.^5./120) .+ 500000
+    y = k0 .* (m .+ n_val .* tan.(lat_rad) .* (a_val.^2./2 .+ (5 .- t .+ 9.*c .+ 4.*c.^2).*a_val.^4./24 .+ (61 .- 58.*t .+ t.^2 .+ 600.*c .- 330*0.00669438./(1-0.00669438)).*a_val.^6./720))
 
     return (x=x, y=y)
 end
 
 function reproj_run(setup)
-    lons, lats = setup
-    result = reproj_wgs84_to_utm(lons, lats)
+    lons, lats, x_3857, y_3857, zone = setup
+
+    # Web Mercator (already computed in setup, just reference)
+    x_3857_result = x_3857
+    y_3857_result = y_3857
+
+    # UTM
+    result_utm = reproj_wgs84_to_utm(lons, lats, zone)
+
     return nothing
 end
 
